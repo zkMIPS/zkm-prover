@@ -1,0 +1,4 @@
+addr = "0.0.0.0:50002"
+prover_addrs = ["127.0.0.1:50002"]
+snark_addrs = []
+base_dir = "/tmp/zkm/test/test_proof"
