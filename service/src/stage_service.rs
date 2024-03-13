@@ -1,0 +1,162 @@
+use std::borrow::BorrowMut;
+use std::fmt::format;
+use std::{clone, result};
+
+use stage::contexts::generate_context;
+use stage::tasks::{self, prove_task, split_task};
+use stage_service::stage_service_server::StageService;
+// use stage_service::{Result};
+use stage_service::{GetStatusRequest, GetStatusResponse};
+use stage_service::{GenerateProofRequest, GenerateProofResponse};
+// use prover::contexts::{SplitContext, ProveContext};
+
+// use prover::pipeline::{self,Pipeline};
+
+use tonic::{Request, Response, Status};
+use tokio::sync::mpsc;
+use tokio::time;  
+use tokio::task;
+use std::fs;
+use std::fs::File;  
+use std::io::Write;
+use stage::tasks::Task;
+use uuid::Uuid; 
+
+use crate::prover_client;
+
+pub mod stage_service {
+    tonic::include_proto!("stage.v1");
+}
+
+#[derive(Debug,Default)]
+pub struct StageServiceSVC{
+}
+
+pub static BLOCK_NO: u64 = 12324343;
+pub static SEG_SIZE: u32 = 65536;
+
+#[tonic::async_trait]
+impl StageService for StageServiceSVC {
+    async fn get_status(
+        &self,
+        request: Request<GetStatusRequest>
+    ) -> tonic::Result<Response<GetStatusResponse>, Status> {
+        println!("{:#?}", request);
+        let mut response = stage_service::GetStatusResponse::default();
+        response.proof_id = String::from("");
+        Ok(Response::new(response))
+    }
+    
+    async fn generate_proof(
+        &self, 
+        request: Request<GenerateProofRequest>
+    ) -> tonic::Result<Response<GenerateProofResponse>, Status> {
+        println!("{:#?}", request);
+
+        let dir_path = format!("./proof/{}", request.get_ref().proof_id);
+        fs::create_dir_all(dir_path.clone())?;
+
+        let elf_path = format!("{}/elf", dir_path);
+        let mut file = File::create(elf_path.clone())?;
+        file.write_all(&request.get_ref().elf_data)?;
+
+        let bolck_path = format!("{}/block", dir_path);
+        let mut file = File::create(bolck_path)?;
+        file.write_all(&request.get_ref().block_data)?;
+
+        let seg_path = format!("{}/segment", dir_path);
+        fs::create_dir_all(seg_path.clone())?;
+
+        let prove_path = format!("{}/prove", dir_path);
+        fs::create_dir_all(prove_path.clone())?;
+
+        let agg_path = format!("{}/aggregate", dir_path);
+        fs::create_dir_all(agg_path.clone())?;
+
+        let generate_context = stage::contexts::GenerateContext::new(
+            &request.get_ref().proof_id,
+            &dir_path, 
+            &elf_path,
+            &seg_path,
+            &prove_path,
+            &agg_path,
+            BLOCK_NO, 
+            SEG_SIZE);
+        
+        let mut stage = stage::stage::Stage::new(generate_context);
+        let (tx , mut rx) = mpsc::channel(128);
+        stage.dispatch();
+        loop {
+            let split_task = stage.get_split_task();
+            if let Some(split_task) = split_task {
+                let tx = tx.clone();
+                tokio::spawn(async move {
+                    let response = prover_client::split(split_task).await;
+                    if let Some(split_task) = response {
+                        tx.send(Task::Split(split_task)).await.unwrap();
+                    }
+                });
+            }
+            let prove_task = stage.get_prove_task();
+            if let Some(prove_task) = prove_task {
+                let tx = tx.clone();
+                tokio::spawn(async move {
+                    let response = prover_client::prove(prove_task).await;
+                    if let Some(prove_task) = response {
+                        tx.send(Task::Prove(prove_task)).await.unwrap();
+                    }
+                });
+            }
+            let agg_task = stage.get_agg_task();
+            if let Some(agg_task) = agg_task {
+                let tx = tx.clone();
+                tokio::spawn(async move {
+                    let response = prover_client::aggregate(agg_task).await;
+                    if let Some(agg_task) = response {
+                        tx.send(Task::Agg(agg_task)).await.unwrap();
+                    }
+                });
+            }
+            let final_task = stage.get_final_task();
+            if let Some(final_task) = final_task {
+                let tx = tx.clone();
+                tokio::spawn(async move {
+                    let response = prover_client::aggregate_all(final_task).await;
+                    if let Some(final_task) = response {
+                        tx.send(Task::Final(final_task)).await.unwrap();
+                    }
+                });
+            }
+
+            tokio::select! {
+                task = rx.recv() => {
+                    if let Some(task) = task {
+                        match task {
+                            Task::Split(data) => {
+                                stage.on_split_task(data);
+                            },
+                            Task::Prove(data) => {
+                                stage.on_prove_task(data);
+                            },
+                            Task::Agg(data) => {
+                                stage.on_agg_task(data);
+                            },
+                            Task::Final(data) => {
+                                stage.on_final_task(data);
+                            },
+                        };
+                    }
+                },
+                () = time::sleep(time::Duration::from_secs(1)) => {
+                }
+            };
+            if stage.is_success() {
+                break;
+            }
+            stage.dispatch();
+        }
+        let mut response = stage_service::GenerateProofResponse::default();
+        response.proof_id = request.get_ref().proof_id.clone();
+        Ok(Response::new(response))
+    }
+}

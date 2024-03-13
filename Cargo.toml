@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "prover",
+  "stage",
   "service"
 ]
 
