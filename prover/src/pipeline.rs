@@ -19,91 +19,99 @@ impl Pipeline {
         }
     }
 
-    pub fn split_prove(&mut self, split_context: &SplitContext) -> Result<String> {
+    pub fn split_prove(&mut self, split_context: &SplitContext) -> bool {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => {
                 match SplitProver::new().prove(split_context) {
                     Ok(()) => {
-                        Ok(String::from("SUCCESS"))
+                        return true;
                     }
-                    Err(_) => {
-                        Ok(String::from("BUSY"))
+                    Err(e) => {
+                        print!("split_prove error {:#?}", e);
+                        return false;
                     }   
                 }
             }
             Err(_) => {
-                Ok(String::from("BUSY"))
+                print!("split_prove busy");
+                return false;
             }
         }
     }
 
-    pub fn root_prove(&mut self, prove_context: &ProveContext) -> Result<String> {
+    pub fn root_prove(&mut self, prove_context: &ProveContext) -> bool {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => {
                 match ProveProver::new().prove(prove_context) {
                     Ok(()) => {
-                        Ok(String::from("SUCCESS"))
+                        return true;
                     }
-                    Err(_) => {
-                        Ok(String::from("BUSY"))
+                    Err(e) => {
+                        print!("root_prove error {:#?}", e);
+                        return false;
                     }   
                 }
             }
-            Err(_) => {
-                Ok(String::from("BUSY"))
+            Err(e) => {
+                print!("root_prove busy");
+                return false;
             }
         }
     }
 
-    pub fn aggregate_prove(&mut self, agg_context: &AggContext) -> Result<String> {
+    pub fn aggregate_prove(&mut self, agg_context: &AggContext) -> bool {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => {
                 match AggProver::new().prove(agg_context) {
                     Ok(()) => {
-                        Ok(String::from("SUCCESS"))
+                        return true;
                     }
-                    Err(_) => {
-                        Ok(String::from("BUSY"))
+                    Err(e) => {
+                        print!("aggregate_prove error {:#?}", e);
+                        return false;
                     }   
                 }
             }
             Err(_) => {
-                Ok(String::from("BUSY"))
+                print!("aggregate_prove busy");
+                return false;
             }
         }
     }
 
-    pub fn final_prove(&mut self, final_context: &FinalContext) -> Result<String> {
+    pub fn final_prove(&mut self, final_context: &FinalContext) -> bool {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => {
                 match FinalProver::new().prove(final_context) {
                     Ok(()) => {
-                        Ok(String::from("SUCCESS"))
+                        return true;
                     }
-                    Err(_) => {
-                        Ok(String::from("BUSY"))
+                    Err(e) => {
+                        print!("final_prove error {:#?}", e);
+                        return false;
                     }   
                 }
             }
             Err(_) => {
-                Ok(String::from("BUSY"))
+                print!("final_prove busy");
+                return false;
             }
         }
     }
 
     /// Return prover status
-    pub fn get_status(&mut self) -> Result<(String)> {
+    pub fn get_status(&mut self) -> bool {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => {
-                Ok(String::from("IDLE"))
+                return true;
             }
             Err(_) => {
-                Ok(String::from("BUSY"))
+                return false;
             }
         }
     }

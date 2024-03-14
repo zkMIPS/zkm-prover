@@ -3,7 +3,7 @@ use std::result;
 
 use prover_service::prover_service_server::ProverService;
 use prover_service::{Result};
-use prover_service::{GetStatusRequest, GetStatusResponse};
+use prover_service::{get_status_response, GetStatusRequest, GetStatusResponse};
 use prover_service::{SplitElfRequest, SplitElfResponse};
 use prover_service::{ProveRequest, ProveResponse};
 use prover_service::{AggregateRequest, AggregateResponse};
@@ -31,18 +31,13 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
         println!("{:#?}", request);
 
-        let status= Pipeline::new().get_status();
-        match status {
-            Ok(mesage) => {
-                print!("SUCCESS")
-            }
-            _ => {
-                print!("FAILED")
-            }
-        };
-
-
         let mut response = prover_service::GetStatusResponse::default();
+        let success= Pipeline::new().get_status();
+        if success {
+            response.status = get_status_response::Status::Idle.into();
+        } else {
+            response.status = get_status_response::Status::Computing.into();
+        }
         response.last_computed_request_id = String::from("");
         Ok(Response::new(response))
     }
@@ -59,18 +54,14 @@ impl ProverService for ProverServiceSVC {
             request.get_ref().block_no, 
             request.get_ref().seg_size, 
             &request.get_ref().seg_path); 
-        let result = Pipeline::new().split_prove(&split_context);
+        let success = Pipeline::new().split_prove(&split_context);
         let mut response = prover_service::SplitElfResponse::default();
         response.proof_id = request.get_ref().proof_id.clone();
         response.computed_request_id = request.get_ref().computed_request_id.clone();
-        match result {
-            Ok(message) => {
-                response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: (message) });
-            }
-            Err(e) => {
-                let errmsg = format!("{:#?}", e);
-                response.result = Some(Result { code: (ResultCode::ResultError.into()), message: (errmsg) });
-            }
+        if success {
+            response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: ("SUCCESS".to_string()) });
+        } else {
+            response.result = Some(Result { code: (ResultCode::ResultError.into()), message: ("FAILED".to_string()) });
         }
         Ok(Response::new(response))
     }
@@ -88,18 +79,14 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().seg_path,
             &request.get_ref().proof_path,
             &request.get_ref().pub_value_path); 
-        let result = Pipeline::new().root_prove(&prove_context);
+        let success = Pipeline::new().root_prove(&prove_context);
         let mut response = prover_service::ProveResponse::default();
         response.proof_id = request.get_ref().proof_id.clone();
         response.computed_request_id = request.get_ref().computed_request_id.clone();
-        match result {
-            Ok(message) => {
-                response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: (message) });
-            }
-            Err(e) => {
-                let errmsg = format!("{:#?}", e);
-                response.result = Some(Result { code: (ResultCode::ResultError.into()), message: (errmsg) });
-            }
+        if success {
+            response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: ("SUCCESS".to_string()) });
+        } else {
+            response.result = Some(Result { code: (ResultCode::ResultError.into()), message: ("FAILED".to_string()) });
         }
         Ok(Response::new(response))
     }

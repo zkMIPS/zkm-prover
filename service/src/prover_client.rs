@@ -3,7 +3,7 @@ use std::result;
 
 use prover_service::prover_service_client::ProverServiceClient;
 use prover_service::{Result};
-use prover_service::{GetStatusRequest, GetStatusResponse};
+use prover_service::{get_status_response, GetStatusRequest, GetStatusResponse};
 use prover_service::{SplitElfRequest, SplitElfResponse};
 use prover_service::{ProveRequest, ProveResponse};
 use prover_service::{AggregateRequest, AggregateResponse};
@@ -45,12 +45,15 @@ pub async fn get_idle_client() -> Option<ProverServiceClient<Channel>> {
 pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
     let uri = format!("grpc://{}", addr).parse::<Uri>().unwrap();
     let endpoint = tonic::transport::Channel::builder(uri);
-    let mut client = ProverServiceClient::connect(endpoint).await.unwrap();  
-    let request = GetStatusRequest {};
-    let response = client.get_status(Request::new(request)).await.unwrap();
-    if response.get_ref().status == 0 {
-        return Some(client);
-    }  
+    let client = ProverServiceClient::connect(endpoint).await;
+    if let Ok(mut client) = client {
+        let request = GetStatusRequest {};
+        let response = client.get_status(Request::new(request)).await.unwrap();
+        let status = response.get_ref().status;
+        if status == 3 {
+            return Some(client);
+        }
+    }
     return None;
 }
 
@@ -65,12 +68,12 @@ pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
         request.seg_path = split_task.seg_path.clone();
         request.block_no = split_task.block_no;
         request.seg_size = split_task.seg_size;
-        print!("split request {:?}", request);
+        print!("split request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(300));
         let response = client.split_elf(grpc_request).await.unwrap();
         if let Some(response_result) = response.get_ref().result.as_ref() {
-            print!("split response {:?}", response);
+            print!("split response {:#?}", response);
             if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
                 split_task.state = TASK_STATE_SUCCESS;
                 return Some(split_task);
@@ -93,11 +96,12 @@ pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
         request.seg_size = prove_task.seg_size;
         request.proof_path = prove_task.prove_path.clone();
         request.pub_value_path = prove_task.pub_value_path.clone();
-        print!("prove request {:?}", request);
+        print!("prove request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(3000));
         let response = client.prove(grpc_request).await.unwrap();
         if let Some(response_result) = response.get_ref().result.as_ref() {
+            print!("prove response {:#?}", response);
             if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
                 prove_task.state = TASK_STATE_SUCCESS;
                 return Some(prove_task);
