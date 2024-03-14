@@ -10,7 +10,7 @@ plonky2 = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev" }
 starky = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev" }
 plonky2_util = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev" }
 plonky2_maybe_rayon = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev" }
-mips-circuits = { git = "https://github.com/zkMIPS/zkm.git", branch = "main" }
+zkm = { git = "https://github.com/zkMIPS/zkm.git", branch = "main" }
 
 tokio = { version = "1", features = ["full"] }
 backtrace = "0.3"
