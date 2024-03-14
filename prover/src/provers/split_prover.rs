@@ -7,8 +7,8 @@ use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;
 use std::fs;
 
-use mips_circuits::mips_emulator::state::{InstrumentedState, State, SEGMENT_STEPS};
-use mips_circuits::mips_emulator::utils::get_block_path;
+use zkm::mips_emulator::state::{InstrumentedState, State, SEGMENT_STEPS};
+use zkm::mips_emulator::utils::get_block_path;
 
 #[derive(Default)]
 pub struct SplitProver {}

@@ -14,11 +14,11 @@ use plonky2::util::timing::TimingTree;
 // use plonky2x::frontend::builder::CircuitBuilder as WrapperBuilder;
 
 
-use mips_circuits::all_stark::AllStark;
-use mips_circuits::config::StarkConfig;
-use mips_circuits::cpu::kernel::assembler::segment_kernel;
-use mips_circuits::fixed_recursive_verifier::AllRecursiveCircuits;
-use mips_circuits::mips_emulator::state::{InstrumentedState, State, SEGMENT_STEPS};
+use zkm::all_stark::AllStark;
+use zkm::config::StarkConfig;
+use zkm::cpu::kernel::assembler::segment_kernel;
+use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
+use zkm::mips_emulator::state::{InstrumentedState, State, SEGMENT_STEPS};
 
 use std::fs::File;  
 use std::io::Write;
