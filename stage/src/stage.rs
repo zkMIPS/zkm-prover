@@ -81,11 +81,14 @@ impl Stage {
     fn gen_split_task (&mut self) {
         assert!(self.split_task.state == TASK_STATE_INITIAL);
         self.split_task.proof_id = self.generate_context.proof_id.clone();
+        self.split_task.base_dir = self.generate_context.basedir.clone();
         self.split_task.elf_path = self.generate_context.elf_path.clone();
         self.split_task.seg_path = self.generate_context.seg_path.clone();
+        self.split_task.block_no = self.generate_context.block_no;
+        self.split_task.seg_size = self.generate_context.seg_size;
         self.split_task.task_id = uuid::Uuid::new_v4().to_string();
         self.split_task.state = TASK_STATE_UNPROCESSED;
-        print!("gen_split_task {:#?}", self.split_task);
+        print!("gen_split_task {:?}", self.split_task);
     }
 
     pub fn get_split_task(&mut self) -> Option<SplitTask> {
@@ -101,7 +104,7 @@ impl Stage {
         assert!(split_task.proof_id == self.split_task.proof_id);
         if split_task.state == TASK_STATE_FAILED || split_task.state == TASK_STATE_SUCCESS {
             self.split_task.state = split_task.state;
-            print!("on_split_task {:#?}", self.split_task);
+            print!("on_split_task {:?}", self.split_task);
         }
     }
 
@@ -114,13 +117,17 @@ impl Stage {
             let file_name = path.file_name().unwrap().to_str().unwrap(); 
             let mut prove_task = ProveTask::default();
             prove_task.task_id = uuid::Uuid::new_v4().to_string();
-            prove_task.proof_id = self.generate_context.proof_id.clone(); 
-            prove_task.prove_path = self.generate_context.prove_path.clone();
-            prove_task.seg_path = file_name.to_string();
+            prove_task.base_dir = self.generate_context.basedir.clone();
+            prove_task.block_no = self.generate_context.block_no;
+            prove_task.seg_size = self.generate_context.seg_size;
+            prove_task.proof_id = self.generate_context.proof_id.clone();
+            prove_task.prove_path = format!("{}/prove_{}", self.generate_context.prove_path.clone(), prove_task.task_id);
+            prove_task.pub_value_path = format!("{}/pub_value_{}", self.generate_context.prove_path.clone(), prove_task.task_id);
+            prove_task.seg_path = format!("{}/{}",self.generate_context.seg_path, file_name.to_string());
             prove_task.state = TASK_STATE_UNPROCESSED;
             self.prove_tasks.push(prove_task);
         }
-        print!("gen_prove_task {:#?}", self.prove_tasks);
+        print!("gen_prove_task {:?}", self.prove_tasks);
     }
 
     pub fn get_prove_task(&mut self) -> Option<ProveTask> {
@@ -137,7 +144,7 @@ impl Stage {
     pub fn on_prove_task(&mut self, prove_task: ProveTask) {
         assert!(prove_task.proof_id == self.generate_context.proof_id);
         if prove_task.state == TASK_STATE_FAILED || prove_task.state == TASK_STATE_SUCCESS {
-            print!("on_split_task {:#?}", prove_task);
+            print!("on_split_task {:?}", prove_task);
             for item_task in &mut self.prove_tasks {
                 if item_task.task_id == prove_task.task_id && item_task.state == TASK_STATE_PROCESSING {
                     item_task.state = prove_task.state;
@@ -162,7 +169,7 @@ impl Stage {
             agg_task.state = TASK_STATE_UNPROCESSED;
             self.agg_tasks.push(agg_task);
         }
-        print!("gen_agg_task {:#?}", self.agg_tasks);
+        print!("gen_agg_task {:?}", self.agg_tasks);
     }
 
     pub fn get_agg_task(&mut self) -> Option<AggTask> {

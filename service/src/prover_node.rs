@@ -18,18 +18,18 @@ pub static ACTIVE_TIMEOUT: u64 = 10;
 
 #[derive(Debug, Clone)]
 pub struct ProverNode {
-    pub ip: String,
-    pub port: u16,
+    pub addr: String,
+    // pub ip: String,
+    // pub port: u16,
     pub state: u32,
     pub last_updated: u64,
     // client
 }
 
 impl ProverNode {
-    pub fn new(ip: &String, port: u16) -> Self {
+    pub fn new(addr: &String) -> Self {
         let prover_node = ProverNode {
-            ip: ip.to_string(),
-            port,
+            addr: addr.to_string(),
             state: UNKNOW,
             last_updated: 0,
         };
@@ -71,8 +71,8 @@ impl ProverNodes {
             prover_nodes: Vec::new(),
         }
     }
-    pub fn set_nodes(&mut self, nodes: Vec<ProverNode>) {  
-        self.prover_nodes = nodes;
+    pub fn add_node(&mut self, node: ProverNode) {  
+        self.prover_nodes.push(node);
     }  
   
     pub fn get_nodes(&self) -> Vec<ProverNode> {  

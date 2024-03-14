@@ -23,6 +23,7 @@ use stage::tasks::Task;
 use uuid::Uuid; 
 
 use crate::prover_client;
+use crate::config;
 
 pub mod stage_service {
     tonic::include_proto!("stage.v1");
@@ -32,16 +33,13 @@ pub mod stage_service {
 pub struct StageServiceSVC{
 }
 
-pub static BLOCK_NO: u64 = 12324343;
-pub static SEG_SIZE: u32 = 65536;
-
 #[tonic::async_trait]
 impl StageService for StageServiceSVC {
     async fn get_status(
         &self,
         request: Request<GetStatusRequest>
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
-        println!("{:#?}", request);
+        println!("{:?}", request);
         let mut response = stage_service::GetStatusResponse::default();
         response.proof_id = String::from("");
         Ok(Response::new(response))
@@ -51,9 +49,9 @@ impl StageService for StageServiceSVC {
         &self, 
         request: Request<GenerateProofRequest>
     ) -> tonic::Result<Response<GenerateProofResponse>, Status> {
-        println!("{:#?}", request);
-
-        let dir_path = format!("./proof/{}", request.get_ref().proof_id);
+        println!("{:?}", request.get_ref().proof_id);
+        let base_dir = config::instance().lock().unwrap().base_dir.clone(); 
+        let dir_path = format!("{}/proof/{}", base_dir, request.get_ref().proof_id);
         fs::create_dir_all(dir_path.clone())?;
 
         let elf_path = format!("{}/elf", dir_path);
@@ -80,8 +78,8 @@ impl StageService for StageServiceSVC {
             &seg_path,
             &prove_path,
             &agg_path,
-            BLOCK_NO, 
-            SEG_SIZE);
+            request.get_ref().block_no, 
+            request.get_ref().seg_size);
         
         let mut stage = stage::stage::Stage::new(generate_context);
         let (tx , mut rx) = mpsc::channel(128);
