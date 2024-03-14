@@ -56,6 +56,8 @@ impl Stage {
                 self.gen_prove_task();
                 return;
             }
+        } else {
+            return;
         }
         let mut all_prove_task_success = true;
         for prove_task in &self.prove_tasks {
