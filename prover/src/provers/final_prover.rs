@@ -55,15 +55,8 @@ impl Prover<FinalContext> for FinalProver {
         const D: usize = 2;
         type C = PoseidonGoldilocksConfig;
 
-        let basedir = ctx.basedir.clone();
-        let block_no = ctx.block_no.to_string();
-        let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
-        let proof_path1 = ctx.proof_path1.clone();
-        let proof_path2 = ctx.proof_path2.clone();
-        let pub_value_path1 = ctx.pub_value_path1.clone();
-        let pub_value_path2 = ctx.pub_value_path2.clone();
-        let is_agg_1 = ctx.is_agg_1;
-        let is_agg_2 = ctx.is_agg_2;
+        let proof_path = ctx.proof_path.clone();
+        let pub_value_path = ctx.pub_value_path.clone();
         let output_dir = ctx.output_dir.clone();
         let file = String::from("");
         let args = "".to_string();
@@ -78,38 +71,14 @@ impl Prover<FinalContext> for FinalProver {
             &config,
         );
 
-        let root_proof_content = read_file_content(&proof_path1)?;  
+        let root_proof_content = read_file_content(&proof_path)?;  
         let root_proof: ProofWithPublicInputs<F, C, D> = serde_json::from_str(&root_proof_content)?;
 
-        let next_proof_content = read_file_content(&proof_path2)?;  
-        let next_proof: ProofWithPublicInputs<F, C, D> = serde_json::from_str(&next_proof_content)?;
-
-        let root_pub_value_content = read_file_content(&pub_value_path1)?;
+        let root_pub_value_content = read_file_content(&pub_value_path)?;
         let root_pub_value: PublicValues =  serde_json::from_str(&root_pub_value_content)?;
 
-        let next_pub_value_content = read_file_content(&pub_value_path2)?;
-        let next_pub_value: PublicValues =  serde_json::from_str(&next_pub_value_content)?;
-
-        let mut timing = TimingTree::new("agg first", log::Level::Info);
-        // Update public values for the aggregation.
-        let agg_public_values = PublicValues {
-            roots_before: root_pub_value.roots_before,
-            roots_after: next_pub_value.roots_after,
-        };
-        timing = TimingTree::new("prove aggression", log::Level::Info);
-        // We can duplicate the proofs here because the state hasn't mutated.
-        let (agg_proof, updated_agg_public_values) = all_circuits.prove_aggregation(
-            is_agg_1,
-            &next_proof,
-            is_agg_2,
-            &root_proof,
-            agg_public_values.clone(),
-        )?;
-        timing.filter(Duration::from_millis(100)).print();
-        all_circuits.verify_aggregation(&agg_proof)?;
-
         let (block_proof, _block_public_values) =
-        all_circuits.prove_block(None, &agg_proof, updated_agg_public_values)?;
+        all_circuits.prove_block(None, &root_proof, root_pub_value)?;
 
         log::info!(
             "proof size: {:?}",

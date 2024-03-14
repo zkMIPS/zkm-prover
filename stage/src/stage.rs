@@ -27,6 +27,15 @@ pub fn get_timestamp() -> u64 {
     duration_since_epoch.as_secs()
 }
 
+pub fn copy_file_bin(src: &String, dst: &String) {
+    let mut file_src = File::open(src).unwrap();
+    let mut content = Vec::new();  
+    file_src.read_to_end(&mut content).unwrap();
+
+    let mut file_dst = File::open(dst).unwrap();
+    file_dst.write_all(content.as_slice()).unwrap(); 
+}
+
 pub struct Stage {
     pub generate_context: GenerateContext,
     pub split_task: SplitTask,
