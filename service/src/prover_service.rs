@@ -8,7 +8,7 @@ use prover_service::{SplitElfRequest, SplitElfResponse};
 use prover_service::{ProveRequest, ProveResponse};
 use prover_service::{AggregateRequest, AggregateResponse};
 use prover_service::{AggregateAllRequest, AggregateAllResponse};
-use prover::contexts::{SplitContext, ProveContext, AggContext, FinalContext};
+use prover::contexts::{agg_context, AggContext, FinalContext, ProveContext, SplitContext};
 
 use prover::pipeline::{self,Pipeline};
 
@@ -96,8 +96,28 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateRequest>
     ) -> tonic::Result<Response<AggregateResponse>, Status> {
         println!("{:#?}", request);
+        let agg_context = AggContext::new(
+            &request.get_ref().base_dir,
+            request.get_ref().block_no, 
+            request.get_ref().seg_size, 
+            &request.get_ref().proof_path1, 
+            &request.get_ref().proof_path2,
+            &request.get_ref().pub_value_path1, 
+            &request.get_ref().pub_value_path2,
+            request.get_ref().is_agg_1, 
+            request.get_ref().is_agg_2, 
+            &request.get_ref().agg_proof_path, 
+            &request.get_ref().agg_pub_value_path);
+
+        let success = Pipeline::new().aggregate_prove(&agg_context);
         let mut response = prover_service::AggregateResponse::default();
+        response.proof_id = request.get_ref().proof_id.clone();
         response.computed_request_id = request.get_ref().computed_request_id.clone();
+        if success {
+            response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: ("SUCCESS".to_string()) });
+        } else {
+            response.result = Some(Result { code: (ResultCode::ResultError.into()), message: ("FAILED".to_string()) });
+        }
         Ok(Response::new(response))
     }
 
@@ -106,9 +126,28 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateAllRequest>
     ) -> tonic::Result<Response<AggregateAllResponse>, Status> {
         println!("{:#?}", request);
-        let mut response = prover_service::AggregateAllResponse::default();
-        response.computed_request_id = request.get_ref().computed_request_id.clone();
-        Ok(Response::new(response))
+        let final_context = FinalContext::new(
+            &request.get_ref().base_dir,
+            request.get_ref().block_no, 
+            request.get_ref().seg_size, 
+            &request.get_ref().proof_path1, 
+            &request.get_ref().proof_path2,
+            &request.get_ref().pub_value_path1, 
+            &request.get_ref().pub_value_path2,
+            request.get_ref().is_agg_1, 
+            request.get_ref().is_agg_2, 
+            &request.get_ref().output_dir);
+        
+            let success = Pipeline::new().final_prove(&final_context);
+            let mut response = prover_service::AggregateAllResponse::default();
+            response.proof_id = request.get_ref().proof_id.clone();
+            response.computed_request_id = request.get_ref().computed_request_id.clone();
+            if success {
+                response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: ("SUCCESS".to_string()) });
+            } else {
+                response.result = Some(Result { code: (ResultCode::ResultError.into()), message: ("FAILED".to_string()) });
+            }
+            Ok(Response::new(response))
     }
 
 }

@@ -33,8 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             nodes_data.add_node(ProverNode::new(&node));
         }
     }
-    let mut prover = prover_service::ProverServiceSVC::default();
-    let mut stage = stage_service::StageServiceSVC::default();
+    let prover = prover_service::ProverServiceSVC::default();
+    let stage = stage_service::StageServiceSVC::default();
     Server::builder()
         .add_service(ProverServiceServer::new(prover))
         .add_service(StageServiceServer::new(stage))

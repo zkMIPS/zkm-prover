@@ -139,8 +139,10 @@ message AggregateRequest {
     string proof_path2 = 10;
     string pub_value_path1 = 11;
     string pub_value_path2 = 12;
-    string agg_proof_path = 13;
-    string agg_pub_value_path = 14;
+    bool is_agg_1 = 13;
+    bool is_agg_2 = 14;
+    string agg_proof_path = 15;
+    string agg_pub_value_path = 16;
 }
 
 /**
@@ -173,8 +175,9 @@ message AggregateAllRequest {
     string proof_path2 = 10;
     string pub_value_path1 = 11;
     string pub_value_path2 = 12;
-    string agg_proof_path = 13;
-    string agg_pub_value_path = 14;
+    bool is_agg_1 = 13;
+    bool is_agg_2 = 14;
+    string output_dir = 15;
 }
 
 /**
@@ -183,13 +186,14 @@ message AggregateAllRequest {
  * @param {result} - request result
  */
 message AggregateAllResponse {
-    string computed_request_id = 1;
+    string proof_id = 1;
+    string computed_request_id = 2;
     oneof proof {
-        FinalProof final_proof = 2;
-        string recursive_proof =3;
+        FinalProof final_proof = 3;
+        string recursive_proof =4;
     }
-    Result result = 4;
-    string result_string = 5;
+    Result result = 5;
+    string result_string = 6;
 }
 
 /*

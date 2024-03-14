@@ -9,6 +9,8 @@ pub struct FinalContext {
     pub proof_path2: String,
     pub pub_value_path1: String,
     pub pub_value_path2: String,
+    pub is_agg_1: bool,
+    pub is_agg_2: bool,
     pub output_dir: String,
 }
 
@@ -21,6 +23,8 @@ impl FinalContext {
         proof_path2: &String,
         pub_value_path1: &String,
         pub_value_path2: &String,
+        is_agg_1: bool,
+        is_agg_2: bool,
         output_dir: &String,
     ) -> Self {
         FinalContext {
@@ -31,6 +35,8 @@ impl FinalContext {
             proof_path2: proof_path2.to_string(),
             pub_value_path1: pub_value_path1.to_string(),
             pub_value_path2: pub_value_path2.to_string(),
+            is_agg_1,
+            is_agg_2,
             output_dir: output_dir.to_string(),
         }
     }

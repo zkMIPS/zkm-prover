@@ -102,9 +102,11 @@ impl Stage {
 
     pub fn on_split_task(&mut self, split_task: SplitTask) {
         assert!(split_task.proof_id == self.split_task.proof_id);
-        if split_task.state == TASK_STATE_FAILED || split_task.state == TASK_STATE_SUCCESS {
+        if split_task.state == TASK_STATE_FAILED || split_task.state == TASK_STATE_SUCCESS || split_task.state == TASK_STATE_UNPROCESSED{
             self.split_task.state = split_task.state;
-            print!("on_split_task {:#?}", self.split_task);
+            if TASK_STATE_UNPROCESSED != split_task.state {
+                print!("on_split_task {:#?}", self.split_task);
+            }
         }
     }
 
@@ -143,8 +145,10 @@ impl Stage {
 
     pub fn on_prove_task(&mut self, prove_task: ProveTask) {
         assert!(prove_task.proof_id == self.generate_context.proof_id);
-        if prove_task.state == TASK_STATE_FAILED || prove_task.state == TASK_STATE_SUCCESS {
-            print!("on_prove_task {:#?}", prove_task);
+        if prove_task.state == TASK_STATE_FAILED || prove_task.state == TASK_STATE_SUCCESS || prove_task.state == TASK_STATE_UNPROCESSED {
+            if TASK_STATE_UNPROCESSED != prove_task.state {
+                print!("on_prove_task {:#?}", prove_task);
+            }
             for item_task in &mut self.prove_tasks {
                 if item_task.task_id == prove_task.task_id && item_task.state == TASK_STATE_PROCESSING {
                     item_task.state = prove_task.state;
@@ -164,7 +168,7 @@ impl Stage {
             let mut agg_task = AggTask::default();
             agg_task.task_id = uuid::Uuid::new_v4().to_string();
             agg_task.proof_id = self.generate_context.proof_id.clone(); 
-            agg_task.elf_path = self.generate_context.prove_path.clone();
+            //agg_task.elf_path = self.generate_context.prove_path.clone();
             agg_task.seg_path = file_name.to_string();
             agg_task.state = TASK_STATE_UNPROCESSED;
             self.agg_tasks.push(agg_task);

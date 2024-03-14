@@ -9,6 +9,8 @@ pub struct AggContext {
     pub proof_path2: String,
     pub pub_value_path1: String,
     pub pub_value_path2: String,
+    pub is_agg_1: bool,
+    pub is_agg_2: bool,
     pub agg_proof_path: String,
     pub agg_pub_value_path: String,
 }
@@ -22,6 +24,8 @@ impl AggContext {
         proof_path2: &String,
         pub_value_path1: &String,
         pub_value_path2: &String,
+        is_agg_1: bool,
+        is_agg_2: bool,
         agg_proof_path: &String,
         agg_pub_value_path: &String,
     ) -> Self {
@@ -33,6 +37,8 @@ impl AggContext {
             proof_path2: proof_path2.to_string(),
             pub_value_path1: pub_value_path1.to_string(),
             pub_value_path2: pub_value_path2.to_string(),
+            is_agg_1,
+            is_agg_2,
             agg_proof_path: agg_proof_path.to_string(),
             agg_pub_value_path: agg_pub_value_path.to_string(),
         }

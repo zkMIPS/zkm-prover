@@ -53,6 +53,8 @@ impl Prover<AggContext> for AggProver {
         let pub_value_path2 = ctx.pub_value_path2.clone();
         let agg_proof_path = ctx.agg_proof_path.clone();
         let agg_pub_value_path = ctx.agg_pub_value_path.clone();
+        let is_agg1 = ctx.is_agg_1;
+        let is_agg2 = ctx.is_agg_2;
         let file = String::from("");
         let args = "".to_string();
 
@@ -87,9 +89,9 @@ impl Prover<AggContext> for AggProver {
         timing = TimingTree::new("prove aggression", log::Level::Info);
         // We can duplicate the proofs here because the state hasn't mutated.
         let (agg_proof, updated_agg_public_values) = all_circuits.prove_aggregation(
-            false,
+            is_agg1,
             &next_proof,
-            false,
+            is_agg2,
             &root_proof,
             agg_public_values.clone(),
         )?;
