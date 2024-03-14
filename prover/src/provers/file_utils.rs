@@ -8,3 +8,10 @@ pub fn read_file_content(path: &String) -> anyhow::Result<String> {
     file_root.read_to_string(&mut content)?;
     return Ok(content)  
 }
+
+pub fn read_file_bin(path: &String) -> anyhow::Result<Vec<u8>> {
+    let mut file_root = File::open(path)?;
+    let mut content = Vec::new();  
+    file_root.read_to_end(&mut content)?;
+    return Ok(content) 
+}

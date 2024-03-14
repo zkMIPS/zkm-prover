@@ -5,6 +5,8 @@ mod prove_prover;
 pub use prove_prover::ProveProver;
 
 mod file_utils;
+pub use file_utils::read_file_content;
+pub use file_utils::read_file_bin;
 
 mod agg_prover;
 pub use agg_prover::AggProver;
