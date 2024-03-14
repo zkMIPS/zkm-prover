@@ -3,6 +3,7 @@ use crate::contexts::FinalContext;
 
 use bincode::Error;
 use elf::{endian::AnyEndian, ElfBytes};
+use ethers::types::transaction::request;
 use num::ToPrimitive;
 use serde::Serialize;
 use uuid::timestamp::context;
@@ -61,6 +62,8 @@ impl Prover<FinalContext> for FinalProver {
         let proof_path2 = ctx.proof_path2.clone();
         let pub_value_path1 = ctx.pub_value_path1.clone();
         let pub_value_path2 = ctx.pub_value_path2.clone();
+        let is_agg_1 = ctx.is_agg_1;
+        let is_agg_2 = ctx.is_agg_2;
         let output_dir = ctx.output_dir.clone();
         let file = String::from("");
         let args = "".to_string();
@@ -96,9 +99,9 @@ impl Prover<FinalContext> for FinalProver {
         timing = TimingTree::new("prove aggression", log::Level::Info);
         // We can duplicate the proofs here because the state hasn't mutated.
         let (agg_proof, updated_agg_public_values) = all_circuits.prove_aggregation(
-            false,
+            is_agg_1,
             &next_proof,
-            false,
+            is_agg_2,
             &root_proof,
             agg_public_values.clone(),
         )?;

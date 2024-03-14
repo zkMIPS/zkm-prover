@@ -134,6 +134,9 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
                 return Some(split_task);
             }
         }
+        split_task.state = TASK_STATE_FAILED;
+    } else {
+        split_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(split_task)
@@ -166,6 +169,9 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
                 return Some(prove_task);
             }
         }
+        prove_task.state = TASK_STATE_FAILED;
+    } else {
+        prove_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(prove_task)
@@ -203,6 +209,9 @@ pub async fn aggregate_all(
                 return Some(agg_all_task);
             }
         }
+        agg_task.state = TASK_STATE_FAILED;
+    } else {
+        agg_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(agg_all_task)
