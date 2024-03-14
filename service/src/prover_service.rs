@@ -130,12 +130,8 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().base_dir,
             request.get_ref().block_no, 
             request.get_ref().seg_size, 
-            &request.get_ref().proof_path1, 
-            &request.get_ref().proof_path2,
-            &request.get_ref().pub_value_path1, 
-            &request.get_ref().pub_value_path2,
-            request.get_ref().is_agg_1, 
-            request.get_ref().is_agg_2, 
+            &request.get_ref().proof_path, 
+            &request.get_ref().pub_value_path, 
             &request.get_ref().output_dir);
         
             let success = Pipeline::new().final_prove(&final_context);

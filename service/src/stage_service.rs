@@ -74,6 +74,9 @@ impl StageService for StageServiceSVC {
         let agg_path = format!("{}/aggregate", dir_path);
         fs::create_dir_all(agg_path.clone())?;
 
+        let final_path = format!("{}/final", dir_path);
+        fs::create_dir_all(final_path.clone())?;
+
         let generate_context = stage::contexts::GenerateContext::new(
             &request.get_ref().proof_id,
             &dir_path, 
@@ -81,6 +84,7 @@ impl StageService for StageServiceSVC {
             &seg_path,
             &prove_path,
             &agg_path,
+            &final_path,
             request.get_ref().block_no, 
             request.get_ref().seg_size);
         

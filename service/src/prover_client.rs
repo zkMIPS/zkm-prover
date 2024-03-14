@@ -170,12 +170,8 @@ pub async fn aggregate_all(mut final_task: FinalTask) -> Option<FinalTask> {
         request.base_dir = final_task.base_dir.clone();
         request.block_no = final_task.block_no;
         request.seg_size = final_task.seg_size;
-        request.proof_path1 = final_task.proof_path1.clone();
-        request.pub_value_path1 = final_task.pub_value_path1.clone();
-        request.proof_path2 = final_task.proof_path2.clone();
-        request.pub_value_path2 = final_task.pub_value_path2.clone();
-        request.is_agg_1 = final_task.is_agg_1;
-        request.is_agg_2 = final_task.is_agg_2;
+        request.proof_path = final_task.proof_path.clone();
+        request.pub_value_path = final_task.pub_value_path.clone();
         request.output_dir = final_task.out_path.clone();
 
         print!("aggregate_all request {:#?}", request);

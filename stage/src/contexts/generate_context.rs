@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::tasks::final_task;
+
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct GenerateContext {
     pub proof_id: String,
@@ -8,6 +10,7 @@ pub struct GenerateContext {
     pub seg_path: String,
     pub prove_path: String,
     pub agg_path: String,
+    pub final_path: String,
     pub block_no: u64,
     pub seg_size: u32,
     
@@ -21,6 +24,7 @@ impl GenerateContext {
         seg_path: &str,
         prove_path: &str,
         agg_path: &str,
+        final_path: &str,
         block_no: u64,
         seg_size: u32,
     ) -> Self {
@@ -32,6 +36,7 @@ impl GenerateContext {
             seg_path: seg_path.to_string(),
             prove_path: prove_path.to_string(),
             agg_path: agg_path.to_string(),
+            final_path: final_path.to_string(),
             block_no,
             seg_size,
         }

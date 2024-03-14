@@ -17,6 +17,7 @@ pub struct AggTask {
     pub agg_proof_path: String,
     pub agg_pub_value_path: String,
     pub seg_path: String,
+    pub task_seq: usize,
 }
 
 impl Clone for AggTask {
@@ -37,6 +38,7 @@ impl Clone for AggTask {
             agg_proof_path: self.agg_proof_path.clone(),
             agg_pub_value_path: self.agg_pub_value_path.clone(),
             seg_path: self.seg_path.clone(),
+            task_seq: self.task_seq,
         }  
     }  
 }
