@@ -259,9 +259,9 @@ pub async fn final_proof(
                 }
             }
         }
-        final_task.state = TASK_STATE_FAILED;
+        agg_all_task.state = TASK_STATE_FAILED;
     } else {
-        final_task.state = TASK_STATE_UNPROCESSED;
+        agg_all_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(final_task)

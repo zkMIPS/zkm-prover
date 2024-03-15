@@ -116,7 +116,8 @@ impl Stage {
     }
 
     pub fn is_success(&mut self) -> bool {
-        if self.final_task.state == TASK_STATE_SUCCESS {
+        // TODO
+        if self.agg_all_task.state == TASK_STATE_SUCCESS {
             return true;
         }
         false
