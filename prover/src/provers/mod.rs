@@ -11,8 +11,8 @@ pub use file_utils::read_file_bin;
 mod agg_prover;
 pub use agg_prover::AggProver;
 
-mod final_prover;
-pub use final_prover::FinalProver;
+mod agg_all_prover;
+pub use agg_all_prover::AggAllProver;
 
 use anyhow::Result;
 

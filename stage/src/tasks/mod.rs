@@ -12,7 +12,7 @@ pub mod prove_task;
 pub use prove_task::ProveTask;
 
 pub mod agg_task;
-pub use agg_task::AggTask;
+pub use agg_task::AggAllTask;
 
 pub mod final_task;
 pub use final_task::FinalTask;
@@ -20,6 +20,6 @@ pub use final_task::FinalTask;
 pub enum Task {
     Split(SplitTask),
     Prove(ProveTask),
-    Agg(AggTask),
+    Agg(AggAllTask),
     Final(FinalTask),
 }

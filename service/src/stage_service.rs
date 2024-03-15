@@ -71,6 +71,12 @@ impl StageService for StageServiceSVC {
         let prove_path = format!("{}/prove", dir_path);
         fs::create_dir_all(prove_path.clone())?;
 
+        let prove_proof_path = format!("{}/proof", prove_path);
+        fs::create_dir_all(prove_proof_path.clone())?;
+
+        let prove_pub_value_path = format!("{}/pub_value", prove_path);
+        fs::create_dir_all(prove_pub_value_path.clone())?;
+
         let agg_path = format!("{}/aggregate", dir_path);
         fs::create_dir_all(agg_path.clone())?;
 
@@ -112,11 +118,11 @@ impl StageService for StageServiceSVC {
                     }
                 });
             }
-            let agg_task = stage.get_agg_task();
+            let agg_task = stage.get_agg_all_task();
             if let Some(agg_task) = agg_task {
                 let tx = tx.clone();
                 tokio::spawn(async move {
-                    let response = prover_client::aggregate(agg_task).await;
+                    let response = prover_client::aggregate_all(agg_task).await;
                     if let Some(agg_task) = response {
                         tx.send(Task::Agg(agg_task)).await.unwrap();
                     }
@@ -126,7 +132,7 @@ impl StageService for StageServiceSVC {
             if let Some(final_task) = final_task {
                 let tx = tx.clone();
                 tokio::spawn(async move {
-                    let response = prover_client::aggregate_all(final_task).await;
+                    let response = prover_client::final_proof(final_task).await;
                     if let Some(final_task) = response {
                         tx.send(Task::Final(final_task)).await.unwrap();
                     }
@@ -144,7 +150,7 @@ impl StageService for StageServiceSVC {
                                 stage.on_prove_task(data);
                             },
                             Task::Agg(data) => {
-                                stage.on_agg_task(data);
+                                stage.on_agg_all_task(data);
                             },
                             Task::Final(data) => {
                                 stage.on_final_task(data);

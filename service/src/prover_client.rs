@@ -12,7 +12,7 @@ use prover_service::{AggregateAllRequest, AggregateAllResponse};
 use prover::pipeline::{self,Pipeline};
 
 use tonic::{client, Request, Response, Status};
-use stage::tasks::{AggTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED};
+use stage::tasks::{AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED};
 
 use self::prover_service::ResultCode;
 use tonic::transport::{Uri}; 
@@ -122,74 +122,68 @@ pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
     Some(prove_task)
 }
 
-pub async fn aggregate(mut agg_task: AggTask) -> Option<AggTask> {
-    let client = get_idle_client().await;  
-    if let Some(mut client) = client {
-        let mut request = AggregateRequest::default();
-        request.proof_id = agg_task.proof_id.clone();
-        request.computed_request_id = agg_task.task_id.clone();
-        request.base_dir = agg_task.base_dir.clone();
-        request.seg_path = agg_task.seg_path.clone();
-        request.block_no = agg_task.block_no;
-        request.seg_size = agg_task.seg_size;
-        request.proof_path1 = agg_task.proof_path1.clone();
-        request.pub_value_path1 = agg_task.pub_value_path1.clone();
-        request.proof_path2 = agg_task.proof_path2.clone();
-        request.pub_value_path2 = agg_task.pub_value_path2.clone();
-        request.is_agg_1 = agg_task.is_agg_1;
-        request.is_agg_2 = agg_task.is_agg_2;
-        request.agg_proof_path = agg_task.agg_proof_path.clone();
-        request.agg_pub_value_path = agg_task.agg_pub_value_path.clone();
-
-        print!("aggregate request {:#?}", request);
-        let mut grpc_request = Request::new(request);
-        grpc_request.set_timeout(Duration::from_secs(3000));
-        let response = client.aggregate(grpc_request).await;
-        if let Ok(response) = response {
-            if let Some(response_result) = response.get_ref().result.as_ref() {
-                print!("aggregate response {:#?}", response);
-                if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
-                    agg_task.state = TASK_STATE_SUCCESS;
-                    return Some(agg_task);
-                }
-            }
-        }
-        agg_task.state = TASK_STATE_FAILED;
-    } else {
-        agg_task.state = TASK_STATE_UNPROCESSED;
-    }
-    Some(agg_task)
-}
-
-pub async fn aggregate_all(mut final_task: FinalTask) -> Option<FinalTask> {
+pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
     let client = get_idle_client().await;  
     if let Some(mut client) = client {
         let mut request = AggregateAllRequest::default();
-        request.proof_id = final_task.proof_id.clone();
-        request.computed_request_id = final_task.task_id.clone();
-        request.base_dir = final_task.base_dir.clone();
-        request.block_no = final_task.block_no;
-        request.seg_size = final_task.seg_size;
-        request.proof_path = final_task.proof_path.clone();
-        request.pub_value_path = final_task.pub_value_path.clone();
-        request.output_dir = final_task.out_path.clone();
+        request.proof_id = agg_all_task.proof_id.clone();
+        request.computed_request_id = agg_all_task.task_id.clone();
+        request.base_dir = agg_all_task.base_dir.clone();
+        request.block_no = agg_all_task.block_no;
+        request.seg_size = agg_all_task.seg_size;
+        request.proof_num = agg_all_task.proof_num;
+        request.proof_dir = agg_all_task.proof_dir.clone();
+        request.pub_value_dir = agg_all_task.pub_value_dir.clone();
+        request.output_dir = agg_all_task.output_dir.clone();
 
-        print!("aggregate_all request {:#?}", request);
+        print!("aggregate request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(3000));
         let response = client.aggregate_all(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                print!("aggregate_all response {:#?}", response);
+                print!("aggregate response {:#?}", response);
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
-                    final_task.state = TASK_STATE_SUCCESS;
-                    return Some(final_task);
+                    agg_all_task.state = TASK_STATE_SUCCESS;
+                    return Some(agg_all_task);
                 }
             }
         }
-        final_task.state = TASK_STATE_FAILED;
+        agg_all_task.state = TASK_STATE_FAILED;
     } else {
-        final_task.state = TASK_STATE_UNPROCESSED;
+        agg_all_task.state = TASK_STATE_UNPROCESSED;
     }
+    Some(agg_all_task)
+}
+
+pub async fn final_proof(mut final_task: FinalTask) -> Option<FinalTask> {
+    // let client = get_idle_client().await;  
+    // if let Some(mut client) = client {
+    //     let mut request = AggregateAllRequest::default();
+    //     request.proof_id = final_task.proof_id.clone();
+    //     request.computed_request_id = final_task.task_id.clone();
+    //     request.base_dir = final_task.base_dir.clone();
+    //     request.block_no = final_task.block_no;
+    //     request.seg_size = final_task.seg_size;
+    //     request.pub_value_dir = final_task.pub_value_path.clone();
+    //     request.output_dir = final_task.out_path.clone();
+
+    //     print!("aggregate_all request {:#?}", request);
+    //     let mut grpc_request = Request::new(request);
+    //     grpc_request.set_timeout(Duration::from_secs(3000));
+    //     let response = client.aggregate_all(grpc_request).await;
+    //     if let Ok(response) = response {
+    //         if let Some(response_result) = response.get_ref().result.as_ref() {
+    //             print!("aggregate_all response {:#?}", response);
+    //             if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
+    //                 final_task.state = TASK_STATE_SUCCESS;
+    //                 return Some(final_task);
+    //             }
+    //         }
+    //     }
+    //     final_task.state = TASK_STATE_FAILED;
+    // } else {
+    //     final_task.state = TASK_STATE_UNPROCESSED;
+    // }
     Some(final_task)
 }

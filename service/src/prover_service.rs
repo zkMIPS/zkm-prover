@@ -10,7 +10,7 @@ use prover_service::{ProveRequest, ProveResponse};
 use prover_service::{AggregateRequest, AggregateResponse};
 use prover_service::{AggregateAllRequest, AggregateAllResponse};
 use prover_service::{FinalProofRequest, FinalProofResponse};
-use prover::contexts::{agg_context, AggContext, FinalContext, ProveContext, SplitContext};
+use prover::contexts::{agg_context, AggContext, AggAllContext, ProveContext, SplitContext};
 
 use prover::pipeline::{self,Pipeline};
 
@@ -137,15 +137,16 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateAllRequest>
     ) -> tonic::Result<Response<AggregateAllResponse>, Status> {
         println!("{:#?}", request);
-        let final_context = FinalContext::new(
+        let final_context = AggAllContext::new(
             &request.get_ref().base_dir,
             request.get_ref().block_no, 
             request.get_ref().seg_size, 
-            &request.get_ref().proof_path, 
-            &request.get_ref().pub_value_path, 
+            request.get_ref().proof_num,
+            &request.get_ref().proof_dir, 
+            &request.get_ref().pub_value_dir, 
             &request.get_ref().output_dir);
         
-            let success = Pipeline::new().final_prove(&final_context);
+            let success = Pipeline::new().aggregate_all_prove(&final_context);
             let mut response = prover_service::AggregateAllResponse::default();
             response.proof_id = request.get_ref().proof_id.clone();
             response.computed_request_id = request.get_ref().computed_request_id.clone();

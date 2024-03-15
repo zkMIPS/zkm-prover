@@ -1,5 +1,5 @@
-use crate::contexts::{agg_context, final_context, AggContext, FinalContext, ProveContext, SplitContext};
-use crate::provers::{SplitProver, ProveProver, AggProver, FinalProver, Prover};
+use crate::contexts::{agg_context, agg_all_context, AggContext, AggAllContext, ProveContext, SplitContext};
+use crate::provers::{SplitProver, ProveProver, AggProver, AggAllProver, Prover};
 
 use anyhow::{anyhow, bail, Result};
 use std::path::Path;
@@ -82,22 +82,22 @@ impl Pipeline {
         }
     }
 
-    pub fn final_prove(&mut self, final_context: &FinalContext) -> bool {
+    pub fn aggregate_all_prove(&mut self, final_context: &AggAllContext) -> bool {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => {
-                match FinalProver::new().prove(final_context) {
+                match AggAllProver::new().prove(final_context) {
                     Ok(()) => {
                         return true;
                     }
                     Err(e) => {
-                        print!("final_prove error {:#?}", e);
+                        print!("aggregate_all_prove error {:#?}", e);
                         return false;
                     }   
                 }
             }
             Err(_) => {
-                print!("final_prove busy");
+                print!("aggregate_all_prove busy");
                 return false;
             }
         }
