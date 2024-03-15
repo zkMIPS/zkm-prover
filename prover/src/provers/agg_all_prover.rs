@@ -50,6 +50,10 @@ impl Prover<AggAllContext> for AggAllProver {
             return Ok(());
         }
 
+        if proof_num < 1 {
+            return Ok(());
+        }
+
         // read all proof and pub_value
         let mut root_proofs: Vec<ProofWithPublicInputs<F, C, D>> = Vec::new();
         let mut root_pub_values: Vec<PublicValues> = Vec::new();
