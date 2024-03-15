@@ -69,7 +69,7 @@ impl Stage {
         if !all_prove_task_success {
             return;
         }
-        if all_prove_task_success && self.agg_ids.len() > 2 &&  self.agg_tasks.len() == 0 {
+        if all_prove_task_success && self.agg_ids.len() > 1 &&  self.agg_tasks.len() == 0 {
             self.gen_agg_task();
             return;
         }
@@ -182,44 +182,71 @@ impl Stage {
         }
     }
 
+/*
+0 1 2 3 4 5
+ 0   1   2
+   0     1
+      0
+
+0 1 2 3 4
+ 0   1  2
+   0    1
+      0
+*/
     pub fn gen_agg_task (&mut self) {
         assert!(self.agg_level > 0);
         self.agg_ids.sort();
+        let agg_task_index = 0;
+        let agg_level = 0;
         let input_dir = format!("{}/{}", self.generate_context.prove_path.clone(), self.agg_level-1);
         let prove_dir = format!("{}/{}", self.generate_context.prove_path.clone(), self.agg_level);
         fs::create_dir_all(prove_dir.clone()).unwrap();
         let num = self.agg_ids.len();
-        for i in 0..num / 2  {
-            let first = i*2;
-            let second = first + 1;
-            let mut agg_task = AggTask::default();
-            agg_task.task_id = uuid::Uuid::new_v4().to_string();
-            agg_task.state = TASK_STATE_UNPROCESSED;
-            agg_task.base_dir = self.generate_context.basedir.clone();
-            agg_task.block_no = self.generate_context.block_no;
-            agg_task.seg_size = self.generate_context.seg_size;
-            agg_task.proof_id = self.generate_context.proof_id.clone(); 
-            agg_task.seg_path = self.generate_context.seg_path.clone();
-            agg_task.proof_path1 = format!("{}/prove_{}", input_dir, first);
-            agg_task.pub_value_path1 = format!("{}/pub_value_{}", input_dir, first);
-            agg_task.proof_path2 = format!("{}/prove_{}", input_dir, second);
-            agg_task.pub_value_path2 = format!("{}/pub_value_{}", input_dir, second);
-            agg_task.is_agg_1 = true; // TODO
-            agg_task.is_agg_2 = true; // TODO
-            agg_task.agg_proof_path = format!("{}/prove_{}", prove_dir, i);
-            agg_task.agg_pub_value_path = format!("{}/pub_value_{}", prove_dir, i);
-            agg_task.task_seq = i;                
-            self.agg_tasks.push(agg_task);
+        loop {
+            for i in 0..num / 2  {
+                let first = i*2;
+                let second = first + 1;
+                let mut agg_task = AggTask::default();
+                agg_task.task_id = uuid::Uuid::new_v4().to_string();
+                agg_task.state = TASK_STATE_UNPROCESSED;
+                agg_task.base_dir = self.generate_context.basedir.clone();
+                agg_task.block_no = self.generate_context.block_no;
+                agg_task.seg_size = self.generate_context.seg_size;
+                agg_task.proof_id = self.generate_context.proof_id.clone(); 
+                agg_task.seg_path = self.generate_context.seg_path.clone();
+                agg_task.proof_path1 = format!("{}/prove_{}", input_dir, first);
+                agg_task.pub_value_path1 = format!("{}/pub_value_{}", input_dir, first);
+                agg_task.proof_path2 = format!("{}/prove_{}", input_dir, second);
+                agg_task.pub_value_path2 = format!("{}/pub_value_{}", input_dir, second);
+                agg_task.is_agg_1 = true; // TODO
+                agg_task.is_agg_2 = true; // TODO
+                agg_task.agg_proof_path = format!("{}/prove_{}", prove_dir, i);
+                agg_task.agg_pub_value_path = format!("{}/pub_value_{}", prove_dir, i);
+                agg_task.task_seq = i; 
+                agg_task.root = i == 0;
+                if agg_level > 0 {
+                    if let Some(father_1) = self.agg_tasks.get(agg_task_index + first) {
+                        agg_task.dependencies.push(father_1.task_id.clone());
+                    }
+                    if let Some(father_2) = self.agg_tasks.get(agg_task_index + second) {
+                        agg_task.dependencies.push(father_2.task_id.clone());
+                    }
+                }           
+                self.agg_tasks.push(agg_task);
+            }
+            if num % 2 == 1 {
+                self.agg_ids.clear();
+                let file_no = num / 2 + 1;
+                // Copy files to the next loop
+                copy_file_bin(&format!("{}/prove_{}", input_dir, num-1), &format!("{}/prove_{}", prove_dir, file_no));
+                copy_file_bin(&format!("{}/pub_value_{}", input_dir, num-1), &format!("{}/pub_value_{}", prove_dir, file_no));
+                // create a success task
+                self.agg_ids.push(file_no);
+            }
+            if self.agg_ids.len() == 1 {
+                break;
+            }
         }
-        if num % 2 == 1 {
-            self.agg_ids.clear();
-            let file_no = num / 2 + 1;
-            // Copy files to the next loop
-            copy_file_bin(&format!("{}/prove_{}", input_dir, num-1), &format!("{}/prove_{}", prove_dir, file_no));
-            copy_file_bin(&format!("{}/pub_value_{}", input_dir, num-1), &format!("{}/pub_value_{}", prove_dir, file_no));
-            self.agg_ids.push(file_no);
-        }
-        
         print!("gen_agg_task {:#?}", self.agg_tasks);
     }
 

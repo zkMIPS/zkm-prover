@@ -4,10 +4,12 @@ use std::result;
 use prover_service::prover_service_server::ProverService;
 use prover_service::{Result};
 use prover_service::{get_status_response, GetStatusRequest, GetStatusResponse};
+use prover_service::{GetTaskResultRequest, GetTaskResultResponse};
 use prover_service::{SplitElfRequest, SplitElfResponse};
 use prover_service::{ProveRequest, ProveResponse};
 use prover_service::{AggregateRequest, AggregateResponse};
 use prover_service::{AggregateAllRequest, AggregateAllResponse};
+use prover_service::{FinalProofRequest, FinalProofResponse};
 use prover::contexts::{agg_context, AggContext, FinalContext, ProveContext, SplitContext};
 
 use prover::pipeline::{self,Pipeline};
@@ -29,7 +31,7 @@ impl ProverService for ProverServiceSVC {
         &self,
         request: Request<GetStatusRequest>
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
-        println!("{:#?}", request);
+        // println!("{:#?}", request);
 
         let mut response = prover_service::GetStatusResponse::default();
         let success= Pipeline::new().get_status();
@@ -38,9 +40,18 @@ impl ProverService for ProverServiceSVC {
         } else {
             response.status = get_status_response::Status::Computing.into();
         }
-        response.last_computed_request_id = String::from("");
         Ok(Response::new(response))
     }
+
+    async fn get_task_result(
+        &self,
+        request: Request<GetTaskResultRequest>
+    ) -> tonic::Result<Response<GetTaskResultResponse>, Status> {
+        // println!("{:#?}", request);
+        let response = prover_service::GetTaskResultResponse::default();
+        Ok(Response::new(response))
+    }
+
     
     async fn split_elf(
         &self, 
@@ -146,4 +157,12 @@ impl ProverService for ProverServiceSVC {
             Ok(Response::new(response))
     }
 
+    async fn final_proof(
+        &self,
+        request: Request<FinalProofRequest>
+    ) -> tonic::Result<Response<FinalProofResponse>, Status> {
+        // println!("{:#?}", request);
+        let response = prover_service::FinalProofResponse::default();
+        Ok(Response::new(response))
+    }
 }

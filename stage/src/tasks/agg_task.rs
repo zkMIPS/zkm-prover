@@ -18,6 +18,9 @@ pub struct AggTask {
     pub agg_pub_value_path: String,
     pub seg_path: String,
     pub task_seq: usize,
+
+    pub root: bool,
+    pub dependencies: Vec<String>,
 }
 
 impl Clone for AggTask {
@@ -39,6 +42,8 @@ impl Clone for AggTask {
             agg_pub_value_path: self.agg_pub_value_path.clone(),
             seg_path: self.seg_path.clone(),
             task_seq: self.task_seq,
+            root: self.root,
+            dependencies: self.dependencies.clone(),
         }  
     }  
 }
