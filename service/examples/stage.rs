@@ -8,6 +8,8 @@ use std::time::Instant;
 use tonic::transport::ClientTlsConfig;
 use tonic::transport::Endpoint;
 
+use std::time::{Instant, Duration};
+
 pub mod stage_service {
     tonic::include_proto!("stage.v1");
 }
