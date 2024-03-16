@@ -33,27 +33,22 @@ pub fn get_nodes() -> Vec<ProverNode> {
 }
 
 pub async fn get_idle_client() -> Option<ProverServiceClient<Channel>> {
-    println!("get_idle_client in");
     let nodes: Vec<ProverNode> = get_nodes();
     for node in nodes {
         let client = is_active(&node.addr).await;
         if let Some(client) = client {
-            println!("get_idle_client success");
             return Some(client);
         }
     }
-    println!("get_idle_client failed");
     return None;
 }
 
 pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
-    println!("is_active in {}", addr);
     let uri = format!("grpc://{}", addr).parse::<Uri>().unwrap();
     let endpoint = tonic::transport::Channel::builder(uri)
         .connect_timeout(Duration::from_secs(5))
-        .timeout(Duration::from_secs(600))
+        .timeout(Duration::from_secs(1800))
         .concurrency_limit(256);
-    println!("is_active in 2 {}", addr);
     let client = ProverServiceClient::connect(endpoint).await;
     if let Ok(mut client) = client {
         let request = GetStatusRequest {};
@@ -61,12 +56,10 @@ pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
         if let Ok(response) = response {
             let status = response.get_ref().status;
             if get_status_response::Status::from_i32(status) == Some(get_status_response::Status::Idle) {
-                println!("is_active success {}", addr);
                 return Some(client);
             }
         }
     }
-    println!("is_active failed {}", addr);
     return None;
 }
 
