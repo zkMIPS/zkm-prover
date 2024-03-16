@@ -14,7 +14,7 @@ use prover::contexts::{agg_context, AggContext, AggAllContext, ProveContext, Spl
 
 use prover::pipeline::{self,Pipeline};
 
-use tonic::{Request, Response, Status};
+use tonic::{Request, Response, Status}; 
 
 use self::prover_service::ResultCode;
 pub mod prover_service {
@@ -90,7 +90,17 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().seg_path,
             &request.get_ref().proof_path,
             &request.get_ref().pub_value_path); 
-        let success = Pipeline::new().root_prove(&prove_context);
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let ctx = prove_context.clone();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let _ = rt.spawn_blocking(move || {
+            let result = Pipeline::new().root_prove(&ctx);
+            tx.send(result).unwrap();
+        }).await;
+        let success = rx.await.unwrap();
+        // let success = Pipeline::new().root_prove(&prove_context);
+
         let mut response = prover_service::ProveResponse::default();
         response.proof_id = request.get_ref().proof_id.clone();
         response.computed_request_id = request.get_ref().computed_request_id.clone();
