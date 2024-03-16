@@ -33,13 +33,16 @@ pub fn get_nodes() -> Vec<ProverNode> {
 }
 
 pub async fn get_idle_client() -> Option<ProverServiceClient<Channel>> {
+    println!("get_idle_client in");
     let nodes: Vec<ProverNode> = get_nodes();
     for node in nodes {
         let client = is_active(&node.addr).await;
         if let Some(client) = client {
+            println!("get_idle_client success");
             return Some(client);
         }
     }
+    println!("get_idle_client failed");
     return None;
 }
 
