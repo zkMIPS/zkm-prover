@@ -44,7 +44,11 @@ pub async fn get_idle_client() -> Option<ProverServiceClient<Channel>> {
 
 pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
     let uri = format!("grpc://{}", addr).parse::<Uri>().unwrap();
-    let endpoint = tonic::transport::Channel::builder(uri);
+    let endpoint = tonic::transport::Channel::builder(uri)
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(600))
+        .concurrency_limit(256);
+    print!("is_active in {}", addr);
     let client = ProverServiceClient::connect(endpoint).await;
     if let Ok(mut client) = client {
         let request = GetStatusRequest {};
@@ -52,10 +56,12 @@ pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
         if let Ok(response) = response {
             let status = response.get_ref().status;
             if get_status_response::Status::from_i32(status) == Some(get_status_response::Status::Idle) {
+                print!("is_active success {}", addr);
                 return Some(client);
             }
         }
     }
+    print!("is_active failed {}", addr);
     return None;
 }
 
