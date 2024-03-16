@@ -37,7 +37,6 @@ pub async fn get_idle_client(
     for node in nodes {
         let client = is_active(&node.addr, tls_config.clone()).await;
         if let Some(client) = client {
-            println!("get_idle_client success");
             return Some(client);
         }
     }
