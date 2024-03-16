@@ -31,7 +31,7 @@ impl ProverService for ProverServiceSVC {
         &self,
         request: Request<GetStatusRequest>
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
-        // println!("{:#?}", request);
+        println!("{:#?}", request);
 
         let mut response = prover_service::GetStatusResponse::default();
         let success= Pipeline::new().get_status();

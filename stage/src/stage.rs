@@ -97,7 +97,7 @@ impl Stage {
         self.split_task.seg_size = self.generate_context.seg_size;
         self.split_task.task_id = uuid::Uuid::new_v4().to_string();
         self.split_task.state = TASK_STATE_UNPROCESSED;
-        print!("gen_split_task {:#?}", self.split_task);
+        println!("gen_split_task {:#?}", self.split_task);
     }
 
     pub fn get_split_task(&mut self) -> Option<SplitTask> {
@@ -114,7 +114,7 @@ impl Stage {
         if split_task.state == TASK_STATE_FAILED || split_task.state == TASK_STATE_SUCCESS || split_task.state == TASK_STATE_UNPROCESSED{
             self.split_task.state = split_task.state;
             if TASK_STATE_UNPROCESSED != split_task.state {
-                print!("on_split_task {:#?}", self.split_task);
+                println!("on_split_task {:#?}", self.split_task);
             }
         }
     }
@@ -143,7 +143,7 @@ impl Stage {
                 self.prove_tasks.push(prove_task);
             }
         }
-        print!("gen_prove_task {:#?}", self.prove_tasks);
+        println!("gen_prove_task {:#?}", self.prove_tasks);
     }
 
     pub fn get_prove_task(&mut self) -> Option<ProveTask> {
@@ -161,7 +161,7 @@ impl Stage {
         assert!(prove_task.proof_id == self.generate_context.proof_id);
         if prove_task.state == TASK_STATE_FAILED || prove_task.state == TASK_STATE_SUCCESS || prove_task.state == TASK_STATE_UNPROCESSED {
             if TASK_STATE_UNPROCESSED != prove_task.state {
-                print!("on_prove_task {:#?}", prove_task);
+                println!("on_prove_task {:#?}", prove_task);
             }
             for item_task in &mut self.prove_tasks {
                 if item_task.task_id == prove_task.task_id && item_task.state == TASK_STATE_PROCESSING {
@@ -184,7 +184,7 @@ impl Stage {
         self.agg_all_task.proof_dir = format!("{}/proof", self.generate_context.prove_path);
         self.agg_all_task.pub_value_dir = format!("{}/pub_value", self.generate_context.prove_path);
         self.agg_all_task.output_dir = format!("{}", self.generate_context.agg_path);
-        print!("gen_agg_task {:#?}", self.agg_all_task);
+        println!("gen_agg_task {:#?}", self.agg_all_task);
     }
 
     pub fn get_agg_all_task(&mut self) -> Option<AggAllTask> {
@@ -201,7 +201,7 @@ impl Stage {
         if agg_all_task.state == TASK_STATE_FAILED || agg_all_task.state == TASK_STATE_SUCCESS || agg_all_task.state == TASK_STATE_UNPROCESSED{
             self.agg_all_task.state = agg_all_task.state;
             if TASK_STATE_UNPROCESSED != agg_all_task.state {
-                print!("on_agg_all_task {:#?}", self.agg_all_task);
+                println!("on_agg_all_task {:#?}", self.agg_all_task);
             }
         }
     }
