@@ -1,4 +1,4 @@
-use clap::{Command, Arg, Parser};
+use clap::{Arg, Parser};
 use prover_node::ProverNode;  
 use std::io;
 
@@ -16,7 +16,7 @@ mod config;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, default_value_t = String::from("./config.toml"))]
+    #[arg(short = 'c', long = "config", default_value_t = String::from("./config/config.toml"))]
     config: String,
 }
 

@@ -61,9 +61,11 @@ impl StageService for StageServiceSVC {
         let bolck_dir = format!("{}/0_{}", dir_path, request.get_ref().block_no);
         fs::create_dir_all(bolck_dir.clone())?;
 
-        let bolck_path = format!("{}/input", bolck_dir);
-        let mut file = File::create(bolck_path)?;
-        file.write_all(&request.get_ref().block_data)?;
+        for file_block_item in &request.get_ref().block_data  {
+            let bolck_path = format!("{}/{}", bolck_dir, file_block_item.file_name);
+            let mut file = File::create(bolck_path)?;
+            file.write_all(&file_block_item.file_content)?;
+        }
 
         let seg_path = format!("{}/segment", dir_path);
         fs::create_dir_all(seg_path.clone())?;
