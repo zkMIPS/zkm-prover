@@ -5,6 +5,8 @@ use std::fs;
 use std::path::Path;
 use std::env;
 
+use std::time::{Instant, Duration};
+
 pub mod stage_service {
     tonic::include_proto!("stage.v1");
 }
@@ -44,8 +46,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
     println!("request: {:?}", request.proof_id.clone());
+    let start = Instant::now();
     let mut stage_client = StageServiceClient::connect("http://127.0.0.1:50000").await?;
     let response = stage_client.generate_proof(request).await?.into_inner();
     println!("response: {:?}", response);
+    let end = Instant::now();
+    let elapsed = end.duration_since(start);  
+    println!("Elapsed time: {:?} secs", elapsed.as_secs());
     Ok(())
 }
