@@ -13,6 +13,7 @@ use prover_service::{FinalProofRequest, FinalProofResponse};
 use prover::contexts::{agg_context, AggContext, AggAllContext, ProveContext, SplitContext};
 
 use prover::pipeline::{self,Pipeline};
+use std::time::{Instant, Duration};
 
 use tonic::{Request, Response, Status}; 
 use std::sync::Arc;
@@ -71,6 +72,7 @@ impl ProverService for ProverServiceSVC {
         request: Request<SplitElfRequest>
     ) -> tonic::Result<Response<SplitElfResponse>, Status> {
         println!("{:#?}", request);
+        let start = Instant::now();
 
         let split_context = SplitContext::new(
             &request.get_ref().base_dir,
@@ -78,7 +80,6 @@ impl ProverService for ProverServiceSVC {
             request.get_ref().block_no, 
             request.get_ref().seg_size, 
             &request.get_ref().seg_path); 
-        // let success = Pipeline::new().split_prove(&split_context);
         let split_func = move || {
             let s_ctx: SplitContext = split_context;
             return Pipeline::new().split_prove(&s_ctx);
@@ -92,6 +93,9 @@ impl ProverService for ProverServiceSVC {
         } else {
             response.result = Some(Result { code: (ResultCode::ResultError.into()), message: ("FAILED".to_string()) });
         }
+        let end = Instant::now();
+        let elapsed = end.duration_since(start);  
+        println!("split {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
         Ok(Response::new(response))
     }
 
@@ -100,6 +104,7 @@ impl ProverService for ProverServiceSVC {
         request: Request<ProveRequest>
     ) -> tonic::Result<Response<ProveResponse>, Status> {
         println!("{:#?}", request);
+        let start = Instant::now();
 
         let prove_context = ProveContext::new(
             &request.get_ref().base_dir, 
@@ -109,15 +114,6 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().proof_path,
             &request.get_ref().pub_value_path); 
 
-        // let rt = tokio::runtime::Runtime::new().unwrap();
-        // let ctx = prove_context.clone();
-        // let (tx, rx) = tokio::sync::oneshot::channel();
-        // let _ = rt.spawn_blocking(move || {
-        //     let result = Pipeline::new().root_prove(&ctx);
-        //     tx.send(result).unwrap();
-        // }).await;
-        // let success = rx.await.unwrap();
-        // let success = Pipeline::new().root_prove(&prove_context);
         let prove_func = move || {
             let s_ctx: ProveContext = prove_context;
             return Pipeline::new().root_prove(&s_ctx);
@@ -131,6 +127,9 @@ impl ProverService for ProverServiceSVC {
         } else {
             response.result = Some(Result { code: (ResultCode::ResultError.into()), message: ("FAILED".to_string()) });
         }
+        let end = Instant::now();
+        let elapsed = end.duration_since(start);  
+        println!("prove {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
         Ok(Response::new(response))
     }
 
@@ -139,6 +138,7 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateRequest>
     ) -> tonic::Result<Response<AggregateResponse>, Status> {
         println!("{:#?}", request);
+        let start = Instant::now();
         let agg_context = AggContext::new(
             &request.get_ref().base_dir,
             request.get_ref().block_no, 
@@ -152,10 +152,7 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().agg_proof_path, 
             &request.get_ref().agg_pub_value_path);
 
-        // let success = Pipeline::new().aggregate_prove(&agg_context);
-        // let lock = Arc::new(Mutex::new(agg_context));
         let agg_all_func = move || {
-            // let agg_ctx = lock.lock().unwrap().to_owned();
             let agg_ctx = agg_context;
             return Pipeline::new().aggregate_prove(&agg_ctx);
         };
@@ -168,6 +165,9 @@ impl ProverService for ProverServiceSVC {
         } else {
             response.result = Some(Result { code: (ResultCode::ResultError.into()), message: ("FAILED".to_string()) });
         }
+        let end = Instant::now();
+        let elapsed = end.duration_since(start);  
+        println!("aggregate {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
         Ok(Response::new(response))
     }
 
@@ -176,6 +176,7 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateAllRequest>
     ) -> tonic::Result<Response<AggregateAllResponse>, Status> {
         println!("{:#?}", request);
+        let start = Instant::now();
         let final_context = AggAllContext::new(
             &request.get_ref().base_dir,
             request.get_ref().block_no, 
@@ -185,21 +186,23 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().pub_value_dir, 
             &request.get_ref().output_dir);
         
-            // let success = Pipeline::new().aggregate_all_prove(&final_context);
-            let agg_all_func = move || {
-                let s_ctx: AggAllContext = final_context;
-                return Pipeline::new().aggregate_all_prove(&s_ctx);
-            };
-            let success = run_back_task(agg_all_func).await;
-            let mut response = prover_service::AggregateAllResponse::default();
-            response.proof_id = request.get_ref().proof_id.clone();
-            response.computed_request_id = request.get_ref().computed_request_id.clone();
-            if success {
-                response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: ("SUCCESS".to_string()) });
-            } else {
-                response.result = Some(Result { code: (ResultCode::ResultError.into()), message: ("FAILED".to_string()) });
-            }
-            Ok(Response::new(response))
+        let agg_all_func = move || {
+            let s_ctx: AggAllContext = final_context;
+            return Pipeline::new().aggregate_all_prove(&s_ctx);
+        };
+        let success = run_back_task(agg_all_func).await;
+        let mut response = prover_service::AggregateAllResponse::default();
+        response.proof_id = request.get_ref().proof_id.clone();
+        response.computed_request_id = request.get_ref().computed_request_id.clone();
+        if success {
+            response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: ("SUCCESS".to_string()) });
+        } else {
+            response.result = Some(Result { code: (ResultCode::ResultError.into()), message: ("FAILED".to_string()) });
+        }
+        let end = Instant::now();
+        let elapsed = end.duration_since(start);  
+        println!("aggregate_all {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
+        Ok(Response::new(response))
     }
 
     async fn final_proof(
