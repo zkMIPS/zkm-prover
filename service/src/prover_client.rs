@@ -40,6 +40,7 @@ pub async fn get_idle_client() -> Option<ProverServiceClient<Channel>> {
             return Some(client);
         }
     }
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     return None;
 }
 
