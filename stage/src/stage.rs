@@ -76,6 +76,30 @@ macro_rules! get_task {
     };
 }
 
+macro_rules! on_task {  
+    ($src:ident, $dst:ident) => {  
+        assert!($src.proof_id == $dst.proof_id);
+        if $src.state == TASK_STATE_FAILED || $src.state == TASK_STATE_SUCCESS || $src.state == TASK_STATE_UNPROCESSED{
+            $dst.state = $src.state;
+            if TASK_STATE_UNPROCESSED != $src.state {
+                log::info!("on_task {:#?}", $dst);
+            }
+        }  
+    };  
+}
+
+macro_rules! get_task {
+    ($src:ident) => { 
+        if $src.state == TASK_STATE_UNPROCESSED || 
+            $src.state == TASK_STATE_FAILED {
+            $src.state = TASK_STATE_PROCESSING;
+            return Some($src.clone()); 
+        }
+        return None
+    };
+}
+
+
 impl Stage {
     pub fn new(generate_context: GenerateContext) -> Self {
         Stage {
