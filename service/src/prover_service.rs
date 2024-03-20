@@ -71,8 +71,7 @@ async fn run_back_task<F: FnOnce() -> bool + Send + 'static> (callable: F) -> bo
         let result = callable();
         tx.send(result).unwrap();
     }).await;
-    let success = rx.await.unwrap();
-    success
+    rx.await.unwrap()
 }
 
 #[tonic::async_trait]

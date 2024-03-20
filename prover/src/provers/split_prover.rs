@@ -57,7 +57,8 @@ impl Prover<SplitContext> for SplitProver {
                 }
                 instrumented_state.split_segment(true, &seg_path);
             }
-            Err(_) => {
+            Err(e) => {
+                return Err(anyhow::Error::msg(e.to_string()));
             }
         }        
         Ok(())
