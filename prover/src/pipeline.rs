@@ -28,13 +28,13 @@ impl Pipeline {
                         return true;
                     }
                     Err(e) => {
-                        print!("split_prove error {:#?}", e);
+                        log::error!("split_prove error {:#?}", e);
                         return false;
                     }   
                 }
             }
             Err(_) => {
-                print!("split_prove busy");
+                log::error!("split_prove busy");
                 return false;
             }
         }
@@ -49,13 +49,13 @@ impl Pipeline {
                         return true;
                     }
                     Err(e) => {
-                        print!("root_prove error {:#?}", e);
+                        log::error!("root_prove error {:#?}", e);
                         return false;
                     }   
                 }
             }
             Err(e) => {
-                print!("root_prove busy");
+                log::error!("root_prove busy");
                 return false;
             }
         }
@@ -70,13 +70,13 @@ impl Pipeline {
                         return true;
                     }
                     Err(e) => {
-                        print!("aggregate_prove error {:#?}", e);
+                        log::error!("aggregate_prove error {:#?}", e);
                         return false;
                     }   
                 }
             }
             Err(_) => {
-                print!("aggregate_prove busy");
+                log::error!("aggregate_prove busy");
                 return false;
             }
         }
@@ -91,13 +91,13 @@ impl Pipeline {
                         return true;
                     }
                     Err(e) => {
-                        print!("aggregate_all_prove error {:#?}", e);
+                        log::error!("aggregate_all_prove error {:#?}", e);
                         return false;
                     }   
                 }
             }
             Err(_) => {
-                print!("aggregate_all_prove busy");
+                log::error!("aggregate_all_prove busy");
                 return false;
             }
         }

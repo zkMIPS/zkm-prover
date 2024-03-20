@@ -45,7 +45,7 @@ impl ProverService for ProverServiceSVC {
         &self,
         request: Request<GetStatusRequest>
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
-        // println!("{:#?}", request);
+        // log::info!("{:#?}", request);
 
         let mut response = prover_service::GetStatusResponse::default();
         let success= Pipeline::new().get_status();
@@ -61,7 +61,7 @@ impl ProverService for ProverServiceSVC {
         &self,
         request: Request<GetTaskResultRequest>
     ) -> tonic::Result<Response<GetTaskResultResponse>, Status> {
-        // println!("{:#?}", request);
+        // log::info!("{:#?}", request);
         let response = prover_service::GetTaskResultResponse::default();
         Ok(Response::new(response))
     }
@@ -71,7 +71,7 @@ impl ProverService for ProverServiceSVC {
         &self, 
         request: Request<SplitElfRequest>
     ) -> tonic::Result<Response<SplitElfResponse>, Status> {
-        println!("{:#?}", request);
+        log::info!("{:#?}", request);
         let start = Instant::now();
 
         let split_context = SplitContext::new(
@@ -95,7 +95,7 @@ impl ProverService for ProverServiceSVC {
         }
         let end = Instant::now();
         let elapsed = end.duration_since(start);  
-        println!("split {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
+        log::info!("split {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
         Ok(Response::new(response))
     }
 
@@ -103,7 +103,7 @@ impl ProverService for ProverServiceSVC {
         &self, 
         request: Request<ProveRequest>
     ) -> tonic::Result<Response<ProveResponse>, Status> {
-        println!("{:#?}", request);
+        log::info!("{:#?}", request);
         let start = Instant::now();
 
         let prove_context = ProveContext::new(
@@ -129,7 +129,7 @@ impl ProverService for ProverServiceSVC {
         }
         let end = Instant::now();
         let elapsed = end.duration_since(start);  
-        println!("prove {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
+        log::info!("prove {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
         Ok(Response::new(response))
     }
 
@@ -137,7 +137,7 @@ impl ProverService for ProverServiceSVC {
         &self, 
         request: Request<AggregateRequest>
     ) -> tonic::Result<Response<AggregateResponse>, Status> {
-        println!("{:#?}", request);
+        log::info!("{:#?}", request);
         let start = Instant::now();
         let agg_context = AggContext::new(
             &request.get_ref().base_dir,
@@ -167,7 +167,7 @@ impl ProverService for ProverServiceSVC {
         }
         let end = Instant::now();
         let elapsed = end.duration_since(start);  
-        println!("aggregate {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
+        log::info!("aggregate {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
         Ok(Response::new(response))
     }
 
@@ -175,7 +175,7 @@ impl ProverService for ProverServiceSVC {
         &self, 
         request: Request<AggregateAllRequest>
     ) -> tonic::Result<Response<AggregateAllResponse>, Status> {
-        println!("{:#?}", request);
+        log::info!("{:#?}", request);
         let start = Instant::now();
         let final_context = AggAllContext::new(
             &request.get_ref().base_dir,
@@ -201,7 +201,7 @@ impl ProverService for ProverServiceSVC {
         }
         let end = Instant::now();
         let elapsed = end.duration_since(start);  
-        println!("aggregate_all {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
+        log::info!("aggregate_all {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
         Ok(Response::new(response))
     }
 
@@ -209,7 +209,7 @@ impl ProverService for ProverServiceSVC {
         &self,
         request: Request<FinalProofRequest>
     ) -> tonic::Result<Response<FinalProofResponse>, Status> {
-        // println!("{:#?}", request);
+        // log::info!("{:#?}", request);
         let response = prover_service::FinalProofResponse::default();
         Ok(Response::new(response))
     }

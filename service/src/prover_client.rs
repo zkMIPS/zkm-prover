@@ -95,13 +95,13 @@ pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
         request.seg_path = split_task.seg_path.clone();
         request.block_no = split_task.block_no;
         request.seg_size = split_task.seg_size;
-        println!("split request {:#?}", request);
+        log::info!("split request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(300));
         let response = client.split_elf(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                println!("split response {:#?}", response);
+                log::info!("split response {:#?}", response);
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
                     split_task.state = TASK_STATE_SUCCESS;
                     return Some(split_task);
@@ -127,13 +127,13 @@ pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
         request.seg_size = prove_task.seg_size;
         request.proof_path = prove_task.prove_path.clone();
         request.pub_value_path = prove_task.pub_value_path.clone();
-        println!("prove request {:#?}", request);
+        log::info!("prove request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(3000));
         let response = client.prove(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                println!("prove response {:#?}", response);
+                log::info!("prove response {:#?}", response);
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
                     prove_task.state = TASK_STATE_SUCCESS;
                     return Some(prove_task);
@@ -161,13 +161,13 @@ pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
         request.pub_value_dir = agg_all_task.pub_value_dir.clone();
         request.output_dir = agg_all_task.output_dir.clone();
 
-        println!("aggregate request {:#?}", request);
+        log::info!("aggregate request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(3000));
         let response = client.aggregate_all(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                println!("aggregate response {:#?}", response);
+                log::info!("aggregate response {:#?}", response);
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
                     agg_all_task.state = TASK_STATE_SUCCESS;
                     return Some(agg_all_task);
@@ -190,13 +190,13 @@ pub async fn final_proof(mut final_task: FinalTask) -> Option<FinalTask> {
         request.input_dir = final_task.input_dir.clone();
         request.output_path = final_task.output_path.clone();
 
-        println!("final_proof request {:#?}", request);
+        log::info!("final_proof request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(3000));
         let response = client.final_proof(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                println!("final_proof response {:#?}", response);
+                log::info!("final_proof response {:#?}", response);
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
                     let mut loop_count = 0;
                     loop {

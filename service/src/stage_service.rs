@@ -1,5 +1,6 @@
 use std::borrow::BorrowMut;
 use std::fmt::format;
+use std::sync::Mutex;
 use std::{clone, result};
 
 use stage::contexts::generate_context;
@@ -29,6 +30,13 @@ pub mod stage_service {
     tonic::include_proto!("stage.v1");
 }
 
+use lazy_static::lazy_static;  
+use std::collections::HashMap;
+
+lazy_static! {  
+    static ref GLOBAL_TASKMAP: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());  
+}
+
 #[derive(Debug,Default)]
 pub struct StageServiceSVC{
 }
@@ -39,9 +47,14 @@ impl StageService for StageServiceSVC {
         &self,
         request: Request<GetStatusRequest>
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
-        println!("{:?}", request);
+        // log::info!("{:?}", request);
+        let taskmap = GLOBAL_TASKMAP.lock().unwrap();
+        let status = taskmap.get(&request.get_ref().proof_id);
         let mut response = stage_service::GetStatusResponse::default();
-        response.proof_id = String::from("");
+        if let Some(status) = status {
+            response.status = *status as u64;
+        }
+        response.proof_id = request.get_ref().proof_id.clone();
         Ok(Response::new(response))
     }
     
@@ -49,7 +62,7 @@ impl StageService for StageServiceSVC {
         &self, 
         request: Request<GenerateProofRequest>
     ) -> tonic::Result<Response<GenerateProofResponse>, Status> {
-        println!("{:?}", request.get_ref().proof_id);
+        log::info!("{:?}", request.get_ref().proof_id);
         let base_dir = config::instance().lock().unwrap().base_dir.clone(); 
         let dir_path = format!("{}/proof/{}", base_dir, request.get_ref().proof_id);
         fs::create_dir_all(dir_path.clone())?;
@@ -84,6 +97,11 @@ impl StageService for StageServiceSVC {
 
         let final_path = format!("{}/final", dir_path);
         fs::create_dir_all(final_path.clone())?;
+
+        {
+            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
+            taskmap.insert(request.get_ref().proof_id.clone(), stage_service::ExecutorError::Unspecified.into());
+        }
 
         let generate_context = stage::contexts::GenerateContext::new(
             &request.get_ref().proof_id,
@@ -168,6 +186,12 @@ impl StageService for StageServiceSVC {
             }
             stage.dispatch();
         }
+
+        {
+            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
+            taskmap.insert(request.get_ref().proof_id.clone(), stage_service::ExecutorError::NoError.into());
+        }
+
         let mut response = stage_service::GenerateProofResponse::default();
         response.proof_id = request.get_ref().proof_id.clone();
         Ok(Response::new(response))
