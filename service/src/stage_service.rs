@@ -50,11 +50,13 @@ impl StageService for StageServiceSVC {
         // log::info!("{:?}", request);
         let taskmap = GLOBAL_TASKMAP.lock().unwrap();
         let status = taskmap.get(&request.get_ref().proof_id);
-        let mut response = stage_service::GetStatusResponse::default();
+        let mut response = stage_service::GetStatusResponse {
+            proof_id: request.get_ref().proof_id.clone(),
+            ..Default::default()
+        };
         if let Some(status) = status {
             response.status = *status as u64;
         }
-        response.proof_id = request.get_ref().proof_id.clone();
         Ok(Response::new(response))
     }
     
@@ -95,8 +97,9 @@ impl StageService for StageServiceSVC {
         let agg_path = format!("{}/aggregate", dir_path);
         fs::create_dir_all(agg_path.clone())?;
 
-        let final_path = format!("{}/final", dir_path);
-        fs::create_dir_all(final_path.clone())?;
+        let final_dir = format!("{}/final", dir_path);
+        fs::create_dir_all(final_dir.clone())?;
+        let final_path = format!("{}/output", final_dir);
 
         {
             let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
@@ -192,8 +195,10 @@ impl StageService for StageServiceSVC {
             taskmap.insert(request.get_ref().proof_id.clone(), stage_service::ExecutorError::NoError.into());
         }
 
-        let mut response = stage_service::GenerateProofResponse::default();
-        response.proof_id = request.get_ref().proof_id.clone();
+        let response = stage_service::GenerateProofResponse {
+            proof_id: request.get_ref().proof_id.clone(), 
+            ..Default::default()
+        };
         Ok(Response::new(response))
     }
 }

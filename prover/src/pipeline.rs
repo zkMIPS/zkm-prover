@@ -25,17 +25,17 @@ impl Pipeline {
             Ok(_) => {
                 match SplitProver::new().prove(split_context) {
                     Ok(()) => {
-                        return true;
+                        true
                     }
                     Err(e) => {
                         log::error!("split_prove error {:#?}", e);
-                        return false;
+                        false
                     }   
                 }
             }
             Err(_) => {
                 log::error!("split_prove busy");
-                return false;
+                false
             }
         }
     }
@@ -46,17 +46,17 @@ impl Pipeline {
             Ok(_) => {
                 match ProveProver::new().prove(prove_context) {
                     Ok(()) => {
-                        return true;
+                        true
                     }
                     Err(e) => {
                         log::error!("root_prove error {:#?}", e);
-                        return false;
+                        false
                     }   
                 }
             }
             Err(e) => {
                 log::error!("root_prove busy");
-                return false;
+                false
             }
         }
     }
@@ -67,17 +67,17 @@ impl Pipeline {
             Ok(_) => {
                 match AggProver::new().prove(agg_context) {
                     Ok(()) => {
-                        return true;
+                        true
                     }
                     Err(e) => {
                         log::error!("aggregate_prove error {:#?}", e);
-                        return false;
+                        false
                     }   
                 }
             }
             Err(_) => {
                 log::error!("aggregate_prove busy");
-                return false;
+                false
             }
         }
     }
@@ -88,17 +88,17 @@ impl Pipeline {
             Ok(_) => {
                 match AggAllProver::new().prove(final_context) {
                     Ok(()) => {
-                        return true;
+                        true
                     }
                     Err(e) => {
                         log::error!("aggregate_all_prove error {:#?}", e);
-                        return false;
+                        false
                     }   
                 }
             }
             Err(_) => {
                 log::error!("aggregate_all_prove busy");
-                return false;
+                false
             }
         }
     }
@@ -108,10 +108,10 @@ impl Pipeline {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => {
-                return true;
+                true
             }
             Err(_) => {
-                return false;
+                false
             }
         }
     }

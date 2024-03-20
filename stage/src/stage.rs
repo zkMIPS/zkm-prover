@@ -72,7 +72,7 @@ impl Stage {
             return;
         }
         if self.split_task.state == TASK_STATE_SUCCESS {
-            if self.prove_tasks.len() == 0 {
+            if self.prove_tasks.is_empty() {
                 self.gen_prove_task();
                 return;
             }
@@ -96,10 +96,7 @@ impl Stage {
         if self.agg_all_task.state == TASK_STATE_SUCCESS {
             if self.final_task.state == TASK_STATE_INITIAL {
                 self.gen_final_task();
-                return;
             }
-        } else {
-            return;
         }
     }
 
@@ -107,15 +104,15 @@ impl Stage {
         if self.final_task.state == TASK_STATE_SUCCESS {
             return true;
         }
-        return false;
+        false
     }
 
     fn gen_split_task (&mut self) {
         assert!(self.split_task.state == TASK_STATE_INITIAL);
-        self.split_task.proof_id = self.generate_context.proof_id.clone();
-        self.split_task.base_dir = self.generate_context.basedir.clone();
-        self.split_task.elf_path = self.generate_context.elf_path.clone();
-        self.split_task.seg_path = self.generate_context.seg_path.clone();
+        self.split_task.proof_id.clone_from(&self.generate_context.proof_id);
+        self.split_task.base_dir.clone_from(&self.generate_context.basedir);
+        self.split_task.elf_path.clone_from(&self.generate_context.elf_path);
+        self.split_task.seg_path.clone_from(&self.generate_context.seg_path);
         self.split_task.block_no = self.generate_context.block_no;
         self.split_task.seg_size = self.generate_context.seg_size;
         self.split_task.task_id = uuid::Uuid::new_v4().to_string();
@@ -144,16 +141,17 @@ impl Stage {
             let file_name = path.file_name().unwrap().to_str().unwrap(); 
             let result: Result<usize, <usize as FromStr>::Err> = file_name.parse();
             if let Ok(file_no) = result {
-                let mut prove_task = ProveTask::default();
-                prove_task.task_id = uuid::Uuid::new_v4().to_string();
-                prove_task.base_dir = self.generate_context.basedir.clone();
-                prove_task.block_no = self.generate_context.block_no;
-                prove_task.seg_size = self.generate_context.seg_size;
-                prove_task.proof_id = self.generate_context.proof_id.clone();
-                prove_task.prove_path = format!("{}/proof/{}", prove_dir.clone(), file_no);
-                prove_task.pub_value_path = format!("{}/pub_value/{}", prove_dir.clone(), file_no);
-                prove_task.seg_path = format!("{}/{}",self.generate_context.seg_path, file_name.to_string());
-                prove_task.state = TASK_STATE_UNPROCESSED;
+                let mut prove_task = ProveTask {
+                    task_id: uuid::Uuid::new_v4().to_string(),
+                    base_dir: self.generate_context.basedir.clone(),
+                    block_no: self.generate_context.block_no,
+                    state: TASK_STATE_UNPROCESSED,
+                    seg_size: self.generate_context.seg_size,
+                    proof_id: self.generate_context.proof_id.clone(),
+                    prove_path: format!("{}/proof/{}", prove_dir.clone(), file_no),
+                    pub_value_path: format!("{}/pub_value/{}", prove_dir.clone(), file_no),
+                    seg_path: format!("{}/{}",self.generate_context.seg_path, file_name),
+                };
                 self.prove_tasks.push(prove_task);
             }
         }
@@ -168,7 +166,7 @@ impl Stage {
                 return Some(prove_task.clone());
             }
         }
-        return None
+        None
     }
 
     pub fn on_prove_task(&mut self, prove_task: ProveTask) {
@@ -190,14 +188,14 @@ impl Stage {
         assert!(self.agg_all_task.state == TASK_STATE_INITIAL);
         self.agg_all_task.task_id = uuid::Uuid::new_v4().to_string();
         self.agg_all_task.state = TASK_STATE_UNPROCESSED;
-        self.agg_all_task.base_dir = self.generate_context.basedir.clone();
+        self.agg_all_task.base_dir.clone_from(&self.generate_context.basedir);
         self.agg_all_task.block_no = self.generate_context.block_no;
         self.agg_all_task.seg_size = self.generate_context.seg_size;
-        self.agg_all_task.proof_id = self.generate_context.proof_id.clone(); 
+        self.agg_all_task.proof_id.clone_from(&self.generate_context.proof_id.clone()); 
         self.agg_all_task.proof_num = self.prove_tasks.len() as u32;
         self.agg_all_task.proof_dir = format!("{}/proof", self.generate_context.prove_path);
         self.agg_all_task.pub_value_dir = format!("{}/pub_value", self.generate_context.prove_path);
-        self.agg_all_task.output_dir = format!("{}", self.generate_context.agg_path);
+        self.agg_all_task.output_dir.clone_from(&self.generate_context.agg_path);
         log::info!("gen_agg_task {:#?}", self.agg_all_task);
     }
 
@@ -213,9 +211,9 @@ impl Stage {
 
     pub fn gen_final_task(&mut self) {
         assert!(self.final_task.state == TASK_STATE_INITIAL);
-        self.final_task.proof_id = self.generate_context.proof_id.clone();
-        self.final_task.input_dir = self.generate_context.agg_path.clone();
-        self.final_task.output_path = self.generate_context.final_path.clone();
+        self.final_task.proof_id.clone_from(&self.generate_context.proof_id.clone());
+        self.final_task.input_dir.clone_from(&self.generate_context.agg_path.clone());
+        self.final_task.output_path.clone_from(&self.generate_context.final_path);
         self.final_task.task_id = uuid::Uuid::new_v4().to_string();
         self.final_task.state = TASK_STATE_UNPROCESSED;
         log::info!("gen_final_task {:#?}", self.final_task);

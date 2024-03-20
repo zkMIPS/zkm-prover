@@ -1,5 +1,3 @@
-use std::borrow::BorrowMut;
-use std::result;
 
 use prover_service::prover_service_server::ProverService;
 use prover_service::{Result};
@@ -35,8 +33,7 @@ async fn run_back_task<F: FnOnce() -> bool + Send + 'static> (callable: F) -> bo
         let result = callable();
         tx.send(result).unwrap();
     }).await;
-    let success = rx.await.unwrap();
-    success
+    rx.await.unwrap()
 }
 
 #[tonic::async_trait]
@@ -82,12 +79,14 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().seg_path); 
         let split_func = move || {
             let s_ctx: SplitContext = split_context;
-            return Pipeline::new().split_prove(&s_ctx);
+            Pipeline::new().split_prove(&s_ctx)
         };
         let success = run_back_task(split_func).await;
-        let mut response = prover_service::SplitElfResponse::default();
-        response.proof_id = request.get_ref().proof_id.clone();
-        response.computed_request_id = request.get_ref().computed_request_id.clone();
+        let mut response = prover_service::SplitElfResponse {
+            proof_id: request.get_ref().proof_id.clone(),
+            computed_request_id: request.get_ref().computed_request_id.clone(),
+            ..Default::default()
+        };
         if success {
             response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: ("SUCCESS".to_string()) });
         } else {
@@ -116,12 +115,14 @@ impl ProverService for ProverServiceSVC {
 
         let prove_func = move || {
             let s_ctx: ProveContext = prove_context;
-            return Pipeline::new().root_prove(&s_ctx);
+            Pipeline::new().root_prove(&s_ctx)
         };
         let success = run_back_task(prove_func).await;
-        let mut response = prover_service::ProveResponse::default();
-        response.proof_id = request.get_ref().proof_id.clone();
-        response.computed_request_id = request.get_ref().computed_request_id.clone();
+        let mut response = prover_service::ProveResponse {
+            proof_id: request.get_ref().proof_id.clone(),
+            computed_request_id: request.get_ref().computed_request_id.clone(),
+            ..Default::default()
+        };
         if success {
             response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: ("SUCCESS".to_string()) });
         } else {
@@ -154,12 +155,14 @@ impl ProverService for ProverServiceSVC {
 
         let agg_all_func = move || {
             let agg_ctx = agg_context;
-            return Pipeline::new().aggregate_prove(&agg_ctx);
+            Pipeline::new().aggregate_prove(&agg_ctx)
         };
         let success = run_back_task(agg_all_func).await;
-        let mut response = prover_service::AggregateResponse::default();
-        response.proof_id = request.get_ref().proof_id.clone();
-        response.computed_request_id = request.get_ref().computed_request_id.clone();
+        let mut response = prover_service::AggregateResponse {
+            proof_id: request.get_ref().proof_id.clone(),
+            computed_request_id: request.get_ref().computed_request_id.clone(),
+            ..Default::default()
+        };
         if success {
             response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: ("SUCCESS".to_string()) });
         } else {
@@ -188,12 +191,14 @@ impl ProverService for ProverServiceSVC {
         
         let agg_all_func = move || {
             let s_ctx: AggAllContext = final_context;
-            return Pipeline::new().aggregate_all_prove(&s_ctx);
+            Pipeline::new().aggregate_all_prove(&s_ctx)
         };
         let success = run_back_task(agg_all_func).await;
-        let mut response = prover_service::AggregateAllResponse::default();
-        response.proof_id = request.get_ref().proof_id.clone();
-        response.computed_request_id = request.get_ref().computed_request_id.clone();
+        let mut response = prover_service::AggregateAllResponse {
+            proof_id: request.get_ref().proof_id.clone(),
+            computed_request_id: request.get_ref().computed_request_id.clone(),
+            ..Default::default()
+        };
         if success {
             response.result = Some(Result { code: (ResultCode::ResultOk.into()), message: ("SUCCESS".to_string()) });
         } else {

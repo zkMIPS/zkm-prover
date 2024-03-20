@@ -1,6 +1,7 @@
 use std::borrow::BorrowMut;
 use std::result;
 
+use prover::contexts::agg_all_context;
 use prover_service::prover_service_client::ProverServiceClient;
 use prover_service::{Result};
 use prover_service::{get_status_response, GetStatusRequest};
@@ -30,7 +31,7 @@ pub mod prover_service {
 pub fn get_nodes() -> Vec<ProverNode> {
     let nodes_lock = crate::prover_node::instance();
     let nodes_data = nodes_lock.lock().unwrap();
-    return nodes_data.get_nodes();
+    nodes_data.get_nodes()
 }
 
 pub async fn get_idle_client() -> Option<ProverServiceClient<Channel>> {
@@ -42,13 +43,13 @@ pub async fn get_idle_client() -> Option<ProverServiceClient<Channel>> {
         }
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    return None;
+    None
 }
 
 pub fn get_snark_nodes() -> Vec<ProverNode> {
     let nodes_lock = crate::prover_node::instance();
     let nodes_data = nodes_lock.lock().unwrap();
-    return nodes_data.get_snark_nodes();
+    nodes_data.get_snark_nodes()
 }
 
 pub async fn get_snark_client() -> Option<ProverServiceClient<Channel>> {
@@ -60,7 +61,7 @@ pub async fn get_snark_client() -> Option<ProverServiceClient<Channel>> {
         }
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    return None;
+    None
 }
 
 pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
@@ -81,20 +82,23 @@ pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
             }
         }
     }
-    return None;
+    None
 }
 
 pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
     let client = get_idle_client().await;  
     if let Some(mut client) = client {
-        let mut request = SplitElfRequest::default();
-        request.proof_id = split_task.proof_id.clone();
-        request.computed_request_id = split_task.task_id.clone();
-        request.base_dir = split_task.base_dir.clone();
-        request.elf_path = split_task.elf_path.clone();
-        request.seg_path = split_task.seg_path.clone();
-        request.block_no = split_task.block_no;
-        request.seg_size = split_task.seg_size;
+        let request = SplitElfRequest {
+            chain_id: 0,
+            timestamp: 0,
+            proof_id: split_task.proof_id.clone(),
+            computed_request_id: split_task.task_id.clone(),
+            base_dir: split_task.base_dir.clone(),
+            elf_path: split_task.elf_path.clone(),
+            seg_path: split_task.seg_path.clone(),
+            block_no: split_task.block_no,
+            seg_size: split_task.seg_size,
+        };
         log::info!("split request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(300));
@@ -119,15 +123,18 @@ pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
 pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
     let client = get_idle_client().await;  
     if let Some(mut client) = client {
-        let mut request = ProveRequest::default();
-        request.proof_id = prove_task.proof_id.clone();
-        request.computed_request_id = prove_task.task_id.clone();
-        request.base_dir = prove_task.base_dir.clone();
-        request.seg_path = prove_task.seg_path.clone();
-        request.block_no = prove_task.block_no;
-        request.seg_size = prove_task.seg_size;
-        request.proof_path = prove_task.prove_path.clone();
-        request.pub_value_path = prove_task.pub_value_path.clone();
+        let request = ProveRequest {
+            chain_id: 0,
+            timestamp: 0,
+            proof_id: prove_task.proof_id.clone(),
+            computed_request_id: prove_task.task_id.clone(),
+            base_dir: prove_task.base_dir.clone(),
+            seg_path: prove_task.seg_path.clone(),
+            block_no: prove_task.block_no,
+            seg_size: prove_task.seg_size,
+            proof_path: prove_task.prove_path.clone(),
+            pub_value_path: prove_task.pub_value_path.clone(),
+        };
         log::info!("prove request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(3000));
@@ -152,17 +159,20 @@ pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
 pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
     let client = get_idle_client().await;  
     if let Some(mut client) = client {
-        let mut request = AggregateAllRequest::default();
-        request.proof_id = agg_all_task.proof_id.clone();
-        request.computed_request_id = agg_all_task.task_id.clone();
-        request.base_dir = agg_all_task.base_dir.clone();
-        request.block_no = agg_all_task.block_no;
-        request.seg_size = agg_all_task.seg_size;
-        request.proof_num = agg_all_task.proof_num;
-        request.proof_dir = agg_all_task.proof_dir.clone();
-        request.pub_value_dir = agg_all_task.pub_value_dir.clone();
-        request.output_dir = agg_all_task.output_dir.clone();
-
+        let request = AggregateAllRequest {
+            chain_id: 0,
+            timestamp: 0,
+            proof_id: agg_all_task.proof_id.clone(),
+            computed_request_id: agg_all_task.task_id.clone(),
+            base_dir: agg_all_task.base_dir.clone(),
+            seg_path: agg_all_task.base_dir.clone(),
+            block_no: agg_all_task.block_no,
+            seg_size: agg_all_task.seg_size,
+            proof_num: agg_all_task.proof_num,
+            proof_dir: agg_all_task.proof_dir.clone(),
+            pub_value_dir: agg_all_task.pub_value_dir.clone(),
+            output_dir: agg_all_task.output_dir.clone(),
+        };
         log::info!("aggregate request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(3000));
@@ -187,12 +197,14 @@ pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
 pub async fn final_proof(mut final_task: FinalTask) -> Option<FinalTask> {
     let client = get_snark_client().await;  
     if let Some(mut client) = client {
-        let mut request = FinalProofRequest::default();
-        request.proof_id = final_task.proof_id.clone();
-        request.computed_request_id = final_task.task_id.clone();
-        request.input_dir = final_task.input_dir.clone();
-        request.output_path = final_task.output_path.clone();
-
+        let request = FinalProofRequest {
+            chain_id: 0,
+            timestamp: 0,
+            proof_id: final_task.proof_id.clone(),
+            computed_request_id: final_task.task_id.clone(),
+            input_dir: final_task.input_dir.clone(),
+            output_path: final_task.output_path.clone(),
+        };
         log::info!("final_proof request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(3000));
@@ -227,10 +239,11 @@ pub async fn final_proof(mut final_task: FinalTask) -> Option<FinalTask> {
     Some(final_task)
 }
 
-pub async fn get_task_status(client: &mut ProverServiceClient<Channel>, proof_id: &String, task_id: &String) -> Option<ResultCode> {
-    let mut request = GetTaskResultRequest::default();
-    request.proof_id = proof_id.clone();
-    request.computed_request_id = task_id.clone();      
+pub async fn get_task_status(client: &mut ProverServiceClient<Channel>, proof_id: &str, task_id: &str) -> Option<ResultCode> {
+    let request = GetTaskResultRequest {
+        proof_id: proof_id.to_owned(), 
+        computed_request_id: task_id.to_owned(),
+    };   
     let mut grpc_request = Request::new(request);
     grpc_request.set_timeout(Duration::from_secs(30));
     let response = client.get_task_result(grpc_request).await;
@@ -239,5 +252,5 @@ pub async fn get_task_status(client: &mut ProverServiceClient<Channel>, proof_id
             return ResultCode::from_i32(response_result.code);
         }
     }
-    return Some(ResultCode::ResultUnspecified);
+    Some(ResultCode::ResultUnspecified)
 }

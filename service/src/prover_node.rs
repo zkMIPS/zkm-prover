@@ -25,12 +25,11 @@ pub struct ProverNode {
 
 impl ProverNode {
     pub fn new(addr: &String) -> Self {
-        let prover_node = ProverNode {
+        ProverNode {
             addr: addr.to_string(),
             state: UNKNOW,
             last_updated: 0,
-        };
-        prover_node
+        }
     }
 }
 
@@ -58,7 +57,7 @@ impl ProverNodes {
     }  
   
     pub fn get_nodes(&self) -> Vec<ProverNode> {  
-        return self.prover_nodes.clone();
+        self.prover_nodes.clone()
     } 
 
     pub fn add_snark_node(&mut self, node: ProverNode) {  
@@ -66,6 +65,6 @@ impl ProverNodes {
     }  
   
     pub fn get_snark_nodes(&self) -> Vec<ProverNode> {  
-        return self.snark_nodes.clone();
+        self.snark_nodes.clone()
     } 
 }

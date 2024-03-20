@@ -95,8 +95,8 @@ impl Prover<AggAllContext> for AggAllProver {
             &config,
         );
 
-        let mut agg_proof: ProofWithPublicInputs<F, C, D> = root_proofs.get(0).unwrap().clone();
-        let mut updated_agg_public_values:PublicValues = root_pub_values.get(0).unwrap().clone();
+        let mut agg_proof: ProofWithPublicInputs<F, C, D> = root_proofs.first().unwrap().clone();
+        let mut updated_agg_public_values:PublicValues = root_pub_values.first().unwrap().clone();
 
         let mut base_seg: usize = 1;
         let mut is_agg = false;
@@ -173,7 +173,7 @@ impl Prover<AggAllContext> for AggAllProver {
         );
         let result = all_circuits.verify_block(&block_proof);
 
-        let path = format!("{}", output_dir);
+        let path = output_dir.to_string();
         let builder = WrapperBuilder::<DefaultParameters, 2>::new();
         let mut circuit = builder.build();
         circuit.set_data(all_circuits.block.circuit);

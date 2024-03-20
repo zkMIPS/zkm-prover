@@ -50,10 +50,10 @@ impl RuntimeConfig {
                 return None;
             }
         };
-        instance().lock().unwrap().addr = config.addr.clone();
-        instance().lock().unwrap().prover_addrs = config.prover_addrs.clone();
-        instance().lock().unwrap().base_dir = config.base_dir.clone();
-        instance().lock().unwrap().snark_addrs = config.snark_addrs.clone();
+        instance().lock().unwrap().addr.clone_from(&config.addr);
+        instance().lock().unwrap().prover_addrs.clone_from(&config.prover_addrs);
+        instance().lock().unwrap().base_dir.clone_from(&config.base_dir);
+        instance().lock().unwrap().snark_addrs.clone_from(&config.snark_addrs);
         Some(config)
     }
 }
