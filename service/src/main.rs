@@ -22,6 +22,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::try_init().unwrap_or_default();
     let args = Args::parse();
     let conf_path = std::path::Path::new(&args.config);
     let runtime_config = config::RuntimeConfig::from_toml(conf_path).expect("Config is missing");
