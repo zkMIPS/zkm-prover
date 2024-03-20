@@ -31,6 +31,30 @@ pub struct Stage {
     pub final_task: FinalTask,
 }
 
+macro_rules! on_task {  
+    ($src:ident, $dst:ident) => {  
+        assert!($src.proof_id == $dst.proof_id);
+        if $src.state == TASK_STATE_FAILED || $src.state == TASK_STATE_SUCCESS || $src.state == TASK_STATE_UNPROCESSED{
+            $dst.state = $src.state;
+            if TASK_STATE_UNPROCESSED != $src.state {
+                log::info!("on_task {:#?}", $dst);
+            }
+        }  
+    };  
+}
+
+macro_rules! get_task {
+    ($src:ident) => { 
+        if $src.state == TASK_STATE_UNPROCESSED || 
+            $src.state == TASK_STATE_FAILED {
+            $src.state = TASK_STATE_PROCESSING;
+            return Some($src.clone()); 
+        }
+        return None
+    };
+}
+
+
 impl Stage {
     pub fn new(generate_context: GenerateContext) -> Self {
         Stage {
@@ -100,22 +124,13 @@ impl Stage {
     }
 
     pub fn get_split_task(&mut self) -> Option<SplitTask> {
-        if self.split_task.state == TASK_STATE_UNPROCESSED || 
-            self.split_task.state == TASK_STATE_FAILED {
-            self.split_task.state = TASK_STATE_PROCESSING;
-            return Some(self.split_task.clone()); 
-        }
-        return None
+        let mut src = &mut self.split_task;
+        get_task!(src);
     }
 
     pub fn on_split_task(&mut self, split_task: SplitTask) {
-        assert!(split_task.proof_id == self.split_task.proof_id);
-        if split_task.state == TASK_STATE_FAILED || split_task.state == TASK_STATE_SUCCESS || split_task.state == TASK_STATE_UNPROCESSED{
-            self.split_task.state = split_task.state;
-            if TASK_STATE_UNPROCESSED != split_task.state {
-                log::info!("on_split_task {:#?}", self.split_task);
-            }
-        }
+        let mut dst = &mut self.split_task;
+        on_task!(split_task, dst);
     }
 
     fn gen_prove_task (&mut self) {
@@ -187,22 +202,13 @@ impl Stage {
     }
 
     pub fn get_agg_all_task(&mut self) -> Option<AggAllTask> {
-        if self.agg_all_task.state == TASK_STATE_UNPROCESSED || 
-            self.agg_all_task.state == TASK_STATE_FAILED {
-            self.agg_all_task.state = TASK_STATE_PROCESSING;
-            return Some(self.agg_all_task.clone()); 
-        }
-        return None
+        let mut src = &mut self.agg_all_task;
+        get_task!(src);
     }
 
     pub fn on_agg_all_task(&mut self, agg_all_task: AggAllTask) {
-        assert!(agg_all_task.proof_id == self.agg_all_task.proof_id);
-        if agg_all_task.state == TASK_STATE_FAILED || agg_all_task.state == TASK_STATE_SUCCESS || agg_all_task.state == TASK_STATE_UNPROCESSED{
-            self.agg_all_task.state = agg_all_task.state;
-            if TASK_STATE_UNPROCESSED != agg_all_task.state {
-                log::info!("on_agg_all_task {:#?}", self.agg_all_task);
-            }
-        }
+        let mut dst = &mut self.agg_all_task;
+        on_task!(agg_all_task, dst);
     }
 
     pub fn gen_final_task(&mut self) {
@@ -216,21 +222,12 @@ impl Stage {
     }
 
     pub fn get_final_task(&mut self) -> Option<FinalTask> {
-        if self.final_task.state == TASK_STATE_UNPROCESSED || 
-            self.final_task.state == TASK_STATE_FAILED {
-            self.final_task.state = TASK_STATE_PROCESSING;
-            return Some(self.final_task.clone()); 
-        }
-        return None
+        let mut src = &mut self.final_task;
+        get_task!(src);
     }
 
     pub fn on_final_task(&mut self, final_task: FinalTask) {
-        assert!(final_task.proof_id == self.final_task.proof_id);
-        if final_task.state == TASK_STATE_FAILED || final_task.state == TASK_STATE_SUCCESS || final_task.state == TASK_STATE_UNPROCESSED{
-            self.split_task.state = final_task.state;
-            if TASK_STATE_UNPROCESSED != final_task.state {
-                log::info!("on_final_task {:#?}", self.final_task);
-            }
-        }
+        let mut dst = &mut self.final_task;
+        on_task!(final_task, dst);
     }
 }

@@ -112,6 +112,7 @@ pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
     } else {
         split_task.state = TASK_STATE_UNPROCESSED;
     }
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(split_task)
 }
 
@@ -144,6 +145,7 @@ pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
     } else {
         prove_task.state = TASK_STATE_UNPROCESSED;
     }
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(prove_task)
 }
 
@@ -178,6 +180,7 @@ pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
     } else {
         agg_all_task.state = TASK_STATE_UNPROCESSED;
     }
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(agg_all_task)
 }
 
@@ -220,6 +223,7 @@ pub async fn final_proof(mut final_task: FinalTask) -> Option<FinalTask> {
     } else {
         final_task.state = TASK_STATE_UNPROCESSED;
     }
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(final_task)
 }
 
