@@ -5,6 +5,8 @@ pub static TASK_STATE_PROCESSING :u32 = 2;
 pub static TASK_STATE_SUCCESS :u32 = 3;
 pub static TASK_STATE_FAILED :u32 = 4;
 
+pub static TASK_TIMEOUT :u64 = 1800;
+
 pub mod split_task;
 pub use split_task::SplitTask;
 

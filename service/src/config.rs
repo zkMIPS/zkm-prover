@@ -15,6 +15,7 @@ pub fn instance() -> &'static Mutex<RuntimeConfig> {
 pub struct RuntimeConfig {
     pub addr: String,
     pub prover_addrs: Vec<String>,
+    pub snark_addrs: Vec<String>,
     pub base_dir: String,
 }
 
@@ -23,6 +24,7 @@ impl RuntimeConfig {
         RuntimeConfig {
             addr: "0.0.0.0:50000".to_string(),
             prover_addrs: ["0.0.0.0:50000".to_string()].to_vec(),
+            snark_addrs: ["0.0.0.0:50000".to_string()].to_vec(),
             base_dir: "/tmp".to_string(),
         }
     }
@@ -51,6 +53,7 @@ impl RuntimeConfig {
         instance().lock().unwrap().addr = config.addr.clone();
         instance().lock().unwrap().prover_addrs = config.prover_addrs.clone();
         instance().lock().unwrap().base_dir = config.base_dir.clone();
+        instance().lock().unwrap().snark_addrs = config.snark_addrs.clone();
         Some(config)
     }
 }

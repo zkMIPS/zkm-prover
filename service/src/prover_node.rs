@@ -19,11 +19,8 @@ pub static ACTIVE_TIMEOUT: u64 = 10;
 #[derive(Debug, Clone)]
 pub struct ProverNode {
     pub addr: String,
-    // pub ip: String,
-    // pub port: u16,
     pub state: u32,
     pub last_updated: u64,
-    // client
 }
 
 impl ProverNode {
@@ -33,30 +30,14 @@ impl ProverNode {
             state: UNKNOW,
             last_updated: 0,
         };
-        // client init
         prover_node
-    }
-
-    pub fn is_active(&mut self) -> bool {
-        if self.state != ACTIVE {
-            return false
-        }
-        let now = get_current_timestamp().unwrap();
-        if self.last_updated + ACTIVE_TIMEOUT < now {
-            return false
-        }
-        true
-    }
-
-    pub fn update_state(&mut self, state: u32) {
-        self.state = state;
-        self.last_updated = get_current_timestamp().unwrap();
     }
 }
 
 #[derive(Debug)]
 pub struct ProverNodes {
     pub prover_nodes: Vec<ProverNode>,
+    pub snark_nodes: Vec<ProverNode>,
 }
 
 static INSTANCE: OnceCell<Mutex<ProverNodes>> = OnceCell::new();
@@ -69,6 +50,7 @@ impl ProverNodes {
     fn new() -> Self {
         ProverNodes {
             prover_nodes: Vec::new(),
+            snark_nodes: Vec::new(),
         }
     }
     pub fn add_node(&mut self, node: ProverNode) {  
@@ -77,5 +59,13 @@ impl ProverNodes {
   
     pub fn get_nodes(&self) -> Vec<ProverNode> {  
         return self.prover_nodes.clone();
+    } 
+
+    pub fn add_snark_node(&mut self, node: ProverNode) {  
+        self.snark_nodes.push(node);
+    }  
+  
+    pub fn get_snark_nodes(&self) -> Vec<ProverNode> {  
+        return self.snark_nodes.clone();
     } 
 }

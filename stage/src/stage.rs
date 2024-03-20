@@ -80,8 +80,7 @@ impl Stage {
     }
 
     pub fn is_success(&mut self) -> bool {
-        // TODO
-        if self.agg_all_task.state == TASK_STATE_SUCCESS {
+        if self.final_task.state == TASK_STATE_SUCCESS {
             return true;
         }
         return false;
@@ -207,14 +206,31 @@ impl Stage {
     }
 
     pub fn gen_final_task(&mut self) {
-        
+        assert!(self.final_task.state == TASK_STATE_INITIAL);
+        self.final_task.proof_id = self.generate_context.proof_id.clone();
+        self.final_task.input_dir = self.generate_context.agg_path.clone();
+        self.final_task.output_path = self.generate_context.final_path.clone();
+        self.final_task.task_id = uuid::Uuid::new_v4().to_string();
+        self.final_task.state = TASK_STATE_UNPROCESSED;
+        println!("gen_final_task {:#?}", self.final_task);
     }
 
     pub fn get_final_task(&mut self) -> Option<FinalTask> {
-        return None;
+        if self.final_task.state == TASK_STATE_UNPROCESSED || 
+            self.final_task.state == TASK_STATE_FAILED {
+            self.final_task.state = TASK_STATE_PROCESSING;
+            return Some(self.final_task.clone()); 
+        }
+        return None
     }
 
     pub fn on_final_task(&mut self, final_task: FinalTask) {
-        
+        assert!(final_task.proof_id == self.final_task.proof_id);
+        if final_task.state == TASK_STATE_FAILED || final_task.state == TASK_STATE_SUCCESS || final_task.state == TASK_STATE_UNPROCESSED{
+            self.split_task.state = final_task.state;
+            if TASK_STATE_UNPROCESSED != final_task.state {
+                println!("on_final_task {:#?}", self.final_task);
+            }
+        }
     }
 }

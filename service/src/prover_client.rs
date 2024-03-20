@@ -3,18 +3,19 @@ use std::result;
 
 use prover_service::prover_service_client::ProverServiceClient;
 use prover_service::{Result};
-use prover_service::{get_status_response, GetStatusRequest, GetStatusResponse};
-use prover_service::{SplitElfRequest, SplitElfResponse};
-use prover_service::{ProveRequest, ProveResponse};
-use prover_service::{AggregateRequest, AggregateResponse};
-use prover_service::{AggregateAllRequest, AggregateAllResponse};
+use prover_service::{get_status_response, GetStatusRequest};
+use prover_service::{SplitElfRequest};
+use prover_service::{ProveRequest};
+use prover_service::{AggregateAllRequest};
+use prover_service::{FinalProofRequest};
+use prover_service::{GetTaskResultRequest, GetTaskResultResponse};
 
 use prover::pipeline::{self,Pipeline};
 
 use tonic::{client, Request, Response, Status};
-use stage::tasks::{AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED};
+use stage::tasks::{AggAllTask, FinalTask, ProveTask, SplitTask, Task, TASK_STATE_FAILED, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, TASK_TIMEOUT};
 
-use self::prover_service::ResultCode;
+use self::prover_service::{GetStatusResponse, ResultCode};
 use tonic::transport::{Uri}; 
 use tonic::transport::Channel;
 use std::net::ToSocketAddrs;
@@ -44,11 +45,29 @@ pub async fn get_idle_client() -> Option<ProverServiceClient<Channel>> {
     return None;
 }
 
+pub fn get_snark_nodes() -> Vec<ProverNode> {
+    let nodes_lock = crate::prover_node::instance();
+    let nodes_data = nodes_lock.lock().unwrap();
+    return nodes_data.get_snark_nodes();
+}
+
+pub async fn get_snark_client() -> Option<ProverServiceClient<Channel>> {
+    let nodes: Vec<ProverNode> = get_snark_nodes();
+    for node in nodes {
+        let client = is_active(&node.addr).await;
+        if let Some(client) = client {
+            return Some(client);
+        }
+    }
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    return None;
+}
+
 pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
     let uri = format!("grpc://{}", addr).parse::<Uri>().unwrap();
     let endpoint = tonic::transport::Channel::builder(uri)
         .connect_timeout(Duration::from_secs(5))
-        .timeout(Duration::from_secs(1800))
+        .timeout(Duration::from_secs(TASK_TIMEOUT))
         .concurrency_limit(256);
     let client = ProverServiceClient::connect(endpoint).await;
     if let Ok(mut client) = client {
@@ -56,7 +75,8 @@ pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
         let response = client.get_status(Request::new(request)).await;
         if let Ok(response) = response {
             let status = response.get_ref().status;
-            if get_status_response::Status::from_i32(status) == Some(get_status_response::Status::Idle) {
+            if get_status_response::Status::from_i32(status) == Some(get_status_response::Status::Idle) ||
+                get_status_response::Status::from_i32(status) == Some(get_status_response::Status::Unspecified) {
                 return Some(client);
             }
         }
@@ -162,33 +182,58 @@ pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
 }
 
 pub async fn final_proof(mut final_task: FinalTask) -> Option<FinalTask> {
-    // let client = get_idle_client().await;  
-    // if let Some(mut client) = client {
-    //     let mut request = AggregateAllRequest::default();
-    //     request.proof_id = final_task.proof_id.clone();
-    //     request.computed_request_id = final_task.task_id.clone();
-    //     request.base_dir = final_task.base_dir.clone();
-    //     request.block_no = final_task.block_no;
-    //     request.seg_size = final_task.seg_size;
-    //     request.pub_value_dir = final_task.pub_value_path.clone();
-    //     request.output_dir = final_task.out_path.clone();
+    let client = get_snark_client().await;  
+    if let Some(mut client) = client {
+        let mut request = FinalProofRequest::default();
+        request.proof_id = final_task.proof_id.clone();
+        request.computed_request_id = final_task.task_id.clone();
+        request.input_dir = final_task.input_dir.clone();
+        request.output_path = final_task.output_path.clone();
 
-    //     println!("aggregate_all request {:#?}", request);
-    //     let mut grpc_request = Request::new(request);
-    //     grpc_request.set_timeout(Duration::from_secs(3000));
-    //     let response = client.aggregate_all(grpc_request).await;
-    //     if let Ok(response) = response {
-    //         if let Some(response_result) = response.get_ref().result.as_ref() {
-    //             println!("aggregate_all response {:#?}", response);
-    //             if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
-    //                 final_task.state = TASK_STATE_SUCCESS;
-    //                 return Some(final_task);
-    //             }
-    //         }
-    //     }
-    //     final_task.state = TASK_STATE_FAILED;
-    // } else {
-    //     final_task.state = TASK_STATE_UNPROCESSED;
-    // }
+        println!("final_proof request {:#?}", request);
+        let mut grpc_request = Request::new(request);
+        grpc_request.set_timeout(Duration::from_secs(3000));
+        let response = client.final_proof(grpc_request).await;
+        if let Ok(response) = response {
+            if let Some(response_result) = response.get_ref().result.as_ref() {
+                println!("final_proof response {:#?}", response);
+                if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
+                    let mut loop_count = 0;
+                    loop {
+                        let task_result = get_task_status(&mut client, &final_task.proof_id, &final_task.task_id).await;
+                        if let Some(task_result) = task_result {
+                            if task_result == ResultCode::ResultOk {
+                                final_task.state = TASK_STATE_SUCCESS;
+                                return Some(final_task);
+                            }
+                        }
+                        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                        loop_count += 1;
+                        if loop_count > TASK_TIMEOUT {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        final_task.state = TASK_STATE_FAILED;
+    } else {
+        final_task.state = TASK_STATE_UNPROCESSED;
+    }
     Some(final_task)
+}
+
+pub async fn get_task_status(client: &mut ProverServiceClient<Channel>, proof_id: &String, task_id: &String) -> Option<ResultCode> {
+    let mut request = GetTaskResultRequest::default();
+    request.proof_id = proof_id.clone();
+    request.computed_request_id = task_id.clone();      
+    let mut grpc_request = Request::new(request);
+    grpc_request.set_timeout(Duration::from_secs(30));
+    let response = client.get_task_result(grpc_request).await;
+    if let Ok(response) = response {
+        if let Some(response_result) = response.get_ref().result.as_ref() {
+            return ResultCode::from_i32(response_result.code);
+        }
+    }
+    return Some(ResultCode::ResultUnspecified);
 }
