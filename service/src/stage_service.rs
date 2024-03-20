@@ -130,6 +130,11 @@ impl StageService for StageServiceSVC {
             );
         }
 
+        {
+            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
+            taskmap.insert(request.get_ref().proof_id.clone(), stage_service::ExecutorError::Unspecified.into());
+        }
+
         let generate_context = stage::contexts::GenerateContext::new(
             &request.get_ref().proof_id,
             &dir_path,
