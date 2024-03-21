@@ -12,8 +12,6 @@ use prover_service::{SplitElfRequest, SplitElfResponse};
 use std::time::Instant;
 
 use tonic::{Request, Response, Status}; 
-use std::sync::Arc;
-use std::sync::Mutex;
 
 use self::prover_service::ResultCode;
 #[allow(clippy::module_inception)]

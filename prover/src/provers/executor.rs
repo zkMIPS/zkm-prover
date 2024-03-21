@@ -1,4 +1,3 @@
-use super::Prover;
 use crate::contexts::SplitContext;
 use anyhow::Ok;
 use anyhow::Result;
@@ -7,20 +6,20 @@ use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;
 use std::fs;
 
-use zkm::mips_emulator::state::{InstrumentedState, State, SEGMENT_STEPS};
+use zkm::mips_emulator::state::{InstrumentedState, State};
 use zkm::mips_emulator::utils::get_block_path;
 
 #[derive(Default)]
-pub struct SplitProver {}
+pub struct Executor {}
 
-impl SplitProver {
+impl Executor {
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl Prover<SplitContext> for SplitProver {
-    fn prove(&self, ctx: &SplitContext) -> Result<()> {
+impl Executor {
+    pub fn split(&self, ctx: &SplitContext) -> Result<()> {
         // 1. split ELF into segs
         let basedir = ctx.basedir.clone();
         let elf_path = ctx.elf_path.clone();
