@@ -1,5 +1,5 @@
-use crate::contexts::{AggContext, AggAllContext, ProveContext, SplitContext};
-use crate::provers::{Executor, RootProver, AggProver, AggAllProver, Prover};
+use crate::contexts::{AggContext, AggAllContext, ProveContext};
+use crate::provers::{RootProver, AggProver, AggAllProver, Prover};
 
 // use anyhow::{anyhow, bail, Result};
 // use std::path::Path;
@@ -16,27 +16,6 @@ impl Pipeline {
     pub fn new() -> Self {
         Pipeline {
             _mutex: Mutex::new(0),
-        }
-    }
-
-    pub fn split(&mut self, split_context: &SplitContext) -> bool {
-        let result = PIPELINE_MUTEX.try_lock();
-        match result {
-            Ok(_) => {
-                match Executor::new().split(split_context) {
-                    Ok(()) => {
-                        true
-                    }
-                    Err(e) => {
-                        log::error!("split error {:#?}", e);
-                        false
-                    }   
-                }
-            }
-            Err(_) => {
-                log::error!("split_prove busy");
-                false
-            }
         }
     }
 

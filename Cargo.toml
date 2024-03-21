@@ -2,7 +2,8 @@
 members = [
   "prover",
   "stage",
-  "service"
-]
+  "service",
+  "executor",
+  ]
 
 resolver = "2"

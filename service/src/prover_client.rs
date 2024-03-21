@@ -4,7 +4,7 @@ use prover_service::SplitElfRequest;
 use prover_service::ProveRequest;
 use prover_service::AggregateAllRequest;
 use prover_service::FinalProofRequest;
-use prover_service::{GetTaskResultRequest};
+use prover_service::GetTaskResultRequest;
 
 use tonic::Request;
 use stage::tasks::{AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, TASK_TIMEOUT};

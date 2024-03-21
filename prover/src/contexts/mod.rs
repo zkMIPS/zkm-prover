@@ -1,7 +1,3 @@
-
-pub mod split_context;
-pub use split_context::SplitContext;
-
 pub mod prove_context;
 pub use prove_context::ProveContext;
 

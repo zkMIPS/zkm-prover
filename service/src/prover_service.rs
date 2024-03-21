@@ -7,8 +7,9 @@ use prover_service::{ProveRequest, ProveResponse};
 use prover_service::{AggregateRequest, AggregateResponse};
 use prover_service::{AggregateAllRequest, AggregateAllResponse};
 use prover_service::{FinalProofRequest, FinalProofResponse};
-use prover::contexts::{AggContext, AggAllContext, ProveContext, SplitContext};
+use prover::contexts::{AggContext, AggAllContext, ProveContext};
 use prover::pipeline::Pipeline;
+use executor::split_context::SplitContext;
 use std::time::Instant;
 
 use tonic::{Request, Response, Status}; 
@@ -75,7 +76,7 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().seg_path); 
         let split_func = move || {
             let s_ctx: SplitContext = split_context;
-            Pipeline::new().split(&s_ctx)
+            executor::executor::Executor::new().split(&s_ctx)
         };
         let success = run_back_task(split_func).await;
         let mut response = prover_service::SplitElfResponse {

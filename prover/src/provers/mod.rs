@@ -1,5 +1,3 @@
-mod executor;
-pub use executor::Executor;
 
 mod root_prover;
 pub use root_prover::RootProver;
