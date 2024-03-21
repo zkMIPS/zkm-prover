@@ -2,20 +2,9 @@ use super::Prover;
 use crate::contexts::AggAllContext;
 
 use anyhow::Ok;
-use bincode::Error;
-use elf::{endian::AnyEndian, ElfBytes};
-use ethers::types::transaction::request;
-use ff::derive::bitvec::vec;
-use num::ToPrimitive;
-use plonky2::util::serialization::gate_serialization::default;
-use serde::Serialize;
-use uuid::timestamp::context;
-use std::fs;
-use std::time::Duration;
 
 use plonky2::field::goldilocks_field::GoldilocksField;
-use plonky2::plonk::config::{GenericConfig, PoseidonGoldilocksConfig};
-use plonky2::util::timing::TimingTree;
+use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::plonk::proof::ProofWithPublicInputs;
 
 use plonky2x::backend::circuit::Groth16WrapperParameters;
@@ -26,18 +15,8 @@ use plonky2x::prelude::DefaultParameters;
 
 use zkm::all_stark::AllStark;
 use zkm::config::StarkConfig;
-use zkm::cpu::kernel::assembler::segment_kernel;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
-use zkm::mips_emulator::state::{InstrumentedState, State, SEGMENT_STEPS};
-use zkm::mips_emulator::utils::get_block_path;
-use zkm::proof;
 use zkm::proof::PublicValues;
-use zkm::prover::prove;
-use zkm::verifier::verify_proof;
-
-use std::fs::File;  
-use std::io::Write;
-use std::io::Read;
 
 use super::file_utils::read_file_content;
 
@@ -62,8 +41,8 @@ impl Prover<AggAllContext> for AggAllProver {
         let proof_dir = ctx.proof_dir.clone();
         let pub_value_dir = ctx.pub_value_dir.clone();
         let output_dir = ctx.output_dir.clone();
-        let file = String::from("");
-        let args = "".to_string();
+        let _file = String::from("");
+        let _args = "".to_string();
 
         if proof_num < 1 {
             return Ok(());
@@ -171,7 +150,7 @@ impl Prover<AggAllContext> for AggAllProver {
             "proof size: {:?}",
             serde_json::to_string(&block_proof.proof).unwrap().len()
         );
-        let result = all_circuits.verify_block(&block_proof);
+        let _result = all_circuits.verify_block(&block_proof);
 
         let path = output_dir.to_string();
         let builder = WrapperBuilder::<DefaultParameters, 2>::new();

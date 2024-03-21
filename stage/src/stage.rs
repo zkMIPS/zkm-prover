@@ -1,18 +1,13 @@
 use std::fs;  
-use std::io;  
 use std::path::Path;
-use std::result;
 use std::str::FromStr;
 use std::fs::File; 
 use std::io::Write;
 use std::io::Read;
-use std::sync::Mutex;  
-use std::sync::Arc;
-use crate::contexts::generate_context;
 use crate::tasks::TASK_STATE_PROCESSING;
-use crate::{contexts::generate_context::GenerateContext};
+use crate::contexts::generate_context::GenerateContext;
 use crate::tasks::{TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED};
-use crate::tasks::{split_task, final_task, SplitTask, FinalTask, prove_task, agg_task, AggAllTask, ProveTask};
+use crate::tasks::{SplitTask, FinalTask,AggAllTask, ProveTask};
 
 pub fn copy_file_bin(src: &String, dst: &String) {
     let mut file_src = File::open(src).unwrap();
@@ -93,10 +88,8 @@ impl Stage {
             self.gen_agg_all_task();
             return;
         }
-        if self.agg_all_task.state == TASK_STATE_SUCCESS {
-            if self.final_task.state == TASK_STATE_INITIAL {
-                self.gen_final_task();
-            }
+        if self.agg_all_task.state == TASK_STATE_SUCCESS && self.final_task.state == TASK_STATE_INITIAL {
+            self.gen_final_task();
         }
     }
 
@@ -121,12 +114,12 @@ impl Stage {
     }
 
     pub fn get_split_task(&mut self) -> Option<SplitTask> {
-        let mut src = &mut self.split_task;
+        let src = &mut self.split_task;
         get_task!(src);
     }
 
     pub fn on_split_task(&mut self, split_task: SplitTask) {
-        let mut dst = &mut self.split_task;
+        let dst = &mut self.split_task;
         on_task!(split_task, dst);
     }
 
@@ -141,7 +134,7 @@ impl Stage {
             let file_name = path.file_name().unwrap().to_str().unwrap(); 
             let result: Result<usize, <usize as FromStr>::Err> = file_name.parse();
             if let Ok(file_no) = result {
-                let mut prove_task = ProveTask {
+                let prove_task = ProveTask {
                     task_id: uuid::Uuid::new_v4().to_string(),
                     base_dir: self.generate_context.basedir.clone(),
                     block_no: self.generate_context.block_no,
@@ -170,6 +163,14 @@ impl Stage {
     }
 
     pub fn on_prove_task(&mut self, prove_task: ProveTask) {
+        for mut item_task in &mut self.prove_tasks {
+            if item_task.task_id == prove_task.task_id && item_task.state == TASK_STATE_PROCESSING {
+                let dst = &mut item_task;
+                on_task!(prove_task, dst);
+                break;
+            }
+        }
+
         assert!(prove_task.proof_id == self.generate_context.proof_id);
         if prove_task.state == TASK_STATE_FAILED || prove_task.state == TASK_STATE_SUCCESS || prove_task.state == TASK_STATE_UNPROCESSED {
             if TASK_STATE_UNPROCESSED != prove_task.state {
@@ -200,12 +201,12 @@ impl Stage {
     }
 
     pub fn get_agg_all_task(&mut self) -> Option<AggAllTask> {
-        let mut src = &mut self.agg_all_task;
+        let src = &mut self.agg_all_task;
         get_task!(src);
     }
 
     pub fn on_agg_all_task(&mut self, agg_all_task: AggAllTask) {
-        let mut dst = &mut self.agg_all_task;
+        let dst = &mut self.agg_all_task;
         on_task!(agg_all_task, dst);
     }
 
@@ -220,12 +221,12 @@ impl Stage {
     }
 
     pub fn get_final_task(&mut self) -> Option<FinalTask> {
-        let mut src = &mut self.final_task;
+        let src = &mut self.final_task;
         get_task!(src);
     }
 
     pub fn on_final_task(&mut self, final_task: FinalTask) {
-        let mut dst = &mut self.final_task;
+        let dst = &mut self.final_task;
         on_task!(final_task, dst);
     }
 }

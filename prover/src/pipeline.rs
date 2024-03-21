@@ -1,13 +1,13 @@
-use crate::contexts::{agg_context, agg_all_context, AggContext, AggAllContext, ProveContext, SplitContext};
-use crate::provers::{SplitProver, ProveProver, AggProver, AggAllProver, Prover};
+use crate::contexts::{AggContext, AggAllContext, ProveContext, SplitContext};
+use crate::provers::{Executor, RootProver, AggProver, AggAllProver, Prover};
 
-use anyhow::{anyhow, bail, Result};
-use std::path::Path;
+// use anyhow::{anyhow, bail, Result};
+// use std::path::Path;
 use std::sync::Mutex;
 
 #[derive(Debug, Default)]
 pub struct Pipeline {
-    mutex: Mutex<usize>,
+    _mutex: Mutex<usize>,
 }
 
 static PIPELINE_MUTEX: Mutex<usize> = Mutex::new(0);
@@ -15,20 +15,20 @@ static PIPELINE_MUTEX: Mutex<usize> = Mutex::new(0);
 impl Pipeline {
     pub fn new() -> Self {
         Pipeline {
-            mutex: Mutex::new(0),
+            _mutex: Mutex::new(0),
         }
     }
 
-    pub fn split_prove(&mut self, split_context: &SplitContext) -> bool {
+    pub fn split(&mut self, split_context: &SplitContext) -> bool {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => {
-                match SplitProver::new().prove(split_context) {
+                match Executor::new().split(split_context) {
                     Ok(()) => {
                         true
                     }
                     Err(e) => {
-                        log::error!("split_prove error {:#?}", e);
+                        log::error!("split error {:#?}", e);
                         false
                     }   
                 }
@@ -40,28 +40,28 @@ impl Pipeline {
         }
     }
 
-    pub fn root_prove(&mut self, prove_context: &ProveContext) -> bool {
+    pub fn prove_root(&mut self, prove_context: &ProveContext) -> bool {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => {
-                match ProveProver::new().prove(prove_context) {
+                match RootProver::new().prove(prove_context) {
                     Ok(()) => {
                         true
                     }
                     Err(e) => {
-                        log::error!("root_prove error {:#?}", e);
+                        log::error!("prove_root error {:#?}", e);
                         false
                     }   
                 }
             }
-            Err(e) => {
-                log::error!("root_prove busy");
+            Err(_e) => {
+                log::error!("prove_root busy");
                 false
             }
         }
     }
 
-    pub fn aggregate_prove(&mut self, agg_context: &AggContext) -> bool {
+    pub fn prove_aggregate(&mut self, agg_context: &AggContext) -> bool {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => {
@@ -70,19 +70,19 @@ impl Pipeline {
                         true
                     }
                     Err(e) => {
-                        log::error!("aggregate_prove error {:#?}", e);
+                        log::error!("prove_aggregate error {:#?}", e);
                         false
                     }   
                 }
             }
             Err(_) => {
-                log::error!("aggregate_prove busy");
+                log::error!("prove_aggregate busy");
                 false
             }
         }
     }
 
-    pub fn aggregate_all_prove(&mut self, final_context: &AggAllContext) -> bool {
+    pub fn prove_aggregate_all(&mut self, final_context: &AggAllContext) -> bool {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => {
@@ -91,13 +91,13 @@ impl Pipeline {
                         true
                     }
                     Err(e) => {
-                        log::error!("aggregate_all_prove error {:#?}", e);
+                        log::error!("prove_aggregate_all error {:#?}", e);
                         false
                     }   
                 }
             }
             Err(_) => {
-                log::error!("aggregate_all_prove busy");
+                log::error!("prove_aggregate_all busy");
                 false
             }
         }

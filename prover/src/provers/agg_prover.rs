@@ -1,31 +1,18 @@
 use super::Prover;
 use crate::contexts::AggContext;
 
-use std::time::Duration;
 use num::ToPrimitive;
 use plonky2::field::goldilocks_field::GoldilocksField;
-use plonky2::plonk::config::{GenericConfig, PoseidonGoldilocksConfig};
-use plonky2::util::timing::TimingTree;
+use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::plonk::proof::ProofWithPublicInputs;
-
-// use plonky2x::backend::wrapper::wrap::WrappedCircuit;
-// use plonky2x::frontend::builder::CircuitBuilder as WrapperBuilder;
-
 
 use zkm::all_stark::AllStark;
 use zkm::config::StarkConfig;
-use zkm::cpu::kernel::assembler::segment_kernel;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
-use zkm::mips_emulator::state::{InstrumentedState, State, SEGMENT_STEPS};
-use zkm::mips_emulator::utils::get_block_path;
-use zkm::proof;
 use zkm::proof::PublicValues;
-use zkm::prover::prove;
-use zkm::verifier::verify_proof;
 
 use std::fs::File;  
 use std::io::Write;
-use std::io::Read;
 
 use super::file_utils::read_file_content;
 
@@ -44,9 +31,9 @@ impl Prover<AggContext> for AggProver {
         const D: usize = 2;
         type C = PoseidonGoldilocksConfig;
 
-        let basedir = ctx.basedir.clone();
-        let block_no = ctx.block_no.to_string();
-        let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
+        let _basedir = ctx.basedir.clone();
+        let _block_no = ctx.block_no.to_string();
+        let _seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
         let proof_path1 = ctx.proof_path1.clone();
         let proof_path2 = ctx.proof_path2.clone();
         let pub_value_path1 = ctx.pub_value_path1.clone();
@@ -55,8 +42,8 @@ impl Prover<AggContext> for AggProver {
         let agg_pub_value_path = ctx.agg_pub_value_path.clone();
         let is_agg1 = ctx.is_agg_1;
         let is_agg2 = ctx.is_agg_2;
-        let file = String::from("");
-        let args = "".to_string();
+        let _file = String::from("");
+        let _args = "".to_string();
 
 
         let all_stark = AllStark::<F, D>::default();
@@ -81,13 +68,11 @@ impl Prover<AggContext> for AggProver {
         let next_pub_value_content = read_file_content(&pub_value_path2)?;
         let next_pub_value: PublicValues =  serde_json::from_str(&next_pub_value_content)?;
 
-        let mut timing = TimingTree::new("agg first", log::Level::Info);
         // Update public values for the aggregation.
         let agg_public_values = PublicValues {
             roots_before: root_pub_value.roots_before,
             roots_after: next_pub_value.roots_after,
         };
-        timing = TimingTree::new("prove aggression", log::Level::Info);
         // We can duplicate the proofs here because the state hasn't mutated.
         let (agg_proof, updated_agg_public_values) = all_circuits.prove_aggregation(
             is_agg1,
@@ -96,7 +81,6 @@ impl Prover<AggContext> for AggProver {
             &root_proof,
             agg_public_values.clone(),
         )?;
-        timing.filter(Duration::from_millis(100)).print();
         all_circuits.verify_aggregation(&agg_proof)?;
 
         // write agg_proof write file

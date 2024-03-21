@@ -1,8 +1,8 @@
-mod split_prover;
-pub use split_prover::SplitProver;
+mod executor;
+pub use executor::Executor;
 
-mod prove_prover;
-pub use prove_prover::ProveProver;
+mod root_prover;
+pub use root_prover::RootProver;
 
 mod file_utils;
 pub use file_utils::read_file_content;

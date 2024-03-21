@@ -1,21 +1,17 @@
 
 use prover_service::prover_service_server::ProverService;
-use prover_service::{Result};
 use prover_service::{get_status_response, GetStatusRequest, GetStatusResponse};
-use prover_service::{GetTaskResultRequest, GetTaskResultResponse};
+use prover_service::{Result, GetTaskResultRequest, GetTaskResultResponse};
 use prover_service::{SplitElfRequest, SplitElfResponse};
 use prover_service::{ProveRequest, ProveResponse};
 use prover_service::{AggregateRequest, AggregateResponse};
 use prover_service::{AggregateAllRequest, AggregateAllResponse};
 use prover_service::{FinalProofRequest, FinalProofResponse};
-use prover::contexts::{agg_context, AggContext, AggAllContext, ProveContext, SplitContext};
-
-use prover::pipeline::{self,Pipeline};
-use std::time::{Instant, Duration};
+use prover::contexts::{AggContext, AggAllContext, ProveContext, SplitContext};
+use prover::pipeline::Pipeline;
+use std::time::Instant;
 
 use tonic::{Request, Response, Status}; 
-use std::sync::Arc;
-use std::sync::Mutex;
 
 use self::prover_service::ResultCode;
 pub mod prover_service {
@@ -40,7 +36,7 @@ async fn run_back_task<F: FnOnce() -> bool + Send + 'static> (callable: F) -> bo
 impl ProverService for ProverServiceSVC {
     async fn get_status(
         &self,
-        request: Request<GetStatusRequest>
+        _request: Request<GetStatusRequest>
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
         // log::info!("{:#?}", request);
 
@@ -56,7 +52,7 @@ impl ProverService for ProverServiceSVC {
 
     async fn get_task_result(
         &self,
-        request: Request<GetTaskResultRequest>
+        _request: Request<GetTaskResultRequest>
     ) -> tonic::Result<Response<GetTaskResultResponse>, Status> {
         // log::info!("{:#?}", request);
         let response = prover_service::GetTaskResultResponse::default();
@@ -79,7 +75,7 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().seg_path); 
         let split_func = move || {
             let s_ctx: SplitContext = split_context;
-            Pipeline::new().split_prove(&s_ctx)
+            Pipeline::new().split(&s_ctx)
         };
         let success = run_back_task(split_func).await;
         let mut response = prover_service::SplitElfResponse {
@@ -115,7 +111,7 @@ impl ProverService for ProverServiceSVC {
 
         let prove_func = move || {
             let s_ctx: ProveContext = prove_context;
-            Pipeline::new().root_prove(&s_ctx)
+            Pipeline::new().prove_root(&s_ctx)
         };
         let success = run_back_task(prove_func).await;
         let mut response = prover_service::ProveResponse {
@@ -155,7 +151,7 @@ impl ProverService for ProverServiceSVC {
 
         let agg_all_func = move || {
             let agg_ctx = agg_context;
-            Pipeline::new().aggregate_prove(&agg_ctx)
+            Pipeline::new().prove_aggregate(&agg_ctx)
         };
         let success = run_back_task(agg_all_func).await;
         let mut response = prover_service::AggregateResponse {
@@ -191,7 +187,7 @@ impl ProverService for ProverServiceSVC {
         
         let agg_all_func = move || {
             let s_ctx: AggAllContext = final_context;
-            Pipeline::new().aggregate_all_prove(&s_ctx)
+            Pipeline::new().prove_aggregate_all(&s_ctx)
         };
         let success = run_back_task(agg_all_func).await;
         let mut response = prover_service::AggregateAllResponse {
@@ -212,7 +208,7 @@ impl ProverService for ProverServiceSVC {
 
     async fn final_proof(
         &self,
-        request: Request<FinalProofRequest>
+        _request: Request<FinalProofRequest>
     ) -> tonic::Result<Response<FinalProofResponse>, Status> {
         // log::info!("{:#?}", request);
         let response = prover_service::FinalProofResponse::default();

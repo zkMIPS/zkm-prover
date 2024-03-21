@@ -1,27 +1,15 @@
-use std::borrow::BorrowMut;
-use std::fmt::format;
 use std::sync::Mutex;
-use std::{clone, result};
-
-use stage::contexts::generate_context;
-use stage::tasks::{self, prove_task, split_task};
 use stage_service::stage_service_server::StageService;
-// use stage_service::{Result};
 use stage_service::{GetStatusRequest, GetStatusResponse};
 use stage_service::{GenerateProofRequest, GenerateProofResponse};
-// use prover::contexts::{SplitContext, ProveContext};
-
-// use prover::pipeline::{self,Pipeline};
 
 use tonic::{Request, Response, Status};
 use tokio::sync::mpsc;
 use tokio::time;  
-use tokio::task;
 use std::fs;
 use std::fs::File;  
 use std::io::Write;
 use stage::tasks::Task;
-use uuid::Uuid; 
 
 use crate::prover_client;
 use crate::config;

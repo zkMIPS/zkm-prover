@@ -2,37 +2,30 @@ use super::Prover;
 use crate::contexts::ProveContext;
 
 use num::ToPrimitive;
-use serde::Serialize;
-use std::fs;
 use std::time::Duration;
 
 use plonky2::field::goldilocks_field::GoldilocksField;
-use plonky2::plonk::config::{GenericConfig, PoseidonGoldilocksConfig};
+use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::util::timing::TimingTree;
-
-// use plonky2x::backend::wrapper::wrap::WrappedCircuit;
-// use plonky2x::frontend::builder::CircuitBuilder as WrapperBuilder;
-
 
 use zkm::all_stark::AllStark;
 use zkm::config::StarkConfig;
 use zkm::cpu::kernel::assembler::segment_kernel;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
-use zkm::mips_emulator::state::{InstrumentedState, State, SEGMENT_STEPS};
 
 use std::fs::File;  
 use std::io::Write;
 
 #[derive(Default)]
-pub struct ProveProver {}
+pub struct RootProver {}
 
-impl ProveProver {
+impl RootProver {
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl Prover<ProveContext> for ProveProver {
+impl Prover<ProveContext> for RootProver {
     fn prove(&self, ctx: &ProveContext) -> anyhow::Result<()> {
         type F = GoldilocksField;
         const D: usize = 2;
@@ -45,7 +38,7 @@ impl Prover<ProveContext> for ProveProver {
         let proof_path = ctx.proof_path.clone();
         let pub_value_path = ctx.pub_value_path.clone();
         let file = String::from("");
-        let args = "".to_string();
+        let _args = "".to_string();
 
 
         let all_stark = AllStark::<F, D>::default();
@@ -60,7 +53,7 @@ impl Prover<ProveContext> for ProveProver {
 
         let input = segment_kernel(&basedir, &block_no, &file, &seg_path, seg_size);
         let mut timing: TimingTree = TimingTree::new("prove root", log::Level::Info);
-        let (mut agg_proof, mut updated_agg_public_values) =
+        let (agg_proof, updated_agg_public_values) =
             all_circuits.prove_root(&all_stark, &input, &config, &mut timing)?;
 
         timing.filter(Duration::from_millis(100)).print();

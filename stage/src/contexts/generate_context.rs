@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::tasks::final_task;
-
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct GenerateContext {
     pub proof_id: String,

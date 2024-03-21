@@ -1,6 +1,5 @@
-use clap::{Arg, Parser};
+use clap::Parser;
 use prover_node::ProverNode;  
-use std::io;
 
 use prover_service::prover_service::prover_service_server::ProverServiceServer;
 use stage_service::stage_service::stage_service_server::StageServiceServer;

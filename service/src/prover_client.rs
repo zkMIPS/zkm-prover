@@ -1,27 +1,18 @@
-use std::borrow::BorrowMut;
-use std::result;
-
-use prover::contexts::agg_all_context;
 use prover_service::prover_service_client::ProverServiceClient;
-use prover_service::{Result};
 use prover_service::{get_status_response, GetStatusRequest};
-use prover_service::{SplitElfRequest};
-use prover_service::{ProveRequest};
-use prover_service::{AggregateAllRequest};
-use prover_service::{FinalProofRequest};
-use prover_service::{GetTaskResultRequest, GetTaskResultResponse};
+use prover_service::SplitElfRequest;
+use prover_service::ProveRequest;
+use prover_service::AggregateAllRequest;
+use prover_service::FinalProofRequest;
+use prover_service::{GetTaskResultRequest};
 
-use prover::pipeline::{self,Pipeline};
+use tonic::Request;
+use stage::tasks::{AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, TASK_TIMEOUT};
 
-use tonic::{client, Request, Response, Status};
-use stage::tasks::{AggAllTask, FinalTask, ProveTask, SplitTask, Task, TASK_STATE_FAILED, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, TASK_TIMEOUT};
-
-use self::prover_service::{GetStatusResponse, ResultCode};
-use tonic::transport::{Uri}; 
+use self::prover_service::ResultCode;
+use tonic::transport::Uri; 
 use tonic::transport::Channel;
-use std::net::ToSocketAddrs;
 use crate::prover_node::ProverNode;
-use crate::prover_node::ProverNodes;
 use std::time::Duration;
 
 pub mod prover_service {
