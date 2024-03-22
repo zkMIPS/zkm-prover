@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package stage.v1;
+
+
+service StageService {
+    rpc GenerateProof(GenerateProofRequest) returns (GenerateProofResponse) {}
+    rpc GetStatus(GetStatusRequest) returns (GetStatusResponse) {}
+}
+
+enum ExecutorError {
+    EXECUTOR_ERROR_UNSPECIFIED = 0;
+    EXECUTOR_ERROR_NO_ERROR = 1;
+}
+
+message BlockFileItem {
+    string file_name = 1;
+    bytes file_content = 2;
+}
+
+message GenerateProofRequest {
+    uint64 chain_id = 1;
+    uint64 timestamp = 2;
+    string proof_id = 3;
+    bytes elf_data = 4;
+    repeated BlockFileItem block_data = 5;
+    uint64 block_no = 6;
+    uint32 seg_size = 7;
+}
+
+message GenerateProofResponse {
+    uint32 executor_error = 1;
+    string error_message = 2;
+    string proof_id = 3;
+    bytes common_circuit_data = 4;
+    bytes verifier_only_circuit_data = 5;
+    bytes proof_with_public_inputs = 6;
+}
+
+message GetStatusRequest {
+    string proof_id = 1;
+}
+
+message GetStatusResponse {
+    string proof_id = 1;
+    uint64 status = 2;
+}
