@@ -64,7 +64,7 @@ impl StageService for StageServiceSVC {
             ..Default::default()
         };
         if let Some(status) = status {
-            response.status = *status as u64;
+            response.status = *status as i32;
         }
         Ok(Response::new(response))
     }

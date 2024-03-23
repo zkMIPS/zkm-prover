@@ -35,7 +35,7 @@ message GenerateProofRequest {
 }
 
 message GenerateProofResponse {
-    uint32 executor_error = 1;
+    int32 status = 1;
     string error_message = 2;
     string proof_id = 3;
     bytes result = 4;
@@ -47,5 +47,6 @@ message GetStatusRequest {
 
 message GetStatusResponse {
     string proof_id = 1;
-    uint64 status = 2;
+    int32 status = 2;
+    bytes result = 4;
 }

@@ -46,5 +46,3 @@ $ ./target/release/service --config ./service/config/prover2.toml
 # set CA_CERT_PATH, CERT_PATH and KEY_PATH if tls is enabled
 cargo run --release --example stage
 ```
-
-
