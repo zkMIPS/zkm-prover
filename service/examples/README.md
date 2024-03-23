@@ -43,5 +43,3 @@ $ ./target/release/service --config ./service/config/prover2.toml
 ```
 cargo run --release --example stage
 ```
-
-

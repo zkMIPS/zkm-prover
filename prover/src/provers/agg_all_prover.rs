@@ -1,5 +1,6 @@
 use super::Prover;
 use crate::contexts::AggAllContext;
+use crate::provers::select_degree_bits;
 
 use anyhow::Ok;
 
@@ -37,6 +38,7 @@ impl Prover<AggAllContext> for AggAllProver {
         const D: usize = 2;
         type C = PoseidonGoldilocksConfig;
 
+        let seg_size = ctx.seg_size as usize;
         let proof_num = ctx.proof_num as usize;
         let proof_dir = ctx.proof_dir.clone();
         let pub_value_dir = ctx.pub_value_dir.clone();
@@ -69,8 +71,7 @@ impl Prover<AggAllContext> for AggAllProver {
         // Preprocess all circuits.
         let all_circuits = AllRecursiveCircuits::<F, C, D>::new(
             &all_stark,
-            // &[10..21, 15..22, 14..21, 9..21, 12..21, 15..23],
-            &[10..21, 12..22, 13..21, 8..21, 10..21, 13..23],
+            &select_degree_bits(seg_size),
             &config,
         );
 

@@ -1,4 +1,5 @@
 use std::sync::Mutex;
+use prover::provers;
 use stage_service::stage_service_server::StageService;
 use stage_service::{GetStatusRequest, GetStatusResponse};
 use stage_service::{GenerateProofRequest, GenerateProofResponse};
@@ -43,7 +44,7 @@ impl StageService for StageServiceSVC {
             ..Default::default()
         };
         if let Some(status) = status {
-            response.status = *status as u64;
+            response.status = *status as i32;
         }
         Ok(Response::new(response))
     }
@@ -53,6 +54,18 @@ impl StageService for StageServiceSVC {
         request: Request<GenerateProofRequest>
     ) -> tonic::Result<Response<GenerateProofResponse>, Status> {
         log::info!("{:?}", request.get_ref().proof_id);
+
+        // check seg_size
+        if !provers::valid_seg_size (request.get_ref().seg_size as usize) {
+            let response = stage_service::GenerateProofResponse {
+                proof_id: request.get_ref().proof_id.clone(), 
+                status: stage_service::ExecutorStatus::Failed as i32,
+                error_message: "invalid seg_size".to_string(),
+                ..Default::default()
+            };
+            return Ok(Response::new(response));
+        }
+
         let base_dir = config::instance().lock().unwrap().base_dir.clone(); 
         let dir_path = format!("{}/proof/{}", base_dir, request.get_ref().proof_id);
         fs::create_dir_all(dir_path.clone())?;
@@ -91,7 +104,7 @@ impl StageService for StageServiceSVC {
 
         {
             let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
-            taskmap.insert(request.get_ref().proof_id.clone(), stage_service::ExecutorError::Unspecified.into());
+            taskmap.insert(request.get_ref().proof_id.clone(), stage_service::ExecutorStatus::Unspecified.into());
         }
 
         let generate_context = stage::contexts::GenerateContext::new(
@@ -178,13 +191,16 @@ impl StageService for StageServiceSVC {
             stage.dispatch();
         }
 
+        let snark_result = provers::read_file_bin(&final_path).unwrap();
         {
             let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
-            taskmap.insert(request.get_ref().proof_id.clone(), stage_service::ExecutorError::NoError.into());
+            taskmap.insert(request.get_ref().proof_id.clone(), stage_service::ExecutorStatus::Sucess.into());
         }
 
         let response = stage_service::GenerateProofResponse {
             proof_id: request.get_ref().proof_id.clone(), 
+            status: stage_service::ExecutorStatus::Sucess as i32,
+            result: snark_result,
             ..Default::default()
         };
         Ok(Response::new(response))
