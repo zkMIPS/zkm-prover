@@ -91,7 +91,7 @@ impl ProverService for ProverServiceSVC {
         }
         let end = Instant::now();
         let elapsed = end.duration_since(start);  
-        log::info!("split {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
+        log::info!("split {} {} elapsed time: {:?} secs",  request.get_ref().proof_id, request.get_ref().computed_request_id, elapsed.as_secs());
         Ok(Response::new(response))
     }
 
@@ -127,7 +127,7 @@ impl ProverService for ProverServiceSVC {
         }
         let end = Instant::now();
         let elapsed = end.duration_since(start);  
-        log::info!("prove {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
+        log::info!("prove {} {} elapsed time: {:?} secs", request.get_ref().proof_id, request.get_ref().computed_request_id, elapsed.as_secs());
         Ok(Response::new(response))
     }
 
@@ -167,7 +167,7 @@ impl ProverService for ProverServiceSVC {
         }
         let end = Instant::now();
         let elapsed = end.duration_since(start);  
-        log::info!("aggregate {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
+        log::info!("aggregate {} {} elapsed time: {:?} secs", request.get_ref().proof_id, request.get_ref().computed_request_id, elapsed.as_secs());
         Ok(Response::new(response))
     }
 
@@ -203,7 +203,7 @@ impl ProverService for ProverServiceSVC {
         }
         let end = Instant::now();
         let elapsed = end.duration_since(start);  
-        log::info!("aggregate_all {} elapsed time: {:?} secs",  request.get_ref().computed_request_id, elapsed.as_secs());
+        log::info!("aggregate_all {} {} elapsed time: {:?} secs", request.get_ref().proof_id, request.get_ref().computed_request_id, elapsed.as_secs());
         Ok(Response::new(response))
     }
 

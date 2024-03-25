@@ -62,34 +62,33 @@ impl Stage {
     }
 
     pub fn dispatch(&mut self) {
-        if self.split_task.state == TASK_STATE_INITIAL {
-            self.gen_split_task();
-            return;
-        }
-        if self.split_task.state == TASK_STATE_SUCCESS {
-            if self.prove_tasks.is_empty() {
-                self.gen_prove_task();
-                return;
-            }
-        } else {
-            return;
-        }
-        let mut all_prove_task_success = true;
-        for prove_task in &self.prove_tasks {
-            if prove_task.state != TASK_STATE_SUCCESS {
-                all_prove_task_success = false;
-                break;
-            }
-        }
-        if !all_prove_task_success {
-            return;
-        }
-        if all_prove_task_success && self.agg_all_task.state == TASK_STATE_INITIAL {
-            self.gen_agg_all_task();
-            return;
-        }
-        if self.agg_all_task.state == TASK_STATE_SUCCESS && self.final_task.state == TASK_STATE_INITIAL {
-            self.gen_final_task();
+        match self.split_task.state {
+            TASK_STATE_INITIAL=> {self.gen_split_task()}
+            TASK_STATE_SUCCESS=> {
+                if self.prove_tasks.is_empty() {
+                    self.gen_prove_task();
+                } else {
+                    let mut all_prove_task_success = true;
+                    for prove_task in &self.prove_tasks {
+                        if prove_task.state != TASK_STATE_SUCCESS {
+                            all_prove_task_success = false;
+                            break;
+                        }
+                    }
+                    if all_prove_task_success {
+                        match self.agg_all_task.state {
+                            TASK_STATE_INITIAL=> {self.gen_agg_all_task()}
+                            TASK_STATE_SUCCESS=> {
+                                if self.final_task.state == TASK_STATE_INITIAL {
+                                    self.gen_final_task();
+                                }
+                            }
+                            _=>{}
+                        }
+                    }
+                }
+            },
+            _ => {}
         }
     }
 
