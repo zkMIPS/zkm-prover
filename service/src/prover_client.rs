@@ -103,7 +103,7 @@ pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("split response {:#?}", response);
-                if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
+                if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
                     split_task.state = TASK_STATE_SUCCESS;
                     return Some(split_task);
                 }
@@ -139,7 +139,7 @@ pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("prove response {:#?}", response);
-                if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
+                if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
                     prove_task.state = TASK_STATE_SUCCESS;
                     return Some(prove_task);
                 }
@@ -177,7 +177,7 @@ pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("aggregate response {:#?}", response);
-                if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
+                if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
                     agg_all_task.state = TASK_STATE_SUCCESS;
                     return Some(agg_all_task);
                 }
@@ -209,14 +209,14 @@ pub async fn final_proof(mut final_task: FinalTask) -> Option<FinalTask> {
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("final_proof response {:#?}", response);
-                if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
+                if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
                     let mut loop_count = 0;
                     loop {
                         let task_result =
                             get_task_status(&mut client, &final_task.proof_id, &final_task.task_id)
                                 .await;
                         if let Some(task_result) = task_result {
-                            if task_result == ResultCode::ResultOk {
+                            if task_result == ResultCode::Ok {
                                 final_task.state = TASK_STATE_SUCCESS;
                                 return Some(final_task);
                             }
@@ -255,5 +255,5 @@ pub async fn get_task_status(
             return ResultCode::from_i32(response_result.code);
         }
     }
-    Some(ResultCode::ResultUnspecified)
+    Some(ResultCode::Unspecified)
 }

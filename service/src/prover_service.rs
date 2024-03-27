@@ -14,6 +14,7 @@ use std::time::Instant;
 use tonic::{Request, Response, Status};
 
 use self::prover_service::ResultCode;
+#[allow(clippy::module_inception)]
 pub mod prover_service {
     tonic::include_proto!("prover.v1");
 }
@@ -86,12 +87,12 @@ impl ProverService for ProverServiceSVC {
         };
         if success {
             response.result = Some(Result {
-                code: (ResultCode::ResultOk.into()),
+                code: (ResultCode::Ok.into()),
                 message: ("SUCCESS".to_string()),
             });
         } else {
             response.result = Some(Result {
-                code: (ResultCode::ResultError.into()),
+                code: (ResultCode::Error.into()),
                 message: ("FAILED".to_string()),
             });
         }
@@ -133,12 +134,12 @@ impl ProverService for ProverServiceSVC {
         };
         if success {
             response.result = Some(Result {
-                code: (ResultCode::ResultOk.into()),
+                code: (ResultCode::Ok.into()),
                 message: ("SUCCESS".to_string()),
             });
         } else {
             response.result = Some(Result {
-                code: (ResultCode::ResultError.into()),
+                code: (ResultCode::Error.into()),
                 message: ("FAILED".to_string()),
             });
         }
@@ -184,12 +185,12 @@ impl ProverService for ProverServiceSVC {
         };
         if success {
             response.result = Some(Result {
-                code: (ResultCode::ResultOk.into()),
+                code: (ResultCode::Ok.into()),
                 message: ("SUCCESS".to_string()),
             });
         } else {
             response.result = Some(Result {
-                code: (ResultCode::ResultError.into()),
+                code: (ResultCode::Error.into()),
                 message: ("FAILED".to_string()),
             });
         }
@@ -231,12 +232,12 @@ impl ProverService for ProverServiceSVC {
         };
         if success {
             response.result = Some(Result {
-                code: (ResultCode::ResultOk.into()),
+                code: (ResultCode::Ok.into()),
                 message: ("SUCCESS".to_string()),
             });
         } else {
             response.result = Some(Result {
-                code: (ResultCode::ResultError.into()),
+                code: (ResultCode::Error.into()),
                 message: ("FAILED".to_string()),
             });
         }
