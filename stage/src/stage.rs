@@ -66,8 +66,8 @@ impl Stage {
 
     pub fn dispatch(&mut self) {
         match self.split_task.state {
-            TASK_STATE_INITIAL=> {self.gen_split_task()}
-            TASK_STATE_SUCCESS=> {
+            TASK_STATE_INITIAL => self.gen_split_task(),
+            TASK_STATE_SUCCESS => {
                 if self.prove_tasks.is_empty() {
                     self.gen_prove_task();
                 } else {
@@ -80,17 +80,17 @@ impl Stage {
                     }
                     if all_prove_task_success {
                         match self.agg_all_task.state {
-                            TASK_STATE_INITIAL=> {self.gen_agg_all_task()}
-                            TASK_STATE_SUCCESS=> {
+                            TASK_STATE_INITIAL => self.gen_agg_all_task(),
+                            TASK_STATE_SUCCESS => {
                                 if self.final_task.state == TASK_STATE_INITIAL {
                                     self.gen_final_task();
                                 }
                             }
-                            _=>{}
+                            _ => {}
                         }
                     }
                 }
-            },
+            }
             _ => {}
         }
     }
