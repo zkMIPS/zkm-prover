@@ -51,12 +51,7 @@ fn select_degree_bits(seg_size: usize) -> [std::ops::Range<usize>; 6] {
 }
 
 pub fn valid_seg_size(seg_size: usize) -> bool {
-    if seg_size == 1024
-        || seg_size == 16384
-        || seg_size == 32768
-        || seg_size == 65536
-        || seg_size == 262144
-    {
+    if [1024, 16384, 32768, 65536, 262144].contains(&seg_size) {
         return true;
     }
     false

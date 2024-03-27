@@ -70,24 +70,19 @@ impl Stage {
             TASK_STATE_SUCCESS => {
                 if self.prove_tasks.is_empty() {
                     self.gen_prove_task();
-                } else {
-                    let mut all_prove_task_success = true;
-                    for prove_task in &self.prove_tasks {
-                        if prove_task.state != TASK_STATE_SUCCESS {
-                            all_prove_task_success = false;
-                            break;
-                        }
-                    }
-                    if all_prove_task_success {
-                        match self.agg_all_task.state {
-                            TASK_STATE_INITIAL => self.gen_agg_all_task(),
-                            TASK_STATE_SUCCESS => {
-                                if self.final_task.state == TASK_STATE_INITIAL {
-                                    self.gen_final_task();
-                                }
+                } else if self
+                    .prove_tasks
+                    .iter()
+                    .all(|task| task.state == TASK_STATE_SUCCESS)
+                {
+                    match self.agg_all_task.state {
+                        TASK_STATE_INITIAL => self.gen_agg_all_task(),
+                        TASK_STATE_SUCCESS => {
+                            if self.final_task.state == TASK_STATE_INITIAL {
+                                self.gen_final_task();
                             }
-                            _ => {}
                         }
+                        _ => {}
                     }
                 }
             }
