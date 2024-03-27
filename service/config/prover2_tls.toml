@@ -1,0 +1,7 @@
+addr = "0.0.0.0:50002"
+prover_addrs = ["localhost:50002"]
+snark_addrs = []
+base_dir = "/tmp/zkm/test/test_proof"
+ca_cert_path = "tools/certs/ca.pem"
+cert_path = "tools/certs/prover2.pem"
+key_path = "tools/certs/prover2.key"
