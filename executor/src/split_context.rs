@@ -17,7 +17,6 @@ impl SplitContext {
         seg_size: u32,
         seg_path: &String,
     ) -> Self {
-        
         SplitContext {
             basedir: basedir.to_string(),
             elf_path: elf_path.to_string(),

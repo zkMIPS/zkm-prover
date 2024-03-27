@@ -1,5 +1,5 @@
-use std::sync::Mutex;  
-use once_cell::sync::OnceCell; 
+use once_cell::sync::OnceCell;
+use std::sync::Mutex;
 
 #[derive(Debug, Clone)]
 pub struct ProverNode {
@@ -21,10 +21,10 @@ pub struct ProverNodes {
 }
 
 static INSTANCE: OnceCell<Mutex<ProverNodes>> = OnceCell::new();
-  
-pub fn instance() -> &'static Mutex<ProverNodes> {  
+
+pub fn instance() -> &'static Mutex<ProverNodes> {
     INSTANCE.get_or_init(|| Mutex::new(ProverNodes::new()))
-} 
+}
 
 impl ProverNodes {
     fn new() -> Self {
@@ -33,19 +33,19 @@ impl ProverNodes {
             snark_nodes: Vec::new(),
         }
     }
-    pub fn add_node(&mut self, node: ProverNode) {  
+    pub fn add_node(&mut self, node: ProverNode) {
         self.prover_nodes.push(node);
-    }  
-  
-    pub fn get_nodes(&self) -> Vec<ProverNode> {  
-        self.prover_nodes.clone()
-    } 
+    }
 
-    pub fn add_snark_node(&mut self, node: ProverNode) {  
+    pub fn get_nodes(&self) -> Vec<ProverNode> {
+        self.prover_nodes.clone()
+    }
+
+    pub fn add_snark_node(&mut self, node: ProverNode) {
         self.snark_nodes.push(node);
-    }  
-  
-    pub fn get_snark_nodes(&self) -> Vec<ProverNode> {  
+    }
+
+    pub fn get_snark_nodes(&self) -> Vec<ProverNode> {
         self.snark_nodes.clone()
-    } 
+    }
 }

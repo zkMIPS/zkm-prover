@@ -16,6 +16,7 @@ pub struct AggContext {
 }
 
 impl AggContext {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         basedir: &String,
         block_no: u64,

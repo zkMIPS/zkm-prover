@@ -11,10 +11,10 @@ pub struct GenerateContext {
     pub final_path: String,
     pub block_no: u64,
     pub seg_size: u32,
-    
 }
 
 impl GenerateContext {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         proof_id: &str,
         basedir: &str,
@@ -26,7 +26,6 @@ impl GenerateContext {
         block_no: u64,
         seg_size: u32,
     ) -> Self {
-        
         GenerateContext {
             proof_id: proof_id.to_string(),
             basedir: basedir.to_string(),

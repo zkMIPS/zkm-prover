@@ -13,7 +13,7 @@ use zkm::config::StarkConfig;
 use zkm::cpu::kernel::assembler::segment_kernel;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 
-use std::fs::File;  
+use std::fs::File;
 use std::io::Write;
 
 #[derive(Default)]
@@ -40,7 +40,6 @@ impl Prover<ProveContext> for RootProver {
         let file = String::from("");
         let _args = "".to_string();
 
-
         let all_stark = AllStark::<F, D>::default();
         let config = StarkConfig::standard_fast_config();
         // Preprocess all circuits.
@@ -60,13 +59,13 @@ impl Prover<ProveContext> for RootProver {
         all_circuits.verify_root(agg_proof.clone())?;
 
         // write agg_proof write file
-        let json_string = serde_json::to_string(&agg_proof)?;  
+        let json_string = serde_json::to_string(&agg_proof)?;
         let mut file = File::create(proof_path)?;
         file.write_all(json_string.as_bytes())?;
         file.flush()?;
 
         // updated_agg_public_values file
-        let json_string = serde_json::to_string(&updated_agg_public_values)?;  
+        let json_string = serde_json::to_string(&updated_agg_public_values)?;
         let mut file = File::create(pub_value_path)?;
         file.write_all(json_string.as_bytes())?;
         file.flush()?;

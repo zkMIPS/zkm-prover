@@ -1,5 +1,3 @@
-
-
 #[derive(Debug, Default)]
 pub struct ProveTask {
     pub task_id: String,
@@ -14,8 +12,8 @@ pub struct ProveTask {
 }
 
 impl Clone for ProveTask {
-    fn clone(&self) -> Self {  
-        ProveTask {  
+    fn clone(&self) -> Self {
+        ProveTask {
             task_id: self.task_id.clone(),
             state: self.state,
             base_dir: self.base_dir.clone(),
@@ -25,6 +23,6 @@ impl Clone for ProveTask {
             prove_path: self.prove_path.clone(),
             pub_value_path: self.pub_value_path.clone(),
             seg_path: self.seg_path.clone(),
-        }  
-    }  
+        }
+    }
 }

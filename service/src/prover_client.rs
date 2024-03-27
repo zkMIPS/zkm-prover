@@ -1,19 +1,22 @@
 use prover_service::prover_service_client::ProverServiceClient;
-use prover_service::{get_status_response, GetStatusRequest};
-use prover_service::SplitElfRequest;
-use prover_service::ProveRequest;
 use prover_service::AggregateAllRequest;
 use prover_service::FinalProofRequest;
 use prover_service::GetTaskResultRequest;
+use prover_service::ProveRequest;
+use prover_service::SplitElfRequest;
+use prover_service::{get_status_response, GetStatusRequest};
 
+use stage::tasks::{
+    AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_SUCCESS,
+    TASK_STATE_UNPROCESSED, TASK_TIMEOUT,
+};
 use tonic::Request;
-use stage::tasks::{AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, TASK_TIMEOUT};
 
 use self::prover_service::ResultCode;
-use tonic::transport::Uri; 
-use tonic::transport::Channel;
 use crate::prover_node::ProverNode;
 use std::time::Duration;
+use tonic::transport::Channel;
+use tonic::transport::Uri;
 
 pub mod prover_service {
     tonic::include_proto!("prover.v1");
@@ -67,8 +70,11 @@ pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
         let response = client.get_status(Request::new(request)).await;
         if let Ok(response) = response {
             let status = response.get_ref().status;
-            if get_status_response::Status::from_i32(status) == Some(get_status_response::Status::Idle) ||
-                get_status_response::Status::from_i32(status) == Some(get_status_response::Status::Unspecified) {
+            if get_status_response::Status::from_i32(status)
+                == Some(get_status_response::Status::Idle)
+                || get_status_response::Status::from_i32(status)
+                    == Some(get_status_response::Status::Unspecified)
+            {
                 return Some(client);
             }
         }
@@ -77,7 +83,7 @@ pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
 }
 
 pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
-    let client = get_idle_client().await;  
+    let client = get_idle_client().await;
     if let Some(mut client) = client {
         let request = SplitElfRequest {
             chain_id: 0,
@@ -112,7 +118,7 @@ pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
 }
 
 pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
-    let client = get_idle_client().await;  
+    let client = get_idle_client().await;
     if let Some(mut client) = client {
         let request = ProveRequest {
             chain_id: 0,
@@ -148,7 +154,7 @@ pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
 }
 
 pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
-    let client = get_idle_client().await;  
+    let client = get_idle_client().await;
     if let Some(mut client) = client {
         let request = AggregateAllRequest {
             chain_id: 0,
@@ -186,7 +192,7 @@ pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
 }
 
 pub async fn final_proof(mut final_task: FinalTask) -> Option<FinalTask> {
-    let client = get_snark_client().await;  
+    let client = get_snark_client().await;
     if let Some(mut client) = client {
         let request = FinalProofRequest {
             chain_id: 0,
@@ -206,7 +212,9 @@ pub async fn final_proof(mut final_task: FinalTask) -> Option<FinalTask> {
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::ResultOk) {
                     let mut loop_count = 0;
                     loop {
-                        let task_result = get_task_status(&mut client, &final_task.proof_id, &final_task.task_id).await;
+                        let task_result =
+                            get_task_status(&mut client, &final_task.proof_id, &final_task.task_id)
+                                .await;
                         if let Some(task_result) = task_result {
                             if task_result == ResultCode::ResultOk {
                                 final_task.state = TASK_STATE_SUCCESS;
@@ -230,11 +238,15 @@ pub async fn final_proof(mut final_task: FinalTask) -> Option<FinalTask> {
     Some(final_task)
 }
 
-pub async fn get_task_status(client: &mut ProverServiceClient<Channel>, proof_id: &str, task_id: &str) -> Option<ResultCode> {
+pub async fn get_task_status(
+    client: &mut ProverServiceClient<Channel>,
+    proof_id: &str,
+    task_id: &str,
+) -> Option<ResultCode> {
     let request = GetTaskResultRequest {
-        proof_id: proof_id.to_owned(), 
+        proof_id: proof_id.to_owned(),
         computed_request_id: task_id.to_owned(),
-    };   
+    };
     let mut grpc_request = Request::new(request);
     grpc_request.set_timeout(Duration::from_secs(30));
     let response = client.get_task_result(grpc_request).await;

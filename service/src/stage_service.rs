@@ -1,39 +1,38 @@
-use std::sync::Mutex;
 use stage_service::stage_service_server::StageService;
-use stage_service::{GetStatusRequest, GetStatusResponse};
 use stage_service::{GenerateProofRequest, GenerateProofResponse};
+use stage_service::{GetStatusRequest, GetStatusResponse};
+use std::sync::Mutex;
 
-use tonic::{Request, Response, Status};
-use tokio::sync::mpsc;
-use tokio::time;  
-use std::fs;
-use std::fs::File;  
-use std::io::Write;
 use stage::tasks::Task;
+use std::fs;
+use std::fs::File;
+use std::io::Write;
+use tokio::sync::mpsc;
+use tokio::time;
+use tonic::{Request, Response, Status};
 
-use crate::prover_client;
 use crate::config;
+use crate::prover_client;
 
 pub mod stage_service {
     tonic::include_proto!("stage.v1");
 }
 
-use lazy_static::lazy_static;  
+use lazy_static::lazy_static;
 use std::collections::HashMap;
 
-lazy_static! {  
-    static ref GLOBAL_TASKMAP: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());  
+lazy_static! {
+    static ref GLOBAL_TASKMAP: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());
 }
 
-#[derive(Debug,Default)]
-pub struct StageServiceSVC{
-}
+#[derive(Debug, Default)]
+pub struct StageServiceSVC {}
 
 #[tonic::async_trait]
 impl StageService for StageServiceSVC {
     async fn get_status(
         &self,
-        request: Request<GetStatusRequest>
+        request: Request<GetStatusRequest>,
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
         // log::info!("{:?}", request);
         let taskmap = GLOBAL_TASKMAP.lock().unwrap();
@@ -47,13 +46,13 @@ impl StageService for StageServiceSVC {
         }
         Ok(Response::new(response))
     }
-    
+
     async fn generate_proof(
-        &self, 
-        request: Request<GenerateProofRequest>
+        &self,
+        request: Request<GenerateProofRequest>,
     ) -> tonic::Result<Response<GenerateProofResponse>, Status> {
         log::info!("{:?}", request.get_ref().proof_id);
-        let base_dir = config::instance().lock().unwrap().base_dir.clone(); 
+        let base_dir = config::instance().lock().unwrap().base_dir.clone();
         let dir_path = format!("{}/proof/{}", base_dir, request.get_ref().proof_id);
         fs::create_dir_all(dir_path.clone())?;
 
@@ -64,7 +63,7 @@ impl StageService for StageServiceSVC {
         let bolck_dir = format!("{}/0_{}", dir_path, request.get_ref().block_no);
         fs::create_dir_all(bolck_dir.clone())?;
 
-        for file_block_item in &request.get_ref().block_data  {
+        for file_block_item in &request.get_ref().block_data {
             let bolck_path = format!("{}/{}", bolck_dir, file_block_item.file_name);
             let mut file = File::create(bolck_path)?;
             file.write_all(&file_block_item.file_content)?;
@@ -91,22 +90,26 @@ impl StageService for StageServiceSVC {
 
         {
             let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
-            taskmap.insert(request.get_ref().proof_id.clone(), stage_service::ExecutorError::Unspecified.into());
+            taskmap.insert(
+                request.get_ref().proof_id.clone(),
+                stage_service::ExecutorError::Unspecified.into(),
+            );
         }
 
         let generate_context = stage::contexts::GenerateContext::new(
             &request.get_ref().proof_id,
-            &dir_path, 
+            &dir_path,
             &elf_path,
             &seg_path,
             &prove_path,
             &agg_path,
             &final_path,
-            request.get_ref().block_no, 
-            request.get_ref().seg_size);
-        
+            request.get_ref().block_no,
+            request.get_ref().seg_size,
+        );
+
         let mut stage = stage::stage::Stage::new(generate_context);
-        let (tx , mut rx) = mpsc::channel(128);
+        let (tx, mut rx) = mpsc::channel(128);
         stage.dispatch();
         loop {
             let split_task = stage.get_split_task();
@@ -180,11 +183,14 @@ impl StageService for StageServiceSVC {
 
         {
             let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
-            taskmap.insert(request.get_ref().proof_id.clone(), stage_service::ExecutorError::NoError.into());
+            taskmap.insert(
+                request.get_ref().proof_id.clone(),
+                stage_service::ExecutorError::NoError.into(),
+            );
         }
 
         let response = stage_service::GenerateProofResponse {
-            proof_id: request.get_ref().proof_id.clone(), 
+            proof_id: request.get_ref().proof_id.clone(),
             ..Default::default()
         };
         Ok(Response::new(response))
