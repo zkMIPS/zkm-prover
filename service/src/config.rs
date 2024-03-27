@@ -1,13 +1,13 @@
 use log::error;
+use once_cell::sync::OnceCell;
 use serde_derive::Deserialize;
 use std::fs;
 use std::path::Path;
-use std::sync::Mutex;  
-use once_cell::sync::OnceCell; 
+use std::sync::Mutex;
 
 static INSTANCE: OnceCell<Mutex<RuntimeConfig>> = OnceCell::new();
-  
-pub fn instance() -> &'static Mutex<RuntimeConfig> {  
+
+pub fn instance() -> &'static Mutex<RuntimeConfig> {
     INSTANCE.get_or_init(|| Mutex::new(RuntimeConfig::new()))
 }
 
@@ -51,9 +51,21 @@ impl RuntimeConfig {
             }
         };
         instance().lock().unwrap().addr.clone_from(&config.addr);
-        instance().lock().unwrap().prover_addrs.clone_from(&config.prover_addrs);
-        instance().lock().unwrap().base_dir.clone_from(&config.base_dir);
-        instance().lock().unwrap().snark_addrs.clone_from(&config.snark_addrs);
+        instance()
+            .lock()
+            .unwrap()
+            .prover_addrs
+            .clone_from(&config.prover_addrs);
+        instance()
+            .lock()
+            .unwrap()
+            .base_dir
+            .clone_from(&config.base_dir);
+        instance()
+            .lock()
+            .unwrap()
+            .snark_addrs
+            .clone_from(&config.snark_addrs);
         Some(config)
     }
 }

@@ -1,4 +1,3 @@
-
 #[derive(Debug, Default)]
 pub struct SplitTask {
     pub task_id: String,
@@ -12,8 +11,8 @@ pub struct SplitTask {
 }
 
 impl Clone for SplitTask {
-    fn clone(&self) -> Self {  
-        SplitTask {  
+    fn clone(&self) -> Self {
+        SplitTask {
             task_id: self.task_id.clone(),
             state: self.state,
             proof_id: self.proof_id.clone(),
@@ -22,6 +21,6 @@ impl Clone for SplitTask {
             seg_path: self.seg_path.clone(),
             block_no: self.block_no,
             seg_size: self.seg_size,
-        }  
-    }  
+        }
+    }
 }

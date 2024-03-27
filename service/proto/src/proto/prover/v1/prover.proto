@@ -9,11 +9,11 @@ message Version {
 // timestamps are represented in unix time in seconds
 
 enum ResultCode {
-    RESULT_UNSPECIFIED = 0;
-    RESULT_OK = 1;
-    RESULT_ERROR = 2;
-    RESULT_INTERNAL_ERROR = 3;
-    RESULT_BUSY = 4;
+    UNSPECIFIED = 0;
+    OK = 1;
+    ERROR = 2;
+    INTERNAL_ERROR = 3;
+    BUSY = 4;
 }
 
 message Result {

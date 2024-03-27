@@ -1,16 +1,15 @@
 use clap::Parser;
-use prover_node::ProverNode;  
+use prover_node::ProverNode;
 
 use prover_service::prover_service::prover_service_server::ProverServiceServer;
 use stage_service::stage_service::stage_service_server::StageServiceServer;
 use tonic::transport::Server;
 
-mod prover_service;
-mod stage_service;
+mod config;
 mod prover_client;
 mod prover_node;
-mod config;
-
+mod prover_service;
+mod stage_service;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

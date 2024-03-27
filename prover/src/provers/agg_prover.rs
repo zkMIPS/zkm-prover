@@ -12,7 +12,7 @@ use zkm::config::StarkConfig;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 use zkm::proof::PublicValues;
 
-use std::fs::File;  
+use std::fs::File;
 use std::io::Write;
 
 use super::file_utils::read_file_content;
@@ -45,7 +45,6 @@ impl Prover<AggContext> for AggProver {
         let is_agg2 = ctx.is_agg_2;
         let _file = String::from("");
         let _args = "".to_string();
-
 
         let all_stark = AllStark::<F, D>::default();
         let config = StarkConfig::standard_fast_config();
@@ -84,13 +83,13 @@ impl Prover<AggContext> for AggProver {
         all_circuits.verify_aggregation(&agg_proof)?;
 
         // write agg_proof write file
-        let json_string = serde_json::to_string(&agg_proof)?;  
+        let json_string = serde_json::to_string(&agg_proof)?;
         let mut file = File::create(agg_proof_path)?;
         file.write_all(json_string.as_bytes())?;
         file.flush()?;
 
         // updated_agg_public_values file
-        let json_string = serde_json::to_string(&updated_agg_public_values)?;  
+        let json_string = serde_json::to_string(&updated_agg_public_values)?;
         let mut file = File::create(agg_pub_value_path)?;
         file.write_all(json_string.as_bytes())?;
         file.flush()?;

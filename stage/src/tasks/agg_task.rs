@@ -1,5 +1,3 @@
-
-
 #[derive(Debug, Default)]
 pub struct AggAllTask {
     pub task_id: String,
@@ -15,8 +13,8 @@ pub struct AggAllTask {
 }
 
 impl Clone for AggAllTask {
-    fn clone(&self) -> Self {  
-        AggAllTask {  
+    fn clone(&self) -> Self {
+        AggAllTask {
             task_id: self.task_id.clone(),
             state: self.state,
             base_dir: self.base_dir.clone(),
@@ -27,6 +25,6 @@ impl Clone for AggAllTask {
             proof_dir: self.proof_dir.clone(),
             pub_value_dir: self.pub_value_dir.clone(),
             output_dir: self.output_dir.clone(),
-        }  
-    }  
+        }
+    }
 }
