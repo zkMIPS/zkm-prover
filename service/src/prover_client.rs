@@ -1,3 +1,4 @@
+use common::tls::Config as TlsConfig;
 use prover_service::prover_service_client::ProverServiceClient;
 use prover_service::AggregateAllRequest;
 use prover_service::FinalProofRequest;
@@ -5,6 +6,7 @@ use prover_service::GetTaskResultRequest;
 use prover_service::ProveRequest;
 use prover_service::SplitElfRequest;
 use prover_service::{get_status_response, GetStatusRequest};
+use tonic::transport::ClientTlsConfig;
 
 use stage::tasks::{
     AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_SUCCESS,
@@ -28,10 +30,12 @@ pub fn get_nodes() -> Vec<ProverNode> {
     nodes_data.get_nodes()
 }
 
-pub async fn get_idle_client() -> Option<ProverServiceClient<Channel>> {
+pub async fn get_idle_client(
+    tls_config: Option<TlsConfig>,
+) -> Option<ProverServiceClient<Channel>> {
     let nodes: Vec<ProverNode> = get_nodes();
     for node in nodes {
-        let client = is_active(&node.addr).await;
+        let client = is_active(&node.addr, tls_config.clone()).await;
         if let Some(client) = client {
             return Some(client);
         }
@@ -46,10 +50,12 @@ pub fn get_snark_nodes() -> Vec<ProverNode> {
     nodes_data.get_snark_nodes()
 }
 
-pub async fn get_snark_client() -> Option<ProverServiceClient<Channel>> {
+pub async fn get_snark_client(
+    tls_config: Option<TlsConfig>,
+) -> Option<ProverServiceClient<Channel>> {
     let nodes: Vec<ProverNode> = get_snark_nodes();
     for node in nodes {
-        let client = is_active(&node.addr).await;
+        let client = is_active(&node.addr, tls_config.clone()).await;
         if let Some(client) = client {
             return Some(client);
         }
@@ -58,12 +64,21 @@ pub async fn get_snark_client() -> Option<ProverServiceClient<Channel>> {
     None
 }
 
-pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
+pub async fn is_active(
+    addr: &String,
+    tls_config: Option<TlsConfig>,
+) -> Option<ProverServiceClient<Channel>> {
     let uri = format!("grpc://{}", addr).parse::<Uri>().unwrap();
-    let endpoint = tonic::transport::Channel::builder(uri)
+    let mut endpoint = tonic::transport::Channel::builder(uri)
         .connect_timeout(Duration::from_secs(5))
         .timeout(Duration::from_secs(TASK_TIMEOUT))
         .concurrency_limit(256);
+    if let Some(config) = tls_config {
+        let tls_config = ClientTlsConfig::new()
+            .ca_certificate(config.ca_cert)
+            .identity(config.identity);
+        endpoint = endpoint.tls_config(tls_config).unwrap();
+    }
     let client = ProverServiceClient::connect(endpoint).await;
     if let Ok(mut client) = client {
         let request = GetStatusRequest {};
@@ -82,8 +97,8 @@ pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
     None
 }
 
-pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
-    let client = get_idle_client().await;
+pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> Option<SplitTask> {
+    let client = get_idle_client(tls_config).await;
     if let Some(mut client) = client {
         let request = SplitElfRequest {
             chain_id: 0,
@@ -117,8 +132,8 @@ pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
     Some(split_task)
 }
 
-pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
-    let client = get_idle_client().await;
+pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> Option<ProveTask> {
+    let client = get_idle_client(tls_config).await;
     if let Some(mut client) = client {
         let request = ProveRequest {
             chain_id: 0,
@@ -153,8 +168,11 @@ pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
     Some(prove_task)
 }
 
-pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
-    let client = get_idle_client().await;
+pub async fn aggregate_all(
+    mut agg_all_task: AggAllTask,
+    tls_config: Option<TlsConfig>,
+) -> Option<AggAllTask> {
+    let client = get_idle_client(tls_config).await;
     if let Some(mut client) = client {
         let request = AggregateAllRequest {
             chain_id: 0,
@@ -191,8 +209,11 @@ pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
     Some(agg_all_task)
 }
 
-pub async fn final_proof(mut final_task: FinalTask) -> Option<FinalTask> {
-    let client = get_snark_client().await;
+pub async fn final_proof(
+    mut final_task: FinalTask,
+    tls_config: Option<TlsConfig>,
+) -> Option<FinalTask> {
+    let client = get_snark_client(tls_config).await;
     if let Some(mut client) = client {
         let request = FinalProofRequest {
             chain_id: 0,

@@ -1,3 +1,4 @@
+use common::tls::Config as TlsConfig;
 use stage_service::stage_service_server::StageService;
 use stage_service::{GenerateProofRequest, GenerateProofResponse};
 use stage_service::{GetStatusRequest, GetStatusResponse};
@@ -14,7 +15,6 @@ use tonic::{Request, Response, Status};
 use crate::config;
 use crate::prover_client;
 
-#[allow(clippy::module_inception)]
 pub mod stage_service {
     tonic::include_proto!("stage.v1");
 }
@@ -26,8 +26,27 @@ lazy_static! {
     static ref GLOBAL_TASKMAP: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());
 }
 
-#[derive(Debug, Default)]
-pub struct StageServiceSVC {}
+pub struct StageServiceSVC {
+    tls_config: Option<TlsConfig>,
+}
+
+impl StageServiceSVC {
+    pub async fn new(config: config::RuntimeConfig) -> anyhow::Result<Self> {
+        let tls_config = if config.ca_cert_path.is_some() {
+            Some(
+                TlsConfig::new(
+                    config.ca_cert_path.unwrap(),
+                    config.cert_path.unwrap(),
+                    config.key_path.unwrap(),
+                )
+                .await?,
+            )
+        } else {
+            None
+        };
+        Ok(StageServiceSVC { tls_config })
+    }
+}
 
 #[tonic::async_trait]
 impl StageService for StageServiceSVC {
@@ -116,8 +135,9 @@ impl StageService for StageServiceSVC {
             let split_task = stage.get_split_task();
             if let Some(split_task) = split_task {
                 let tx = tx.clone();
+                let tls_config = self.tls_config.clone();
                 tokio::spawn(async move {
-                    let response = prover_client::split(split_task).await;
+                    let response = prover_client::split(split_task, tls_config).await;
                     if let Some(split_task) = response {
                         tx.send(Task::Split(split_task)).await.unwrap();
                     }
@@ -126,8 +146,9 @@ impl StageService for StageServiceSVC {
             let prove_task = stage.get_prove_task();
             if let Some(prove_task) = prove_task {
                 let tx = tx.clone();
+                let tls_config = self.tls_config.clone();
                 tokio::spawn(async move {
-                    let response = prover_client::prove(prove_task).await;
+                    let response = prover_client::prove(prove_task, tls_config).await;
                     if let Some(prove_task) = response {
                         tx.send(Task::Prove(prove_task)).await.unwrap();
                     }
@@ -136,8 +157,9 @@ impl StageService for StageServiceSVC {
             let agg_task = stage.get_agg_all_task();
             if let Some(agg_task) = agg_task {
                 let tx = tx.clone();
+                let tls_config = self.tls_config.clone();
                 tokio::spawn(async move {
-                    let response = prover_client::aggregate_all(agg_task).await;
+                    let response = prover_client::aggregate_all(agg_task, tls_config).await;
                     if let Some(agg_task) = response {
                         tx.send(Task::Agg(agg_task)).await.unwrap();
                     }
@@ -146,8 +168,9 @@ impl StageService for StageServiceSVC {
             let final_task = stage.get_final_task();
             if let Some(final_task) = final_task {
                 let tx = tx.clone();
+                let tls_config = self.tls_config.clone();
                 tokio::spawn(async move {
-                    let response = prover_client::final_proof(final_task).await;
+                    let response = prover_client::final_proof(final_task, tls_config).await;
                     if let Some(final_task) = response {
                         tx.send(Task::Final(final_task)).await.unwrap();
                     }
