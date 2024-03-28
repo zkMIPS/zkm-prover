@@ -4,7 +4,7 @@ pub const TASK_STATE_PROCESSING: u32 = 2;
 pub const TASK_STATE_SUCCESS: u32 = 3;
 pub const TASK_STATE_FAILED: u32 = 4;
 
-pub const TASK_TIMEOUT: u64 = 1800;
+pub const TASK_TIMEOUT: u64 = 7200;
 
 pub const TASK_TIMEOUT :u64 = 3600;
 

@@ -125,7 +125,7 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
         };
         log::info!("split request {:#?}", request);
         let mut grpc_request = Request::new(request);
-        grpc_request.set_timeout(Duration::from_secs(300));
+        grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.split_elf(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
@@ -134,9 +134,6 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
                 return Some(split_task);
             }
         }
-        split_task.state = TASK_STATE_FAILED;
-    } else {
-        split_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(split_task)
@@ -160,7 +157,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
         };
         log::info!("prove request {:#?}", request);
         let mut grpc_request = Request::new(request);
-        grpc_request.set_timeout(Duration::from_secs(3000));
+        grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.prove(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
@@ -169,9 +166,6 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
                 return Some(prove_task);
             }
         }
-        prove_task.state = TASK_STATE_FAILED;
-    } else {
-        prove_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(prove_task)
@@ -200,7 +194,7 @@ pub async fn aggregate_all(
         };
         log::info!("aggregate request {:#?}", request);
         let mut grpc_request = Request::new(request);
-        grpc_request.set_timeout(Duration::from_secs(3000));
+        grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.aggregate_all(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
@@ -233,7 +227,7 @@ pub async fn final_proof(
         };
         log::info!("final_proof request {:#?}", request);
         let mut grpc_request = Request::new(request);
-        grpc_request.set_timeout(Duration::from_secs(3000));
+        grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.final_proof(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
@@ -277,7 +271,7 @@ pub async fn get_task_status(
         computed_request_id: task_id.to_owned(),
     };
     let mut grpc_request = Request::new(request);
-    grpc_request.set_timeout(Duration::from_secs(30));
+    grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
     let response = client.get_task_result(grpc_request).await;
     if let Ok(response) = response {
         if let Some(response_result) = response.get_ref().result.as_ref() {
