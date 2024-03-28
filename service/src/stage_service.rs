@@ -13,7 +13,7 @@ use tonic::{Request, Response, Status};
 
 use crate::config;
 use crate::prover_client;
-use prover::provers;
+use prover::provers::{self, read_file_bin};
 
 #[allow(clippy::module_inception)]
 pub mod stage_service {
@@ -195,19 +195,29 @@ impl StageService for StageServiceSVC {
             stage.dispatch();
         }
 
-        {
-            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
-            // TODO
-            taskmap.insert(
-                request.get_ref().proof_id.clone(),
-                stage_service::ExecutorError::NoError.into(),
-            );
-        }
-
-        let response = stage_service::GenerateProofResponse {
+        let mut response = stage_service::GenerateProofResponse {
             proof_id: request.get_ref().proof_id.clone(),
             ..Default::default()
         };
+        {
+            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
+            if stage.is_error() {
+                response.executor_error = stage_service::ExecutorError::Error as u32;
+                taskmap.insert(
+                    request.get_ref().proof_id.clone(),
+                    stage_service::ExecutorError::Error.into(),
+                );
+            } else {
+                let result = read_file_bin(&final_path).unwrap();
+                response.result.clone_from(&result);
+                response.executor_error = stage_service::ExecutorError::NoError as u32;
+                taskmap.insert(
+                    request.get_ref().proof_id.clone(),
+                    stage_service::ExecutorError::NoError.into(),
+                );
+            }
+        }
+
         log::info!("{}", stage.timecost_string());
         Ok(Response::new(response))
     }

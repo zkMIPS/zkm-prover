@@ -11,6 +11,7 @@ service StageService {
 enum ExecutorError {
     EXECUTOR_ERROR_UNSPECIFIED = 0;
     EXECUTOR_ERROR_NO_ERROR = 1;
+    EXECUTOR_ERROR_ERROR = 2;
 }
 
 message BlockFileItem {
@@ -32,9 +33,7 @@ message GenerateProofResponse {
     uint32 executor_error = 1;
     string error_message = 2;
     string proof_id = 3;
-    bytes common_circuit_data = 4;
-    bytes verifier_only_circuit_data = 5;
-    bytes proof_with_public_inputs = 6;
+    bytes result = 4;
 }
 
 message GetStatusRequest {
