@@ -17,11 +17,14 @@ if [ "$tls" = true ]; then
     for prover in "${provers[@]}"; do
         prover_name="prover${id}"
         IFS=':' read -r host port <<< "$prover"
-        bash certgen.sh --cn $prover_name --ssl-dns $host
+        bash certgen.sh --cn $prover_name --ssl-dns ${host}
         rm -rf ${prover_name}.csr
         ((id++))
     done
+    bash certgen.sh --cn client --ssl-dns localhost
+    rm -rf client.csr
     rm -rf ca.srl
+    rm -rf openssl.cnf
     cd -
 fi
 
@@ -33,24 +36,25 @@ else
     stage_template_content=$(cat stage_template.toml)
 fi
 stage_config="$stage_template_content"
-stage_config="${stage_config//\{\{addr\}\}/${stage}}"
+IFS=':' read -r host port <<< "$stage"
+stage_config="${stage_config//\{\{addr\}\}/0.0.0.0:${port}}"
 # generate prover addrs
 prover_addrs=""
 for prover in "${provers[@]}"; do
-    if [ -z "$result" ]; then
-        prover_addrs="$prover"
+    if [ -z "$prover_addrs" ]; then
+        prover_addrs="$prover\""
     else
-        prover_addrs="$prover_addrs, \"$prover\""
+        prover_addrs="$prover_addrs, \"$prover"
     fi
 done
 stage_config="${stage_config//\{\{prover_addrs\}\}/\"${prover_addrs}\"}"
 # generate snark addrs
 snark_addrs=""
 for snark in "${snarks[@]}"; do
-    if [ -z "$result" ]; then
+    if [ -z "$snark_addrs" ]; then
         snark_addrs="$snark"
     else
-        snark_addrs="$prover_addrs, \"$snark\""
+        snark_addrs="$prover_addrs, \"$snark"
     fi
 done
 stage_config="${stage_config//\{\{snark_addrs\}\}/\"${snark_addrs}\"}"
