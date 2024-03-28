@@ -33,10 +33,12 @@ pub struct Stage {
     pub prove_tasks: Vec<ProveTask>,
     pub agg_all_task: AggAllTask,
     pub final_task: FinalTask,
+    pub is_error: bool,
+    pub errmsg: String,
 }
 
 macro_rules! on_task {
-    ($src:ident, $dst:ident) => {
+    ($src:ident, $dst:ident, $stage:ident) => {
         assert!($src.proof_id == $dst.proof_id);
         if $src.state == TASK_STATE_FAILED
             || $src.state == TASK_STATE_SUCCESS
@@ -46,6 +48,9 @@ macro_rules! on_task {
             if TASK_STATE_UNPROCESSED != $src.state {
                 log::info!("on_task {:#?}", $dst);
                 $dst.finish_ts = get_timestamp();
+            }
+            if TASK_STATE_FAILED == $src.state {
+                $stage.is_error = true;
             }
         }
     };
@@ -70,6 +75,8 @@ impl Stage {
             prove_tasks: Vec::new(),
             agg_all_task: AggAllTask::default(),
             final_task: FinalTask::default(),
+            is_error: false,
+            errmsg: "".to_string(),
         }
     }
 
@@ -106,6 +113,10 @@ impl Stage {
         false
     }
 
+    pub fn is_error(&self) -> bool {
+        self.is_error
+    }
+
     fn gen_split_task(&mut self) {
         assert!(self.split_task.state == TASK_STATE_INITIAL);
         self.split_task
@@ -134,7 +145,7 @@ impl Stage {
 
     pub fn on_split_task(&mut self, split_task: SplitTask) {
         let dst = &mut self.split_task;
-        on_task!(split_task, dst);
+        on_task!(split_task, dst, self);
     }
 
     fn gen_prove_task(&mut self) {
@@ -182,7 +193,7 @@ impl Stage {
         for mut item_task in &mut self.prove_tasks {
             if item_task.task_id == prove_task.task_id && item_task.state == TASK_STATE_PROCESSING {
                 let dst = &mut item_task;
-                on_task!(prove_task, dst);
+                on_task!(prove_task, dst, self);
                 break;
             }
         }
@@ -216,7 +227,7 @@ impl Stage {
 
     pub fn on_agg_all_task(&mut self, agg_all_task: AggAllTask) {
         let dst = &mut self.agg_all_task;
-        on_task!(agg_all_task, dst);
+        on_task!(agg_all_task, dst, self);
     }
 
     pub fn gen_final_task(&mut self) {
@@ -242,7 +253,7 @@ impl Stage {
 
     pub fn on_final_task(&mut self, final_task: FinalTask) {
         let dst = &mut self.final_task;
-        on_task!(final_task, dst);
+        on_task!(final_task, dst, self);
     }
 
     pub fn timecost_string(&self) -> String {

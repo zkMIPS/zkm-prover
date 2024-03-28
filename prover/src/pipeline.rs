@@ -19,53 +19,62 @@ impl Pipeline {
         }
     }
 
-    pub fn prove_root(&mut self, prove_context: &ProveContext) -> bool {
+    pub fn prove_root(
+        &mut self,
+        prove_context: &ProveContext,
+    ) -> std::result::Result<bool, String> {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => match RootProver::new().prove(prove_context) {
-                Ok(()) => true,
+                Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_root error {:#?}", e);
-                    false
+                    Err(e.to_string())
                 }
             },
             Err(_e) => {
                 log::error!("prove_root busy");
-                false
+                Ok(false)
             }
         }
     }
 
-    pub fn prove_aggregate(&mut self, agg_context: &AggContext) -> bool {
+    pub fn prove_aggregate(
+        &mut self,
+        agg_context: &AggContext,
+    ) -> std::result::Result<bool, String> {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => match AggProver::new().prove(agg_context) {
-                Ok(()) => true,
+                Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_aggregate error {:#?}", e);
-                    false
+                    Err(e.to_string())
                 }
             },
             Err(_) => {
                 log::error!("prove_aggregate busy");
-                false
+                Ok(false)
             }
         }
     }
 
-    pub fn prove_aggregate_all(&mut self, final_context: &AggAllContext) -> bool {
+    pub fn prove_aggregate_all(
+        &mut self,
+        final_context: &AggAllContext,
+    ) -> std::result::Result<bool, String> {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
             Ok(_) => match AggAllProver::new().prove(final_context) {
-                Ok(()) => true,
+                Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_aggregate_all error {:#?}", e);
-                    false
+                    Err(e.to_string())
                 }
             },
             Err(_) => {
                 log::error!("prove_aggregate_all busy");
-                false
+                Ok(false)
             }
         }
     }

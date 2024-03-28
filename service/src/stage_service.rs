@@ -189,7 +189,7 @@ impl StageService for StageServiceSVC {
                 () = time::sleep(time::Duration::from_secs(1)) => {
                 }
             };
-            if stage.is_success() {
+            if stage.is_success() || stage.is_error() {
                 break;
             }
             stage.dispatch();
@@ -197,6 +197,7 @@ impl StageService for StageServiceSVC {
 
         {
             let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
+            // TODO
             taskmap.insert(
                 request.get_ref().proof_id.clone(),
                 stage_service::ExecutorError::NoError.into(),

@@ -16,7 +16,7 @@ impl Executor {
 }
 
 impl Executor {
-    pub fn split(&self, ctx: &SplitContext) -> bool {
+    pub fn split(&self, ctx: &SplitContext) -> std::result::Result<bool, String> {
         // 1. split ELF into segs
         let basedir = ctx.basedir.clone();
         let elf_path = ctx.elf_path.clone();
@@ -52,11 +52,13 @@ impl Executor {
                         }
                     }
                     instrumented_state.split_segment(true, &seg_path);
-                    return true;
+                    return Ok(true);
                 }
-                Err(_e) => {}
+                Err(e) => {
+                    return Err(e.to_string());
+                }
             }
         }
-        false
+        Ok(false)
     }
 }

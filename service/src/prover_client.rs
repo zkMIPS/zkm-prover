@@ -7,8 +7,8 @@ use prover_service::SplitElfRequest;
 use prover_service::{get_status_response, GetStatusRequest};
 
 use stage::tasks::{
-    AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_SUCCESS,
-    TASK_STATE_UNPROCESSED, TASK_TIMEOUT,
+    AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
+    TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, TASK_TIMEOUT,
 };
 use tonic::Request;
 
@@ -82,7 +82,19 @@ pub async fn is_active(addr: &String) -> Option<ProverServiceClient<Channel>> {
     None
 }
 
+pub fn result_code_to_state(code: i32) -> u32 {
+    match ResultCode::from_i32(code) {
+        Some(ResultCode::Unspecified) => TASK_STATE_PROCESSING,
+        Some(ResultCode::Ok) => TASK_STATE_SUCCESS,
+        Some(ResultCode::Error) => TASK_STATE_FAILED,
+        Some(ResultCode::InternalError) => TASK_STATE_FAILED,
+        Some(ResultCode::Busy) => TASK_STATE_UNPROCESSED,
+        _ => TASK_STATE_UNPROCESSED,
+    }
+}
+
 pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
+    split_task.state = TASK_STATE_UNPROCESSED;
     let client = get_idle_client().await;
     if let Some(mut client) = client {
         let request = SplitElfRequest {
@@ -103,21 +115,17 @@ pub async fn split(mut split_task: SplitTask) -> Option<SplitTask> {
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("split response {:#?}", response);
-                if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
-                    split_task.state = TASK_STATE_SUCCESS;
-                    return Some(split_task);
-                }
+                split_task.state = result_code_to_state(response_result.code);
+                return Some(split_task);
             }
         }
-        split_task.state = TASK_STATE_FAILED;
-    } else {
-        split_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(split_task)
 }
 
 pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
+    prove_task.state = TASK_STATE_UNPROCESSED;
     let client = get_idle_client().await;
     if let Some(mut client) = client {
         let request = ProveRequest {
@@ -139,21 +147,17 @@ pub async fn prove(mut prove_task: ProveTask) -> Option<ProveTask> {
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("prove response {:#?}", response);
-                if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
-                    prove_task.state = TASK_STATE_SUCCESS;
-                    return Some(prove_task);
-                }
+                prove_task.state = result_code_to_state(response_result.code);
+                return Some(prove_task);
             }
         }
-        prove_task.state = TASK_STATE_FAILED;
-    } else {
-        prove_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(prove_task)
 }
 
 pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
+    agg_all_task.state = TASK_STATE_UNPROCESSED;
     let client = get_idle_client().await;
     if let Some(mut client) = client {
         let request = AggregateAllRequest {
@@ -177,15 +181,10 @@ pub async fn aggregate_all(mut agg_all_task: AggAllTask) -> Option<AggAllTask> {
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("aggregate response {:#?}", response);
-                if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
-                    agg_all_task.state = TASK_STATE_SUCCESS;
-                    return Some(agg_all_task);
-                }
+                agg_all_task.state = result_code_to_state(response_result.code);
+                return Some(agg_all_task);
             }
         }
-        agg_all_task.state = TASK_STATE_FAILED;
-    } else {
-        agg_all_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(agg_all_task)
