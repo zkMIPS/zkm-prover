@@ -1,5 +1,6 @@
 use super::Prover;
 use crate::contexts::AggContext;
+use crate::provers::select_degree_bits;
 
 use num::ToPrimitive;
 use plonky2::field::goldilocks_field::GoldilocksField;
@@ -33,7 +34,7 @@ impl Prover<AggContext> for AggProver {
 
         let _basedir = ctx.basedir.clone();
         let _block_no = ctx.block_no.to_string();
-        let _seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
+        let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
         let proof_path1 = ctx.proof_path1.clone();
         let proof_path2 = ctx.proof_path2.clone();
         let pub_value_path1 = ctx.pub_value_path1.clone();
@@ -50,8 +51,7 @@ impl Prover<AggContext> for AggProver {
         // Preprocess all circuits.
         let all_circuits = AllRecursiveCircuits::<F, C, D>::new(
             &all_stark,
-            // &[10..21, 15..22, 14..21, 9..21, 12..21, 15..23],
-            &[10..21, 12..22, 13..21, 8..21, 10..21, 13..23],
+            &select_degree_bits(seg_size),
             &config,
         );
 

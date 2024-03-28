@@ -8,6 +8,8 @@ pub struct SplitTask {
     pub seg_path: String,
     pub block_no: u64,
     pub seg_size: u32,
+    pub start_ts: u64,
+    pub finish_ts: u64,
 }
 
 impl Clone for SplitTask {
@@ -21,6 +23,8 @@ impl Clone for SplitTask {
             seg_path: self.seg_path.clone(),
             block_no: self.block_no,
             seg_size: self.seg_size,
+            start_ts: self.start_ts,
+            finish_ts: self.finish_ts,
         }
     }
 }

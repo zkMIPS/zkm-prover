@@ -10,6 +10,7 @@ use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn copy_file_bin(src: &String, dst: &String) {
     let mut file_src = File::open(src).unwrap();
@@ -20,16 +21,24 @@ pub fn copy_file_bin(src: &String, dst: &String) {
     file_dst.write_all(content.as_slice()).unwrap();
 }
 
+pub fn get_timestamp() -> u64 {
+    let now = SystemTime::now();
+    let duration_since_epoch = now.duration_since(UNIX_EPOCH).unwrap();
+    duration_since_epoch.as_secs()
+}
+
 pub struct Stage {
     pub generate_context: GenerateContext,
     pub split_task: SplitTask,
     pub prove_tasks: Vec<ProveTask>,
     pub agg_all_task: AggAllTask,
     pub final_task: FinalTask,
+    pub is_error: bool,
+    pub errmsg: String,
 }
 
 macro_rules! on_task {
-    ($src:ident, $dst:ident) => {
+    ($src:ident, $dst:ident, $stage:ident) => {
         assert!($src.proof_id == $dst.proof_id);
         if $src.state == TASK_STATE_FAILED
             || $src.state == TASK_STATE_SUCCESS
@@ -38,6 +47,10 @@ macro_rules! on_task {
             $dst.state = $src.state;
             if TASK_STATE_UNPROCESSED != $src.state {
                 log::info!("on_task {:#?}", $dst);
+                $dst.finish_ts = get_timestamp();
+            }
+            if TASK_STATE_FAILED == $src.state {
+                $stage.is_error = true;
             }
         }
     };
@@ -47,6 +60,7 @@ macro_rules! get_task {
     ($src:ident) => {
         if $src.state == TASK_STATE_UNPROCESSED || $src.state == TASK_STATE_FAILED {
             $src.state = TASK_STATE_PROCESSING;
+            $src.start_ts = get_timestamp();
             return Some($src.clone());
         }
         return None
@@ -61,40 +75,34 @@ impl Stage {
             prove_tasks: Vec::new(),
             agg_all_task: AggAllTask::default(),
             final_task: FinalTask::default(),
+            is_error: false,
+            errmsg: "".to_string(),
         }
     }
 
     pub fn dispatch(&mut self) {
-        if self.split_task.state == TASK_STATE_INITIAL {
-            self.gen_split_task();
-            return;
-        }
-        if self.split_task.state == TASK_STATE_SUCCESS {
-            if self.prove_tasks.is_empty() {
-                self.gen_prove_task();
-                return;
+        match self.split_task.state {
+            TASK_STATE_INITIAL => self.gen_split_task(),
+            TASK_STATE_SUCCESS => {
+                if self.prove_tasks.is_empty() {
+                    self.gen_prove_task();
+                } else if self
+                    .prove_tasks
+                    .iter()
+                    .all(|task| task.state == TASK_STATE_SUCCESS)
+                {
+                    match self.agg_all_task.state {
+                        TASK_STATE_INITIAL => self.gen_agg_all_task(),
+                        TASK_STATE_SUCCESS => {
+                            if self.final_task.state == TASK_STATE_INITIAL {
+                                self.gen_final_task();
+                            }
+                        }
+                        _ => {}
+                    }
+                }
             }
-        } else {
-            return;
-        }
-        let mut all_prove_task_success = true;
-        for prove_task in &self.prove_tasks {
-            if prove_task.state != TASK_STATE_SUCCESS {
-                all_prove_task_success = false;
-                break;
-            }
-        }
-        if !all_prove_task_success {
-            return;
-        }
-        if all_prove_task_success && self.agg_all_task.state == TASK_STATE_INITIAL {
-            self.gen_agg_all_task();
-            return;
-        }
-        if self.agg_all_task.state == TASK_STATE_SUCCESS
-            && self.final_task.state == TASK_STATE_INITIAL
-        {
-            self.gen_final_task();
+            _ => {}
         }
     }
 
@@ -103,6 +111,10 @@ impl Stage {
             return true;
         }
         false
+    }
+
+    pub fn is_error(&self) -> bool {
+        self.is_error
     }
 
     fn gen_split_task(&mut self) {
@@ -133,7 +145,7 @@ impl Stage {
 
     pub fn on_split_task(&mut self, split_task: SplitTask) {
         let dst = &mut self.split_task;
-        on_task!(split_task, dst);
+        on_task!(split_task, dst, self);
     }
 
     fn gen_prove_task(&mut self) {
@@ -157,6 +169,8 @@ impl Stage {
                     prove_path: format!("{}/proof/{}", prove_dir.clone(), file_no),
                     pub_value_path: format!("{}/pub_value/{}", prove_dir.clone(), file_no),
                     seg_path: format!("{}/{}", self.generate_context.seg_path, file_name),
+                    start_ts: 0,
+                    finish_ts: 0,
                 };
                 self.prove_tasks.push(prove_task);
             }
@@ -168,6 +182,7 @@ impl Stage {
         for prove_task in &mut self.prove_tasks {
             if prove_task.state == TASK_STATE_UNPROCESSED || prove_task.state == TASK_STATE_FAILED {
                 prove_task.state = TASK_STATE_PROCESSING;
+                prove_task.start_ts = get_timestamp();
                 return Some(prove_task.clone());
             }
         }
@@ -178,26 +193,8 @@ impl Stage {
         for mut item_task in &mut self.prove_tasks {
             if item_task.task_id == prove_task.task_id && item_task.state == TASK_STATE_PROCESSING {
                 let dst = &mut item_task;
-                on_task!(prove_task, dst);
+                on_task!(prove_task, dst, self);
                 break;
-            }
-        }
-
-        assert!(prove_task.proof_id == self.generate_context.proof_id);
-        if prove_task.state == TASK_STATE_FAILED
-            || prove_task.state == TASK_STATE_SUCCESS
-            || prove_task.state == TASK_STATE_UNPROCESSED
-        {
-            if TASK_STATE_UNPROCESSED != prove_task.state {
-                log::info!("on_prove_task {:#?}", prove_task);
-            }
-            for item_task in &mut self.prove_tasks {
-                if item_task.task_id == prove_task.task_id
-                    && item_task.state == TASK_STATE_PROCESSING
-                {
-                    item_task.state = prove_task.state;
-                    break;
-                }
             }
         }
     }
@@ -230,7 +227,7 @@ impl Stage {
 
     pub fn on_agg_all_task(&mut self, agg_all_task: AggAllTask) {
         let dst = &mut self.agg_all_task;
-        on_task!(agg_all_task, dst);
+        on_task!(agg_all_task, dst, self);
     }
 
     pub fn gen_final_task(&mut self) {
@@ -256,6 +253,40 @@ impl Stage {
 
     pub fn on_final_task(&mut self, final_task: FinalTask) {
         let dst = &mut self.final_task;
-        on_task!(final_task, dst);
+        on_task!(final_task, dst, self);
+    }
+
+    pub fn timecost_string(&self) -> String {
+        let split_cost = format!(
+            "split_id: {} cost: {} sec",
+            self.split_task.task_id,
+            self.split_task.finish_ts - self.split_task.start_ts
+        );
+        let root_prove_cost = self
+            .prove_tasks
+            .iter()
+            .map(|task| {
+                format!(
+                    "prove_id: {} cost: {} sec",
+                    task.task_id,
+                    task.finish_ts - task.start_ts
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("\r\n");
+        let agg_all_cost = format!(
+            "agg_all_id: {} cost: {} sec",
+            self.agg_all_task.task_id,
+            self.agg_all_task.finish_ts - self.agg_all_task.start_ts
+        );
+        let final_cost = format!(
+            "final_id: {} cost: {} sec",
+            self.final_task.task_id,
+            self.final_task.finish_ts - self.final_task.start_ts
+        );
+        format!(
+            "proof_id: {}\r\n{}\r\n{}\r\n{}\r\n{}\r\n",
+            self.generate_context.proof_id, split_cost, root_prove_cost, agg_all_cost, final_cost
+        )
     }
 }

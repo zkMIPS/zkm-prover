@@ -22,7 +22,9 @@ pub mod prover_service {
 #[derive(Debug, Default)]
 pub struct ProverServiceSVC {}
 
-async fn run_back_task<F: FnOnce() -> bool + Send + 'static>(callable: F) -> bool {
+async fn run_back_task<F: FnOnce() -> std::result::Result<bool, String> + Send + 'static>(
+    callable: F,
+) -> std::result::Result<bool, String> {
     let rt = tokio::runtime::Handle::current();
     let (tx, rx) = tokio::sync::oneshot::channel();
     let _ = rt
@@ -32,6 +34,32 @@ async fn run_back_task<F: FnOnce() -> bool + Send + 'static>(callable: F) -> boo
         })
         .await;
     rx.await.unwrap()
+}
+
+macro_rules! on_done {
+    ($result:ident, $resp:ident) => {
+        match $result {
+            Ok(done) => {
+                if done {
+                    $resp.result = Some(Result {
+                        code: (ResultCode::Ok.into()),
+                        message: ("SUCCESS".to_string()),
+                    });
+                } else {
+                    $resp.result = Some(Result {
+                        code: (ResultCode::Busy.into()),
+                        message: ("BUSY".to_string()),
+                    });
+                }
+            }
+            Err(e) => {
+                $resp.result = Some(Result {
+                    code: (ResultCode::Error.into()),
+                    message: (e.to_string()),
+                });
+            }
+        }
+    };
 }
 
 #[tonic::async_trait]
@@ -79,23 +107,13 @@ impl ProverService for ProverServiceSVC {
             let s_ctx: SplitContext = split_context;
             executor::executor::Executor::new().split(&s_ctx)
         };
-        let success = run_back_task(split_func).await;
+        let result = run_back_task(split_func).await;
         let mut response = prover_service::SplitElfResponse {
             proof_id: request.get_ref().proof_id.clone(),
             computed_request_id: request.get_ref().computed_request_id.clone(),
             ..Default::default()
         };
-        if success {
-            response.result = Some(Result {
-                code: (ResultCode::Ok.into()),
-                message: ("SUCCESS".to_string()),
-            });
-        } else {
-            response.result = Some(Result {
-                code: (ResultCode::Error.into()),
-                message: ("FAILED".to_string()),
-            });
-        }
+        on_done!(result, response);
         let end = Instant::now();
         let elapsed = end.duration_since(start);
         log::info!(
@@ -126,23 +144,13 @@ impl ProverService for ProverServiceSVC {
             let s_ctx: ProveContext = prove_context;
             Pipeline::new().prove_root(&s_ctx)
         };
-        let success = run_back_task(prove_func).await;
+        let result = run_back_task(prove_func).await;
         let mut response = prover_service::ProveResponse {
             proof_id: request.get_ref().proof_id.clone(),
             computed_request_id: request.get_ref().computed_request_id.clone(),
             ..Default::default()
         };
-        if success {
-            response.result = Some(Result {
-                code: (ResultCode::Ok.into()),
-                message: ("SUCCESS".to_string()),
-            });
-        } else {
-            response.result = Some(Result {
-                code: (ResultCode::Error.into()),
-                message: ("FAILED".to_string()),
-            });
-        }
+        on_done!(result, response);
         let end = Instant::now();
         let elapsed = end.duration_since(start);
         log::info!(
@@ -177,23 +185,13 @@ impl ProverService for ProverServiceSVC {
             let agg_ctx = agg_context;
             Pipeline::new().prove_aggregate(&agg_ctx)
         };
-        let success = run_back_task(agg_all_func).await;
+        let result = run_back_task(agg_all_func).await;
         let mut response = prover_service::AggregateResponse {
             proof_id: request.get_ref().proof_id.clone(),
             computed_request_id: request.get_ref().computed_request_id.clone(),
             ..Default::default()
         };
-        if success {
-            response.result = Some(Result {
-                code: (ResultCode::Ok.into()),
-                message: ("SUCCESS".to_string()),
-            });
-        } else {
-            response.result = Some(Result {
-                code: (ResultCode::Error.into()),
-                message: ("FAILED".to_string()),
-            });
-        }
+        on_done!(result, response);
         let end = Instant::now();
         let elapsed = end.duration_since(start);
         log::info!(
@@ -224,23 +222,13 @@ impl ProverService for ProverServiceSVC {
             let s_ctx: AggAllContext = final_context;
             Pipeline::new().prove_aggregate_all(&s_ctx)
         };
-        let success = run_back_task(agg_all_func).await;
+        let result = run_back_task(agg_all_func).await;
         let mut response = prover_service::AggregateAllResponse {
             proof_id: request.get_ref().proof_id.clone(),
             computed_request_id: request.get_ref().computed_request_id.clone(),
             ..Default::default()
         };
-        if success {
-            response.result = Some(Result {
-                code: (ResultCode::Ok.into()),
-                message: ("SUCCESS".to_string()),
-            });
-        } else {
-            response.result = Some(Result {
-                code: (ResultCode::Error.into()),
-                message: ("FAILED".to_string()),
-            });
-        }
+        on_done!(result, response);
         let end = Instant::now();
         let elapsed = end.duration_since(start);
         log::info!(

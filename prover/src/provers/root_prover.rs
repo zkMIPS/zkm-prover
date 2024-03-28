@@ -1,7 +1,6 @@
 use super::Prover;
 use crate::contexts::ProveContext;
-
-use num::ToPrimitive;
+use crate::provers::select_degree_bits;
 use std::time::Duration;
 
 use plonky2::field::goldilocks_field::GoldilocksField;
@@ -34,7 +33,7 @@ impl Prover<ProveContext> for RootProver {
         let basedir = ctx.basedir.clone();
         let block_no = ctx.block_no.to_string();
         let seg_path = ctx.seg_path.clone();
-        let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
+        let seg_size = ctx.seg_size as usize;
         let proof_path = ctx.proof_path.clone();
         let pub_value_path = ctx.pub_value_path.clone();
         let file = String::from("");
@@ -45,8 +44,7 @@ impl Prover<ProveContext> for RootProver {
         // Preprocess all circuits.
         let all_circuits = AllRecursiveCircuits::<F, C, D>::new(
             &all_stark,
-            // &[10..21, 15..22, 14..21, 9..21, 12..21, 15..23],
-            &[10..21, 12..22, 13..21, 8..21, 10..21, 13..23],
+            &select_degree_bits(seg_size),
             &config,
         );
 

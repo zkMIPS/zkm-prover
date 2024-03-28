@@ -13,6 +13,7 @@ use tonic::{Request, Response, Status};
 
 use crate::config;
 use crate::prover_client;
+use prover::provers::{self, read_file_bin};
 
 #[allow(clippy::module_inception)]
 pub mod stage_service {
@@ -53,6 +54,18 @@ impl StageService for StageServiceSVC {
         request: Request<GenerateProofRequest>,
     ) -> tonic::Result<Response<GenerateProofResponse>, Status> {
         log::info!("{:?}", request.get_ref().proof_id);
+
+        // check seg_size
+        if !provers::valid_seg_size(request.get_ref().seg_size as usize) {
+            let response = stage_service::GenerateProofResponse {
+                proof_id: request.get_ref().proof_id.clone(),
+                executor_error: stage_service::ExecutorError::Unspecified as u32,
+                error_message: "invalid seg_size".to_string(),
+                ..Default::default()
+            };
+            return Ok(Response::new(response));
+        }
+
         let base_dir = config::instance().lock().unwrap().base_dir.clone();
         let dir_path = format!("{}/proof/{}", base_dir, request.get_ref().proof_id);
         fs::create_dir_all(dir_path.clone())?;
@@ -176,24 +189,36 @@ impl StageService for StageServiceSVC {
                 () = time::sleep(time::Duration::from_secs(1)) => {
                 }
             };
-            if stage.is_success() {
+            if stage.is_success() || stage.is_error() {
                 break;
             }
             stage.dispatch();
         }
 
-        {
-            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
-            taskmap.insert(
-                request.get_ref().proof_id.clone(),
-                stage_service::ExecutorError::NoError.into(),
-            );
-        }
-
-        let response = stage_service::GenerateProofResponse {
+        let mut response = stage_service::GenerateProofResponse {
             proof_id: request.get_ref().proof_id.clone(),
             ..Default::default()
         };
+        {
+            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
+            if stage.is_error() {
+                response.executor_error = stage_service::ExecutorError::Error as u32;
+                taskmap.insert(
+                    request.get_ref().proof_id.clone(),
+                    stage_service::ExecutorError::Error.into(),
+                );
+            } else {
+                let result = read_file_bin(&final_path).unwrap();
+                response.result.clone_from(&result);
+                response.executor_error = stage_service::ExecutorError::NoError as u32;
+                taskmap.insert(
+                    request.get_ref().proof_id.clone(),
+                    stage_service::ExecutorError::NoError.into(),
+                );
+            }
+        }
+
+        log::info!("{}", stage.timecost_string());
         Ok(Response::new(response))
     }
 }
