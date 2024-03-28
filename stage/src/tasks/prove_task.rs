@@ -9,6 +9,8 @@ pub struct ProveTask {
     pub prove_path: String,
     pub pub_value_path: String,
     pub seg_path: String,
+    pub start_ts: u64,
+    pub finish_ts: u64,
 }
 
 impl Clone for ProveTask {
@@ -23,6 +25,8 @@ impl Clone for ProveTask {
             prove_path: self.prove_path.clone(),
             pub_value_path: self.pub_value_path.clone(),
             seg_path: self.seg_path.clone(),
+            start_ts: self.start_ts,
+            finish_ts: self.finish_ts,
         }
     }
 }

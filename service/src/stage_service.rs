@@ -207,6 +207,7 @@ impl StageService for StageServiceSVC {
             proof_id: request.get_ref().proof_id.clone(),
             ..Default::default()
         };
+        log::info!("{}", stage.timecost_string());
         Ok(Response::new(response))
     }
 }

@@ -10,6 +10,7 @@ use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn copy_file_bin(src: &String, dst: &String) {
     let mut file_src = File::open(src).unwrap();
@@ -18,6 +19,12 @@ pub fn copy_file_bin(src: &String, dst: &String) {
 
     let mut file_dst = File::open(dst).unwrap();
     file_dst.write_all(content.as_slice()).unwrap();
+}
+
+pub fn get_timestamp() -> u64 {
+    let now = SystemTime::now();
+    let duration_since_epoch = now.duration_since(UNIX_EPOCH).unwrap();
+    duration_since_epoch.as_secs()
 }
 
 pub struct Stage {
@@ -38,6 +45,7 @@ macro_rules! on_task {
             $dst.state = $src.state;
             if TASK_STATE_UNPROCESSED != $src.state {
                 log::info!("on_task {:#?}", $dst);
+                $dst.finish_ts = get_timestamp();
             }
         }
     };
@@ -47,6 +55,7 @@ macro_rules! get_task {
     ($src:ident) => {
         if $src.state == TASK_STATE_UNPROCESSED || $src.state == TASK_STATE_FAILED {
             $src.state = TASK_STATE_PROCESSING;
+            $src.start_ts = get_timestamp();
             return Some($src.clone());
         }
         return None
@@ -149,6 +158,8 @@ impl Stage {
                     prove_path: format!("{}/proof/{}", prove_dir.clone(), file_no),
                     pub_value_path: format!("{}/pub_value/{}", prove_dir.clone(), file_no),
                     seg_path: format!("{}/{}", self.generate_context.seg_path, file_name),
+                    start_ts: 0,
+                    finish_ts: 0,
                 };
                 self.prove_tasks.push(prove_task);
             }
@@ -160,6 +171,7 @@ impl Stage {
         for prove_task in &mut self.prove_tasks {
             if prove_task.state == TASK_STATE_UNPROCESSED || prove_task.state == TASK_STATE_FAILED {
                 prove_task.state = TASK_STATE_PROCESSING;
+                prove_task.start_ts = get_timestamp();
                 return Some(prove_task.clone());
             }
         }
@@ -172,24 +184,6 @@ impl Stage {
                 let dst = &mut item_task;
                 on_task!(prove_task, dst);
                 break;
-            }
-        }
-
-        assert!(prove_task.proof_id == self.generate_context.proof_id);
-        if prove_task.state == TASK_STATE_FAILED
-            || prove_task.state == TASK_STATE_SUCCESS
-            || prove_task.state == TASK_STATE_UNPROCESSED
-        {
-            if TASK_STATE_UNPROCESSED != prove_task.state {
-                log::info!("on_prove_task {:#?}", prove_task);
-            }
-            for item_task in &mut self.prove_tasks {
-                if item_task.task_id == prove_task.task_id
-                    && item_task.state == TASK_STATE_PROCESSING
-                {
-                    item_task.state = prove_task.state;
-                    break;
-                }
             }
         }
     }
@@ -249,5 +243,39 @@ impl Stage {
     pub fn on_final_task(&mut self, final_task: FinalTask) {
         let dst = &mut self.final_task;
         on_task!(final_task, dst);
+    }
+
+    pub fn timecost_string(&self) -> String {
+        let split_cost = format!(
+            "split_id: {} cost: {} sec",
+            self.split_task.task_id,
+            self.split_task.finish_ts - self.split_task.start_ts
+        );
+        let root_prove_cost = self
+            .prove_tasks
+            .iter()
+            .map(|task| {
+                format!(
+                    "prove_id: {} cost: {} sec",
+                    task.task_id,
+                    task.finish_ts - task.start_ts
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("\r\n");
+        let agg_all_cost = format!(
+            "agg_all_id: {} cost: {} sec",
+            self.agg_all_task.task_id,
+            self.agg_all_task.finish_ts - self.agg_all_task.start_ts
+        );
+        let final_cost = format!(
+            "final_id: {} cost: {} sec",
+            self.final_task.task_id,
+            self.final_task.finish_ts - self.final_task.start_ts
+        );
+        format!(
+            "proof_id: {}\r\n{}\r\n{}\r\n{}\r\n{}\r\n",
+            self.generate_context.proof_id, split_cost, root_prove_cost, agg_all_cost, final_cost
+        )
     }
 }

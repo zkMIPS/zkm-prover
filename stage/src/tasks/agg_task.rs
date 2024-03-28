@@ -10,6 +10,8 @@ pub struct AggAllTask {
     pub proof_dir: String,
     pub pub_value_dir: String,
     pub output_dir: String,
+    pub start_ts: u64,
+    pub finish_ts: u64,
 }
 
 impl Clone for AggAllTask {
@@ -25,6 +27,8 @@ impl Clone for AggAllTask {
             proof_dir: self.proof_dir.clone(),
             pub_value_dir: self.pub_value_dir.clone(),
             output_dir: self.output_dir.clone(),
+            start_ts: self.start_ts,
+            finish_ts: self.finish_ts,
         }
     }
 }
