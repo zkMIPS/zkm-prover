@@ -322,4 +322,38 @@ impl Stage {
             self.generate_context.proof_id, split_cost, root_prove_cost, agg_all_cost, final_cost
         )
     }
+
+    pub fn timecost_string(&self) -> String {
+        let split_cost = format!(
+            "split_id: {} cost: {} sec",
+            self.split_task.task_id,
+            self.split_task.finish_ts - self.split_task.start_ts
+        );
+        let root_prove_cost = self
+            .prove_tasks
+            .iter()
+            .map(|task| {
+                format!(
+                    "prove_id: {} cost: {} sec",
+                    task.task_id,
+                    task.finish_ts - task.start_ts
+                )
+            })
+            .collect::<Vec<String>>()
+            .join("\r\n");
+        let agg_all_cost = format!(
+            "agg_all_id: {} cost: {} sec",
+            self.agg_all_task.task_id,
+            self.agg_all_task.finish_ts - self.agg_all_task.start_ts
+        );
+        let final_cost = format!(
+            "final_id: {} cost: {} sec",
+            self.final_task.task_id,
+            self.final_task.finish_ts - self.final_task.start_ts
+        );
+        format!(
+            "proof_id: {}\r\n{}\r\n{}\r\n{}\r\n{}\r\n",
+            self.generate_context.proof_id, split_cost, root_prove_cost, agg_all_cost, final_cost
+        )
+    }
 }
