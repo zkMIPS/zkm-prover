@@ -3,7 +3,7 @@
 # You should provide some variable to use this config bash
 provers=("localhost:50001" "localhost:50002")
 stage="localhost:50000"
-snarks=("localhost:50051")
+snarks=("localhost:50001")
 tls=false
 base_dir="/tmp/zkm/test/test_proof"
 
@@ -58,6 +58,7 @@ for snark in "${snarks[@]}"; do
     fi
 done
 stage_config="${stage_config//\{\{snark_addrs\}\}/\"${snark_addrs}\"}"
+stage_config="${stage_config//\{\{base_dir\}\}/${base_dir}}"
 if [ "$tls" = true ]; then
     echo "$stage_config" > stage_tls.toml 
 else
