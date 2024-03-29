@@ -12,8 +12,8 @@ use tokio::sync::mpsc;
 use tokio::time;
 use tonic::{Request, Response, Status};
 
-use crate::config;
 use crate::prover_client;
+use crate::{config, storage};
 use prover::provers::{self, read_file_bin};
 
 #[allow(clippy::module_inception)]
@@ -30,6 +30,7 @@ lazy_static! {
 
 pub struct StageServiceSVC {
     tls_config: Option<TlsConfig>,
+    _storage: storage::Storage,
 }
 
 impl StageServiceSVC {
@@ -46,7 +47,12 @@ impl StageServiceSVC {
         } else {
             None
         };
-        Ok(StageServiceSVC { tls_config })
+        let database_url = config.database_url.as_str();
+        let storage = storage::Storage::new(database_url);
+        Ok(StageServiceSVC {
+            tls_config,
+            _storage: storage,
+        })
     }
 }
 
@@ -146,6 +152,15 @@ impl StageService for StageServiceSVC {
             request.get_ref().block_no,
             request.get_ref().seg_size,
         );
+
+        // let _ = self
+        //     .storage
+        //     .insert_stage_task(
+        //         &request.get_ref().proof_id,
+        //         stage_service::ExecutorError::Unspecified as i32,
+        //         &serde_json::to_string(&generate_context).unwrap(),
+        //     )
+        //     .await;
 
         let mut stage = stage::stage::Stage::new(generate_context);
         let (tx, mut rx) = mpsc::channel(128);

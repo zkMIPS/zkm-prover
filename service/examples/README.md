@@ -1,6 +1,6 @@
 # Examples
 
-## Tools
+## Hello world
 
 * Compile the Go code to MIPS
 
@@ -8,15 +8,6 @@ Write your own hello.go, and compile with
 
 ```
 GOOS=linux GOARCH=mips GOMIPS=softfloat go build hello.go -o /tmp/zkm/test/hello_world
-```
-
-Download the block and place it in the corresponding directory [minigeth](https://github.com/zkMIPS/cannon-mips).
-
-```
-$ mkdir -p /tmp/cannon
-$ export BASEDIR=/tmp/cannon; minigeth/go-ethereum 13284491
-$ mkdir -p /tmp/zkm/test/0_13284491
-$ cp /tmp/cannon/0_13284491/input /tmp/zkm/test/0_13284491
 ```
 
 * Compile zkm-prover

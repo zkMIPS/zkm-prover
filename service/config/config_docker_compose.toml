@@ -1,0 +1,5 @@
+addr = "0.0.0.0:50000"
+database_url = "mysql://root:123456@localhost:3306/stage"
+prover_addrs = ["zkm-prover:50000"]
+snark_addrs = ["zkm-snark:50051"]
+base_dir = "/zkm/data"

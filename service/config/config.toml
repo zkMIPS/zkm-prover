@@ -1,4 +1,5 @@
 addr = "0.0.0.0:50000"
+database_url = "mysql://root:123456@localhost:3306/stage"
 prover_addrs = ["127.0.0.1:50001", "127.0.0.1:50002"]
 snark_addrs = ["127.0.0.1:50051"]
 base_dir = "/tmp/zkm/test/test_proof"
