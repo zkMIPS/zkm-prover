@@ -1,6 +1,6 @@
 # Examples
 
-## Tools
+## Hello world
 
 * Compile the Go code to MIPS
 
@@ -8,15 +8,6 @@ Write your own hello.go, and compile with
 
 ```
 GOOS=linux GOARCH=mips GOMIPS=softfloat go build hello.go -o /tmp/zkm/test/hello_world
-```
-
-Download the block and place it in the corresponding directory [minigeth](https://github.com/zkMIPS/cannon-mips).
-
-```
-$ mkdir -p /tmp/cannon
-$ export BASEDIR=/tmp/cannon; minigeth/go-ethereum 13284491
-$ mkdir -p /tmp/zkm/test/0_13284491
-$ cp /tmp/cannon/0_13284491/input /tmp/zkm/test/0_13284491
 ```
 
 * Compile zkm-prover
@@ -45,3 +36,30 @@ cargo run --release --example stage
 ```
 
 
+## Minigeth
+
+* Clone canon-mips && Compile 
+
+```
+git clone https://github.com/zkMIPS/cannon-mips.git
+
+cd cannon-mips/minigeth
+
+// go-ethereum for download block data
+go build -o go-ethereum *.go
+
+// go-ethereum-mips elf
+GOOS=linux GOARCH=mips GOMIPS=softfloat go build -o /mnt/data/xander/zkm/test-vectors/go-ethereum-mips *.go
+```
+
+* Download block data 13284469
+
+```
+export BASEDIR=/mnt/data/xander/zkm/test-vectors;./go-ethereum 13284469
+```
+
+* Request stage service generate proof
+
+```
+ELF_PATH=/mnt/data/xander/zkm/test-vectors/go-ethereum-mips BLOCK_PATH=/mnt/data/xander/zkm/test-vectors/0_13284469 BLOCK_NO=13284469 SEG_SIZE=262144 cargo run --release --example stage
+```
