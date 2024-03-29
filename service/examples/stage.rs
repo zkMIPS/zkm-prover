@@ -20,6 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let block_no = block_no.parse::<_>().unwrap_or(13284491);
     let seg_size = env::var("SEG_SIZE").unwrap_or("262144".to_string());
     let seg_size = seg_size.parse::<_>().unwrap_or(262144);
+    let endpoint = env::var("ENDPOINT").unwrap_or("http://127.0.0.1:50000".to_string());
     let ca_cert_path = env::var("CA_CERT_PATH").unwrap_or("".to_string());
     let cert_path = env::var("CERT_PATH").unwrap_or("".to_string());
     let key_path = env::var("KEY_PATH").unwrap_or("".to_string());
@@ -61,9 +62,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let tls_config = ClientTlsConfig::new()
                 .ca_certificate(config.ca_cert)
                 .identity(config.identity);
-            Endpoint::new("http://localhost:50000")?.tls_config(tls_config)?
+            Endpoint::new(endpoint)?.tls_config(tls_config)?
         }
-        None => Endpoint::new("http://127.0.0.1:50000")?,
+        None => Endpoint::new(endpoint)?,
     };
     let mut stage_client = StageServiceClient::connect(endpoint).await?;
     let response = stage_client.generate_proof(request).await?.into_inner();
