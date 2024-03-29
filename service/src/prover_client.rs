@@ -210,9 +210,9 @@ pub async fn aggregate_all(
 
 pub async fn final_proof(
     mut final_task: FinalTask,
-    tls_config: Option<TlsConfig>,
+    _tls_config: Option<TlsConfig>,
 ) -> Option<FinalTask> {
-    let client = get_snark_client(tls_config).await;
+    let client = get_snark_client(None).await;
     if let Some(mut client) = client {
         let request = FinalProofRequest {
             chain_id: 0,
