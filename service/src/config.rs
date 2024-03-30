@@ -57,15 +57,15 @@ impl RuntimeConfig {
             }
         };
         // both of ca_cert_path, cert_path, key_path should be some or none
-        if config.ca_cert_path.is_some() || config.cert_path.is_some() || config.key_path.is_some()
-        {
-            if config.ca_cert_path.is_none()
+        if (config.ca_cert_path.is_some()
+            || config.cert_path.is_some()
+            || config.key_path.is_some())
+            && (config.ca_cert_path.is_none()
                 || config.cert_path.is_none()
-                || config.key_path.is_none()
-            {
-                error!("both of ca_cert_path, cert_path, key_path should be some or none");
-                return None;
-            }
+                || config.key_path.is_none())
+        {
+            error!("both of ca_cert_path, cert_path, key_path should be some or none");
+            return None;
         }
         instance().lock().unwrap().addr.clone_from(&config.addr);
         instance()

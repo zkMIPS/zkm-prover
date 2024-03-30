@@ -16,6 +16,7 @@ use crate::config;
 use crate::prover_client;
 use prover::provers::{self, read_file_bin};
 
+#[allow(clippy::module_inception)]
 pub mod stage_service {
     tonic::include_proto!("stage.v1");
 }
