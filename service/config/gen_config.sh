@@ -52,7 +52,7 @@ stage_config="${stage_config//\{\{prover_addrs\}\}/\"${prover_addrs}\"}"
 snark_addrs=""
 for snark in "${snarks[@]}"; do
     if [ -z "$snark_addrs" ]; then
-        snark_addrs="$snark"
+        snark_addrs="$snark\""
     else
         snark_addrs="$snark_addrs, \"$snark"
     fi
