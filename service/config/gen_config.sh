@@ -31,9 +31,9 @@ fi
 # Generate stage toml
 # Read templeta content first
 if [ "$tls" = true ]; then
-    stage_template_content=$(cat stage_tls_template.toml)
+    stage_template_content=$(cat stage_tls.toml.template)
 else
-    stage_template_content=$(cat stage_template.toml)
+    stage_template_content=$(cat stage.toml.template)
 fi
 stage_config="$stage_template_content"
 IFS=':' read -r host port <<< "$stage"
@@ -68,9 +68,9 @@ fi
 # Generate provers toml
 # Read templeta content first
 if [ "$tls" = true ]; then
-    prover_template_content=$(cat prover_tls_template.toml)
+    prover_template_content=$(cat prover_tls.toml.template)
 else
-    prover_template_content=$(cat prover_template.toml)
+    prover_template_content=$(cat prover.toml.template)
 fi
 
 id=1
