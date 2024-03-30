@@ -1,5 +1,4 @@
-use anyhow::anyhow;
-use std::io;
+use anyhow::bail;
 use std::path::Path;
 use tonic::transport::{Certificate, Identity};
 
@@ -29,31 +28,20 @@ async fn get_cert_and_identity(
     let cert_path = Path::new(&cert_path);
     let key_path = Path::new(&key_path);
     if !ca_cert_path.is_file() || !cert_path.is_file() || !key_path.is_file() {
-        return Err(anyhow!(
-            "both ca_cert_path, cert_path and key_path should be valid file"
-        ));
+        bail!("both ca_cert_path, cert_path and key_path should be valid file")
     }
 
-    let ca_cert = tokio::fs::read(ca_cert_path).await.map_err(|err| {
-        io::Error::new(
-            err.kind(),
-            format!("Failed to read {ca_cert_path:?}, err: {err}"),
-        )
-    })?;
+    let ca_cert = tokio::fs::read(ca_cert_path)
+        .await
+        .unwrap_or_else(|err| panic!("Failed to read {:?}, err: {:?}", ca_cert_path, err));
     let ca_cert = Certificate::from_pem(ca_cert);
 
-    let cert = tokio::fs::read(cert_path).await.map_err(|err| {
-        io::Error::new(
-            err.kind(),
-            format!("Failed to read {cert_path:?}, err: {err}"),
-        )
-    })?;
-    let key = tokio::fs::read(key_path).await.map_err(|err| {
-        io::Error::new(
-            err.kind(),
-            format!("Failed to read {key_path:?}, err: {err}"),
-        )
-    })?;
+    let cert = tokio::fs::read(cert_path)
+        .await
+        .unwrap_or_else(|err| panic!("Failed to read {:?}, err: {:?}", cert_path, err));
+    let key = tokio::fs::read(key_path)
+        .await
+        .unwrap_or_else(|err| panic!("Failed to read {:?}, err: {:?}", key_path, err));
     let identity = Identity::from_pem(cert, key);
 
     Ok((ca_cert, identity))
