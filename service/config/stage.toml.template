@@ -1,0 +1,4 @@
+addr = "{{addr}}"
+prover_addrs = [{{prover_addrs}}]
+snark_addrs = [{{snark_addrs}}]
+base_dir = "{{base_dir}}"

@@ -1,0 +1,7 @@
+addr = "{{addr}}"
+prover_addrs = [{{prover_addrs}}]
+snark_addrs = [{{snark_addrs}}]
+base_dir = "{{base_dir}}"
+ca_cert_path = "tools/certs/ca.pem"
+cert_path = "tools/certs/stage.pem"
+key_path = "tools/certs/stage.key"
