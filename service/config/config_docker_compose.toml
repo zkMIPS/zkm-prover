@@ -1,0 +1,4 @@
+addr = "0.0.0.0:50000"
+prover_addrs = ["zkm-prover1:50000", "zkm-prover2:50000"]
+snark_addrs = ["localhost:50051"]
+base_dir = "/zkm/data"
