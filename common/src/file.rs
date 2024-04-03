@@ -97,10 +97,8 @@ async fn s3_write_file(path: &str, buf: &[u8]) -> anyhow::Result<()> {
     Ok(())
 }
 
-// read dir will be used in generate proof and client read blocks
-// todo: it only list current files below the path
-// todo: implement s3
-pub fn read_dir(path: &str) -> anyhow::Result<Vec<String>> {
+// list_files will return files of current dir
+pub fn list_files(path: &str) -> anyhow::Result<Vec<String>> {
     if is_s3_path(path) {
         let rt = tokio::runtime::Runtime::new().unwrap();
         return rt.block_on(async { list_files_in_s3(path).await });

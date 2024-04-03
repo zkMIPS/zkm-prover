@@ -1,4 +1,4 @@
-use common::file::{read, read_dir};
+use common::file::{list_files, read};
 use common::tls::Config;
 use stage_service::stage_service_client::StageServiceClient;
 use stage_service::{BlockFileItem, GenerateProofRequest};
@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let elf_data = read(&elf_path).unwrap();
     let mut block_data = Vec::new();
 
-    let files = read_dir(&block_path).unwrap();
+    let files = list_files(&block_path).unwrap();
     for file_name in files {
         let file_path = format!("{}/{}", block_path, file_name);
         let block_file_item = BlockFileItem {

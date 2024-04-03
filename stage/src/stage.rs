@@ -4,7 +4,7 @@ use crate::tasks::{AggAllTask, FinalTask, ProveTask, SplitTask};
 use crate::tasks::{
     TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED,
 };
-use common::file::{create_dir_all, read_dir};
+use common::file::{create_dir_all, list_files};
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -138,7 +138,7 @@ impl Stage {
     fn gen_prove_task(&mut self) {
         let prove_dir = self.generate_context.prove_path.clone();
         create_dir_all(&prove_dir).unwrap();
-        let files = read_dir(&self.generate_context.seg_path).unwrap();
+        let files = list_files(&self.generate_context.seg_path).unwrap();
         for file_name in files {
             let result: Result<usize, <usize as FromStr>::Err> = file_name.parse();
             if let Ok(file_no) = result {
