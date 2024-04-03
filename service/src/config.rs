@@ -1,8 +1,7 @@
+use common::file::read_to_string;
 use log::error;
 use once_cell::sync::OnceCell;
 use serde_derive::Deserialize;
-use std::fs;
-use std::path::Path;
 use std::sync::Mutex;
 
 static INSTANCE: OnceCell<Mutex<RuntimeConfig>> = OnceCell::new();
@@ -35,8 +34,8 @@ impl RuntimeConfig {
         }
     }
 
-    pub fn from_toml<T: AsRef<Path>>(path: T) -> Option<Self> {
-        let contents = match fs::read_to_string(path) {
+    pub fn from_toml(path: &str) -> Option<Self> {
+        let contents = match read_to_string(path) {
             Ok(c) => c,
             Err(e) => {
                 error!(

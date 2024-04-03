@@ -19,7 +19,7 @@ use zkm::config::StarkConfig;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 use zkm::proof::PublicValues;
 
-use super::file_utils::read_file_content;
+use common::file::read_to_string;
 
 #[derive(Default)]
 pub struct AggAllProver {}
@@ -56,13 +56,13 @@ impl Prover<AggAllContext> for AggAllProver {
 
         for seg_no in 0..proof_num {
             let proof_path = format!("{}/{}", proof_dir, seg_no);
-            let root_proof_content = read_file_content(&proof_path)?;
+            let root_proof_content = read_to_string(&proof_path)?;
             let root_proof: ProofWithPublicInputs<F, C, D> =
                 serde_json::from_str(&root_proof_content)?;
             root_proofs.push(root_proof);
 
             let pub_value_path = format!("{}/{}", pub_value_dir, seg_no);
-            let root_pub_value_content = read_file_content(&pub_value_path)?;
+            let root_pub_value_content = read_to_string(&pub_value_path)?;
             let root_pub_value: PublicValues = serde_json::from_str(&root_pub_value_content)?;
             root_pub_values.push(root_pub_value);
         }

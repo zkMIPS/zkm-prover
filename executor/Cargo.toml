@@ -27,3 +27,4 @@ hex = "0.4"
 hashbrown = { version = "0.14.0", default-features = false, features = ["ahash", "serde"] } # NOTE: When upgrading, see `ahash` dependency.
 lazy_static = "1.4.0"
 elf = { version = "0.7", default-features = false }
+common = { path="../common" }

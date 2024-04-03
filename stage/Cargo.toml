@@ -11,4 +11,5 @@ log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.144", features = ["derive"] }
 rand = "0.8.5"
 rand_chacha = "0.3.1"
+common = {path = "../common"}
 hashbrown = { version = "0.14.0", default-features = false, features = ["ahash", "serde"] } # NOTE: When upgrading, see `ahash` dependency.

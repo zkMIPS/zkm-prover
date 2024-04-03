@@ -12,8 +12,7 @@ use zkm::config::StarkConfig;
 use zkm::cpu::kernel::assembler::segment_kernel;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 
-use std::fs::File;
-use std::io::Write;
+use common::file::write_file;
 
 #[derive(Default)]
 pub struct RootProver {}
@@ -58,15 +57,11 @@ impl Prover<ProveContext> for RootProver {
 
         // write agg_proof write file
         let json_string = serde_json::to_string(&agg_proof)?;
-        let mut file = File::create(proof_path)?;
-        file.write_all(json_string.as_bytes())?;
-        file.flush()?;
+        write_file(&proof_path, json_string.as_bytes())?;
 
         // updated_agg_public_values file
         let json_string = serde_json::to_string(&updated_agg_public_values)?;
-        let mut file = File::create(pub_value_path)?;
-        file.write_all(json_string.as_bytes())?;
-        file.flush()?;
+        write_file(&pub_value_path, json_string.as_bytes())?;
 
         Ok(())
     }

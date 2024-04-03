@@ -1,8 +1,7 @@
 use crate::split_context::SplitContext;
+use common::file::read;
 use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;
-use std::fs;
-
 use zkm::mips_emulator::state::{InstrumentedState, State};
 use zkm::mips_emulator::utils::get_block_path;
 
@@ -25,7 +24,7 @@ impl Executor {
         let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
         let args = "".to_string();
 
-        let data = fs::read(elf_path);
+        let data = read(&elf_path);
         if let core::result::Result::Ok(data) = data {
             let file_result = ElfBytes::<AnyEndian>::minimal_parse(data.as_slice());
             match file_result {
