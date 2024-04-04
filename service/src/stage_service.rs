@@ -30,7 +30,7 @@ lazy_static! {
 
 pub struct StageServiceSVC {
     tls_config: Option<TlsConfig>,
-    _storage: database::Database,
+    _db: database::Database,
 }
 
 impl StageServiceSVC {
@@ -48,10 +48,10 @@ impl StageServiceSVC {
             None
         };
         let database_url = config.database_url.as_str();
-        let storage = database::Database::new(database_url);
+        let db = database::Database::new(database_url);
         Ok(StageServiceSVC {
             tls_config,
-            _storage: storage,
+            _db: db,
         })
     }
 }
@@ -149,7 +149,7 @@ impl StageService for StageServiceSVC {
         );
 
         // let _ = self
-        //     .storage
+        //     .db
         //     .insert_stage_task(
         //         &request.get_ref().proof_id,
         //         stage_service::ExecutorError::Unspecified as i32,
