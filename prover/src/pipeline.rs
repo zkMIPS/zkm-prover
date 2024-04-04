@@ -10,7 +10,7 @@ pub struct Pipeline {
     _mutex: Mutex<usize>,
 }
 
-pub static PIPELINE_MUTEX: Mutex<usize> = Mutex::new(0);
+static PIPELINE_MUTEX: Mutex<usize> = Mutex::new(0);
 
 impl Pipeline {
     pub fn new() -> Self {

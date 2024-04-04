@@ -13,7 +13,7 @@ use tokio::time;
 use tonic::{Request, Response, Status};
 
 use crate::prover_client;
-use crate::{config, storage};
+use crate::{config, database};
 use prover::provers::{self, read_file_bin};
 
 #[allow(clippy::module_inception)]
@@ -30,7 +30,7 @@ lazy_static! {
 
 pub struct StageServiceSVC {
     tls_config: Option<TlsConfig>,
-    _storage: storage::Storage,
+    _storage: database::Database,
 }
 
 impl StageServiceSVC {
@@ -48,7 +48,7 @@ impl StageServiceSVC {
             None
         };
         let database_url = config.database_url.as_str();
-        let storage = storage::Storage::new(database_url);
+        let storage = database::Database::new(database_url);
         Ok(StageServiceSVC {
             tls_config,
             _storage: storage,
