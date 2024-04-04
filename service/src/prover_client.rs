@@ -203,9 +203,6 @@ pub async fn aggregate_all(
                 return Some(agg_all_task);
             }
         }
-        agg_task.state = TASK_STATE_FAILED;
-    } else {
-        agg_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(agg_all_task)
@@ -253,9 +250,9 @@ pub async fn final_proof(
                 }
             }
         }
-        agg_all_task.state = TASK_STATE_FAILED;
+        final_task.state = TASK_STATE_FAILED;
     } else {
-        agg_all_task.state = TASK_STATE_UNPROCESSED;
+        final_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(final_task)

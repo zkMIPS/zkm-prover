@@ -14,12 +14,6 @@ services:
       zkm-snark:
         condition: service_started
     image: zkm-prover:latest
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-        reservations:
-          memory: 256M
     ports:
       - 50000:50000
     environment:
@@ -36,12 +30,6 @@ services:
     container_name: zkm-prover
     restart: unless-stopped
     image: zkm-prover:latest
-    deploy:
-      resources:
-        limits:
-          memory: 400G
-        reservations:
-          memory: 256M
     environment:
       - RUST_LOG=info
     volumes:

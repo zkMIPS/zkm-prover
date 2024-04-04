@@ -6,8 +6,6 @@ pub const TASK_STATE_FAILED: u32 = 4;
 
 pub const TASK_TIMEOUT: u64 = 7200;
 
-pub const TASK_TIMEOUT :u64 = 3600;
-
 pub mod split_task;
 pub use split_task::SplitTask;
 

@@ -37,9 +37,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         for node in &runtime_config.snark_addrs {
             nodes_data.add_snark_node(ProverNode::new(node));
         }
-        for node in runtime_config.snark_addrs {
-            nodes_data.add_snark_node(ProverNode::new(&node));
-        }
     }
     let prover = prover_service::ProverServiceSVC::default();
     let stage = stage_service::StageServiceSVC::new(runtime_config.clone()).await?;

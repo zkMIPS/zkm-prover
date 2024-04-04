@@ -27,15 +27,6 @@ pub fn get_timestamp() -> u64 {
     duration_since_epoch.as_secs()
 }
 
-pub fn copy_file_bin(src: &String, dst: &String) {
-    let mut file_src = File::open(src).unwrap();
-    let mut content = Vec::new();  
-    file_src.read_to_end(&mut content).unwrap();
-
-    let mut file_dst = File::open(dst).unwrap();
-    file_dst.write_all(content.as_slice()).unwrap(); 
-}
-
 pub struct Stage {
     pub generate_context: GenerateContext,
     pub split_task: SplitTask,
@@ -75,30 +66,6 @@ macro_rules! get_task {
         return None
     };
 }
-
-macro_rules! on_task {  
-    ($src:ident, $dst:ident) => {  
-        assert!($src.proof_id == $dst.proof_id);
-        if $src.state == TASK_STATE_FAILED || $src.state == TASK_STATE_SUCCESS || $src.state == TASK_STATE_UNPROCESSED{
-            $dst.state = $src.state;
-            if TASK_STATE_UNPROCESSED != $src.state {
-                log::info!("on_task {:#?}", $dst);
-            }
-        }  
-    };  
-}
-
-macro_rules! get_task {
-    ($src:ident) => { 
-        if $src.state == TASK_STATE_UNPROCESSED || 
-            $src.state == TASK_STATE_FAILED {
-            $src.state = TASK_STATE_PROCESSING;
-            return Some($src.clone()); 
-        }
-        return None
-    };
-}
-
 
 impl Stage {
     pub fn new(generate_context: GenerateContext) -> Self {
@@ -287,40 +254,6 @@ impl Stage {
     pub fn on_final_task(&mut self, final_task: FinalTask) {
         let dst = &mut self.final_task;
         on_task!(final_task, dst, self);
-    }
-
-    pub fn timecost_string(&self) -> String {
-        let split_cost = format!(
-            "split_id: {} cost: {} sec",
-            self.split_task.task_id,
-            self.split_task.finish_ts - self.split_task.start_ts
-        );
-        let root_prove_cost = self
-            .prove_tasks
-            .iter()
-            .map(|task| {
-                format!(
-                    "prove_id: {} cost: {} sec",
-                    task.task_id,
-                    task.finish_ts - task.start_ts
-                )
-            })
-            .collect::<Vec<String>>()
-            .join("\r\n");
-        let agg_all_cost = format!(
-            "agg_all_id: {} cost: {} sec",
-            self.agg_all_task.task_id,
-            self.agg_all_task.finish_ts - self.agg_all_task.start_ts
-        );
-        let final_cost = format!(
-            "final_id: {} cost: {} sec",
-            self.final_task.task_id,
-            self.final_task.finish_ts - self.final_task.start_ts
-        );
-        format!(
-            "proof_id: {}\r\n{}\r\n{}\r\n{}\r\n{}\r\n",
-            self.generate_context.proof_id, split_cost, root_prove_cost, agg_all_cost, final_cost
-        )
     }
 
     pub fn timecost_string(&self) -> String {

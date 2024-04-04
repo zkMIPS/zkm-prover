@@ -19,11 +19,6 @@ message BlockFileItem {
     bytes file_content = 2;
 }
 
-message BlockFileItem {
-    string file_name = 1;
-    bytes file_content = 2;
-}
-
 message GenerateProofRequest {
     uint64 chain_id = 1;
     uint64 timestamp = 2;
@@ -35,7 +30,7 @@ message GenerateProofRequest {
 }
 
 message GenerateProofResponse {
-    int32 status = 1;
+    uint32 executor_error = 1;
     string error_message = 2;
     string proof_id = 3;
     bytes result = 4;
@@ -47,6 +42,5 @@ message GetStatusRequest {
 
 message GetStatusResponse {
     string proof_id = 1;
-    int32 status = 2;
-    bytes result = 4;
+    uint64 status = 2;
 }

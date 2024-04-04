@@ -11,7 +11,7 @@ use prover_service::{ProveRequest, ProveResponse};
 use prover_service::{SplitElfRequest, SplitElfResponse};
 use std::time::Instant;
 
-use tonic::{Request, Response, Status}; 
+use tonic::{Request, Response, Status};
 
 use self::prover_service::ResultCode;
 #[allow(clippy::module_inception)]
@@ -60,16 +60,6 @@ macro_rules! on_done {
             }
         }
     };
-}
-
-async fn run_back_task<F: FnOnce() -> bool + Send + 'static> (callable: F) -> bool {
-    let rt = tokio::runtime::Handle::current();
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let _ = rt.spawn_blocking(move || {
-        let result = callable();
-        tx.send(result).unwrap();
-    }).await;
-    rx.await.unwrap()
 }
 
 #[tonic::async_trait]

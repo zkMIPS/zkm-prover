@@ -70,7 +70,7 @@ impl StageService for StageServiceSVC {
             ..Default::default()
         };
         if let Some(status) = status {
-            response.status = *status as i32;
+            response.status = *status as u64;
         }
         Ok(Response::new(response))
     }
@@ -134,11 +134,6 @@ impl StageService for StageServiceSVC {
                 request.get_ref().proof_id.clone(),
                 stage_service::ExecutorError::Unspecified.into(),
             );
-        }
-
-        {
-            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
-            taskmap.insert(request.get_ref().proof_id.clone(), stage_service::ExecutorError::Unspecified.into());
         }
 
         let generate_context = stage::contexts::GenerateContext::new(
