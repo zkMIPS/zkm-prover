@@ -25,6 +25,9 @@ impl Executor {
         let args = "".to_string();
 
         let data = read(&elf_path).await;
+        let block_path = get_block_path(&basedir, &block_no, "");
+        let input_path = format!("{}/input", block_path);
+        let input_data = read(&input_path.clone()).await.unwrap();
         if let core::result::Result::Ok(data) = data {
             let file_result = ElfBytes::<AnyEndian>::minimal_parse(data.as_slice());
             match file_result {
@@ -33,8 +36,10 @@ impl Executor {
                     state.patch_go(&file);
                     state.patch_stack(&args);
 
-                    let block_path = get_block_path(&basedir, &block_no, "");
-                    state.load_input(&block_path);
+                    state
+                        .memory
+                        .set_memory_range(0x30000000, Box::new(input_data.as_slice()))
+                        .expect("set memory range failed");
 
                     let mut instrumented_state = InstrumentedState::new(state, block_path);
                     instrumented_state.split_segment(false, &seg_path);
