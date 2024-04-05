@@ -229,12 +229,14 @@ pub async fn final_proof(
             output_path: final_task.output_path.clone(),
         };
         log::info!("final_proof request {:#?}", request);
+        println!("final_proof request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(3000));
         let response = client.final_proof(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("final_proof response {:#?}", response);
+                println!("final_proof response {:#?}", response);
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
                     let mut loop_count = 0;
                     loop {
