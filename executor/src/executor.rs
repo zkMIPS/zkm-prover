@@ -1,5 +1,5 @@
 use crate::split_context::SplitContext;
-use common::file::read;
+use common::file::{create_dir_all_sync, read, write_file_sync};
 use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;
 use zkm::mips_emulator::state::{InstrumentedState, State};
@@ -46,7 +46,11 @@ impl Executor {
                         .expect("set memory range failed");
 
                     let mut instrumented_state = InstrumentedState::new(state, block_path);
-                    instrumented_state.split_segment(false, &seg_path);
+                    // proof is false would not return segments
+                    let seg_path_clone = seg_path.clone();
+                    create_dir_all_sync(seg_path_clone).unwrap();
+
+                    instrumented_state.get_split_segments(false);
                     let mut segment_step: usize = seg_size;
                     loop {
                         if instrumented_state.state.exited {
@@ -56,10 +60,20 @@ impl Executor {
                         segment_step -= 1;
                         if segment_step == 0 {
                             segment_step = seg_size;
-                            instrumented_state.split_segment(true, &seg_path);
+                            let segments = instrumented_state.get_split_segments(true);
+                            for segment in segments {
+                                let segment_path = format!("{}/{}", seg_path, segment.segment_id);
+                                let data = serde_json::to_vec(&segment).unwrap();
+                                write_file_sync(segment_path, data).unwrap();
+                            }
                         }
                     }
-                    instrumented_state.split_segment(true, &seg_path);
+                    let segments = instrumented_state.get_split_segments(true);
+                    for segment in segments {
+                        let segment_path = format!("{}/{}", seg_path, segment.segment_id);
+                        let data = serde_json::to_vec(&segment).unwrap();
+                        write_file_sync(segment_path, data).unwrap();
+                    }
                     return Ok(true);
                 }
                 Err(e) => {

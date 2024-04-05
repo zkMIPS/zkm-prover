@@ -35,7 +35,6 @@ pub async fn get_idle_client(
 ) -> Option<ProverServiceClient<Channel>> {
     let nodes: Vec<ProverNode> = get_nodes();
     for node in nodes {
-        println!("prover node addr is {:?}", node.addr);
         let client = is_active(&node.addr, tls_config.clone()).await;
         if let Some(client) = client {
             return Some(client);

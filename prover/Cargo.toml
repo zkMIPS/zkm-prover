@@ -12,7 +12,7 @@ plonky2_maybe_rayon = { git = "https://github.com/zkMIPS/plonky2.git", branch = 
 plonky2x = { git = "https://github.com/zkMIPS/succinctx.git", package = "plonky2x",  branch = "zkm" }
 plonky2x-derive = { git = "https://github.com/zkMIPS/succinctx.git", package = "plonky2x-derive",  branch = "zkm" }
 curta = { git ="https://github.com/zkMIPS/curta.git", branch = "zkm" }
-zkm = { git = "https://github.com/zkMIPS/zkm.git", branch = "main" }
+zkm = { git = "https://github.com/evan95s/zkm.git", branch = "feature/file-support" }
 
 tokio = { version = "1", features = ["full"] }
 backtrace = "0.3"

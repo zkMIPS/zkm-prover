@@ -7,7 +7,7 @@ edition = "2021"
 plonky2 = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev" }
 plonky2_util = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev" }
 plonky2_maybe_rayon = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev" }
-zkm = { git = "https://github.com/zkMIPS/zkm.git", branch = "main" }
+zkm = { git = "https://github.com/evan95s/zkm.git", branch = "feature/file-support" }
 
 itertools = "0.11.0"
 log = { version = "0.4.14", default-features = false }
@@ -28,3 +28,5 @@ hashbrown = { version = "0.14.0", default-features = false, features = ["ahash",
 lazy_static = "1.4.0"
 elf = { version = "0.7", default-features = false }
 common = { path="../common" }
+tokio = { version = "1", features = ["full"] }
+futures = "0.3.28"

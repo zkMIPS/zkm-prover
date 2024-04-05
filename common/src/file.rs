@@ -1,10 +1,11 @@
 use aws_sdk_s3::primitives::ByteStream;
-use tokio::io::AsyncReadExt;
-
 use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
+use std::thread;
+use tokio::io::AsyncReadExt;
+use tokio::runtime::Runtime;
 
 use anyhow::Ok;
 
@@ -50,6 +51,16 @@ pub async fn create_dir_all(path: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+pub fn create_dir_all_sync(path: String) -> anyhow::Result<()> {
+    let handle = thread::spawn(move || {
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async { create_dir_all(&path).await })
+    });
+
+    let result = handle.join().unwrap();
+    result
+}
+
 async fn s3_create_dir_all(path: &str) -> anyhow::Result<()> {
     let (bucket, key) = parse_s3_path(path);
     let parts: Vec<&str> = key.split('/').collect();
@@ -66,6 +77,16 @@ async fn s3_create_dir_all(path: &str) -> anyhow::Result<()> {
         }
     }
     Ok(())
+}
+
+pub fn write_file_sync(path: String, buf: Vec<u8>) -> anyhow::Result<()> {
+    let handle = thread::spawn(move || {
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async { write_file(&path, &buf).await })
+    });
+
+    let result = handle.join().unwrap();
+    result
 }
 
 pub async fn write_file(path: &str, buf: &[u8]) -> anyhow::Result<()> {
