@@ -9,10 +9,10 @@ use plonky2::util::timing::TimingTree;
 
 use zkm::all_stark::AllStark;
 use zkm::config::StarkConfig;
-use zkm::cpu::kernel::assembler::segment_kernel;
+use zkm::cpu::kernel::assembler::segment_kernel_with_data;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 
-use common::file::write_file;
+use common::file::{read, write_file};
 
 #[derive(Default)]
 pub struct RootProver {}
@@ -47,7 +47,8 @@ impl Prover<ProveContext> for RootProver {
             &config,
         );
 
-        let input = segment_kernel(&basedir, &block_no, &file, &seg_path, seg_size);
+        let seg_data = read(&seg_path).await?;
+        let input = segment_kernel_with_data(&basedir, &block_no, &file, seg_data, seg_size);
         let mut timing: TimingTree = TimingTree::new("prove root", log::Level::Info);
         let (agg_proof, updated_agg_public_values) =
             all_circuits.prove_root(&all_stark, &input, &config, &mut timing)?;
