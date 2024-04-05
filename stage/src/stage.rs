@@ -138,6 +138,7 @@ impl Stage {
     async fn gen_prove_task(&mut self) {
         println!("generate prove task begin");
         let prove_dir = self.generate_context.prove_path.clone();
+        println!("prove dir is {}", prove_dir);
         create_dir_all(&prove_dir).await.unwrap();
         let files = list_files(&self.generate_context.seg_path).await.unwrap();
         for file_name in files {
