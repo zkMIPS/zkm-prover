@@ -26,7 +26,11 @@ impl Executor {
 
         let data = read(&elf_path).await;
         let block_path = get_block_path(&basedir, &block_no, "");
-        let input_path = format!("{}/input", block_path);
+        let input_path = if block_path.ends_with("/") {
+            format!("{}input", block_path)
+        } else {
+            format!("{}/input", block_path)
+        };
         let input_data = read(&input_path.clone()).await.unwrap();
         if let core::result::Result::Ok(data) = data {
             let file_result = ElfBytes::<AnyEndian>::minimal_parse(data.as_slice());
