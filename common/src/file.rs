@@ -1,18 +1,17 @@
 use aws_sdk_s3::primitives::ByteStream;
 use tokio::io::AsyncReadExt;
 
+use futures::executor::block_on;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::io::Write;
-use tokio::runtime::Handle;
 
 use anyhow::Ok;
 
 pub fn read(path: &str) -> anyhow::Result<Vec<u8>> {
     if is_s3_path(path) {
-        let rt = Handle::current();
-        return rt.block_on(async { s3_read(path).await });
+        return block_on(async { s3_read(path).await });
     }
     Ok(std::fs::read(path)?)
 }
@@ -46,8 +45,7 @@ pub fn read_to_string(path: &str) -> anyhow::Result<String> {
 
 pub fn create_dir_all(path: &str) -> anyhow::Result<()> {
     if is_s3_path(path) {
-        let rt = Handle::current();
-        return rt.block_on(async { s3_create_dir_all(path).await });
+        return block_on(async { s3_create_dir_all(path).await });
     }
     fs::create_dir_all(path)?;
     Ok(())
@@ -73,8 +71,7 @@ async fn s3_create_dir_all(path: &str) -> anyhow::Result<()> {
 
 pub fn write_file(path: &str, buf: &[u8]) -> anyhow::Result<()> {
     if is_s3_path(path) {
-        let rt = Handle::current();
-        return rt.block_on(async { s3_write_file(path, buf).await });
+        return block_on(async { s3_write_file(path, buf).await });
     }
     let mut file = File::create(path)?;
     file.write_all(buf)?;
@@ -101,8 +98,7 @@ async fn s3_write_file(path: &str, buf: &[u8]) -> anyhow::Result<()> {
 // list_files will return files of current dir
 pub fn list_files(path: &str) -> anyhow::Result<Vec<String>> {
     if is_s3_path(path) {
-        let rt = Handle::current();
-        return rt.block_on(async { list_files_in_s3(path).await });
+        return block_on(async { list_files_in_s3(path).await });
     }
     let mut files = vec![];
     let dir_entries = fs::read_dir(path)?;
