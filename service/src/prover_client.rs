@@ -109,6 +109,7 @@ pub fn result_code_to_state(code: i32) -> u32 {
 }
 
 pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> Option<SplitTask> {
+    println!("split task {:#?} begin", split_task);
     split_task.state = TASK_STATE_UNPROCESSED;
     let client = get_idle_client(tls_config).await;
     if let Some(mut client) = client {
@@ -130,12 +131,14 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("split response {:#?}", response);
+                println!("split response {:#?}", response);
                 split_task.state = result_code_to_state(response_result.code);
                 return Some(split_task);
             }
         }
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    println!("split task {:#?} done", split_task);
     Some(split_task)
 }
 
