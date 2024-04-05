@@ -18,7 +18,7 @@ use zkm::config::StarkConfig;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 use zkm::proof::PublicValues;
 
-use common::file::read_to_string;
+use common::file::{create_dir_all, read_to_string, write_file};
 
 #[derive(Default)]
 pub struct AggAllProver {}
@@ -164,7 +164,34 @@ impl Prover<AggAllContext> for AggAllProver {
         println!("build finish");
 
         let wrapped_proof = wrapped_circuit.prove(&block_proof).unwrap();
-        wrapped_proof.save(path).unwrap();
+        // save wrapper_proof
+        create_dir_all(&path).await?;
+        let common_data_file = if path.ends_with("/") {
+            format!("{}common_circuit_data.json", path)
+        } else {
+            format!("{}/common_circuit_data.json", path)
+        };
+        write_file(
+            &common_data_file,
+            &serde_json::to_vec(&wrapped_proof.common_data)?,
+        )
+        .await?;
+        let verify_data_file = if path.ends_with("/") {
+            format!("{}verifier_only_circuit_data.json", path)
+        } else {
+            format!("{}/verifier_only_circuit_data.json", path)
+        };
+        write_file(
+            &verify_data_file,
+            &serde_json::to_vec(&wrapped_proof.verifier_data)?,
+        )
+        .await?;
+        let proof_file = if path.ends_with("/") {
+            format!("{}proof_with_public_inputs.json", path)
+        } else {
+            format!("{}/proof_with_public_inputs.json", path)
+        };
+        write_file(&proof_file, &serde_json::to_vec(&wrapped_proof.proof)?).await?;
         Ok(())
     }
 }
