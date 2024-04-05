@@ -30,7 +30,7 @@ async fn run_back_task<F: FnOnce() -> std::result::Result<bool, String> + Send +
     let _ = rt
         .spawn_blocking(move || {
             let result = callable();
-            tx.send(result).unwrap();
+            let _ = tx.send(result);
         })
         .await;
     rx.await.unwrap()
