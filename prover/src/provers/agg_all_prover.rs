@@ -13,7 +13,6 @@ use plonky2x::backend::wrapper::wrap::WrappedCircuit;
 use plonky2x::frontend::builder::CircuitBuilder as WrapperBuilder;
 
 use plonky2x::prelude::DefaultParameters;
-
 use zkm::all_stark::AllStark;
 use zkm::config::StarkConfig;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
@@ -31,7 +30,7 @@ impl AggAllProver {
 }
 
 impl Prover<AggAllContext> for AggAllProver {
-    fn prove(&self, ctx: &AggAllContext) -> anyhow::Result<()> {
+    async fn prove(&self, ctx: &AggAllContext) -> anyhow::Result<()> {
         type InnerParameters = DefaultParameters;
         type OuterParameters = Groth16WrapperParameters;
         type F = GoldilocksField;
@@ -56,13 +55,13 @@ impl Prover<AggAllContext> for AggAllProver {
 
         for seg_no in 0..proof_num {
             let proof_path = format!("{}/{}", proof_dir, seg_no);
-            let root_proof_content = read_to_string(&proof_path)?;
+            let root_proof_content = read_to_string(&proof_path).await?;
             let root_proof: ProofWithPublicInputs<F, C, D> =
                 serde_json::from_str(&root_proof_content)?;
             root_proofs.push(root_proof);
 
             let pub_value_path = format!("{}/{}", pub_value_dir, seg_no);
-            let root_pub_value_content = read_to_string(&pub_value_path)?;
+            let root_pub_value_content = read_to_string(&pub_value_path).await?;
             let root_pub_value: PublicValues = serde_json::from_str(&root_pub_value_content)?;
             root_pub_values.push(root_pub_value);
         }

@@ -15,7 +15,7 @@ impl Executor {
 }
 
 impl Executor {
-    pub fn split(&self, ctx: &SplitContext) -> std::result::Result<bool, String> {
+    pub async fn split(&self, ctx: &SplitContext) -> std::result::Result<bool, String> {
         // 1. split ELF into segs
         let basedir = ctx.basedir.clone();
         let elf_path = ctx.elf_path.clone();
@@ -24,7 +24,7 @@ impl Executor {
         let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
         let args = "".to_string();
 
-        let data = read(&elf_path);
+        let data = read(&elf_path).await;
         if let core::result::Result::Ok(data) = data {
             let file_result = ElfBytes::<AnyEndian>::minimal_parse(data.as_slice());
             match file_result {

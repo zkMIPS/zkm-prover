@@ -13,7 +13,7 @@ use std::collections::HashMap;
 
 /// Prover trait
 pub trait Prover<T> {
-    fn prove(&self, ctx: &T) -> Result<()>;
+    fn prove(&self, ctx: &T) -> impl std::future::Future<Output = Result<()>> + Send;
 }
 
 const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 5] = [

@@ -67,12 +67,12 @@ impl Stage {
         }
     }
 
-    pub fn dispatch(&mut self) {
+    pub async fn dispatch(&mut self) {
         match self.split_task.state {
             TASK_STATE_INITIAL => self.gen_split_task(),
             TASK_STATE_SUCCESS => {
                 if self.prove_tasks.is_empty() {
-                    self.gen_prove_task();
+                    self.gen_prove_task().await;
                 } else if self
                     .prove_tasks
                     .iter()
@@ -135,10 +135,10 @@ impl Stage {
         on_task!(split_task, dst, self);
     }
 
-    fn gen_prove_task(&mut self) {
+    async fn gen_prove_task(&mut self) {
         let prove_dir = self.generate_context.prove_path.clone();
-        create_dir_all(&prove_dir).unwrap();
-        let files = list_files(&self.generate_context.seg_path).unwrap();
+        create_dir_all(&prove_dir).await.unwrap();
+        let files = list_files(&self.generate_context.seg_path).await.unwrap();
         for file_name in files {
             let result: Result<usize, <usize as FromStr>::Err> = file_name.parse();
             if let Ok(file_no) = result {

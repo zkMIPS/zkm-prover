@@ -24,7 +24,7 @@ impl RootProver {
 }
 
 impl Prover<ProveContext> for RootProver {
-    fn prove(&self, ctx: &ProveContext) -> anyhow::Result<()> {
+    async fn prove(&self, ctx: &ProveContext) -> anyhow::Result<()> {
         type F = GoldilocksField;
         const D: usize = 2;
         type C = PoseidonGoldilocksConfig;
@@ -57,11 +57,11 @@ impl Prover<ProveContext> for RootProver {
 
         // write agg_proof write file
         let json_string = serde_json::to_string(&agg_proof)?;
-        write_file(&proof_path, json_string.as_bytes())?;
+        write_file(&proof_path, json_string.as_bytes()).await?;
 
         // updated_agg_public_values file
         let json_string = serde_json::to_string(&updated_agg_public_values)?;
-        write_file(&pub_value_path, json_string.as_bytes())?;
+        write_file(&pub_value_path, json_string.as_bytes()).await?;
 
         Ok(())
     }

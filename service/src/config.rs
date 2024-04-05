@@ -34,8 +34,8 @@ impl RuntimeConfig {
         }
     }
 
-    pub fn from_toml(path: &str) -> Option<Self> {
-        let contents = match read_to_string(path) {
+    pub async fn from_toml(path: &str) -> Option<Self> {
+        let contents = match read_to_string(path).await {
             Ok(c) => c,
             Err(e) => {
                 error!(

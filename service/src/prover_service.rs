@@ -10,7 +10,6 @@ use prover_service::{GetTaskResultRequest, GetTaskResultResponse, Result};
 use prover_service::{ProveRequest, ProveResponse};
 use prover_service::{SplitElfRequest, SplitElfResponse};
 use std::time::Instant;
-
 use tonic::{Request, Response, Status};
 
 use self::prover_service::ResultCode;
@@ -21,20 +20,6 @@ pub mod prover_service {
 
 #[derive(Debug, Default)]
 pub struct ProverServiceSVC {}
-
-async fn run_back_task<F: FnOnce() -> std::result::Result<bool, String> + Send + 'static>(
-    callable: F,
-) -> std::result::Result<bool, String> {
-    let rt = tokio::runtime::Handle::current();
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    let _ = rt
-        .spawn_blocking(move || {
-            let result = callable();
-            tx.send(result).unwrap();
-        })
-        .await;
-    rx.await.unwrap()
-}
 
 macro_rules! on_done {
     ($result:ident, $resp:ident) => {
@@ -103,11 +88,9 @@ impl ProverService for ProverServiceSVC {
             request.get_ref().seg_size,
             &request.get_ref().seg_path,
         );
-        let split_func = move || {
-            let s_ctx: SplitContext = split_context;
-            executor::executor::Executor::new().split(&s_ctx)
-        };
-        let result = run_back_task(split_func).await;
+        let result = executor::executor::Executor::new()
+            .split(&split_context)
+            .await;
         let mut response = prover_service::SplitElfResponse {
             proof_id: request.get_ref().proof_id.clone(),
             computed_request_id: request.get_ref().computed_request_id.clone(),
@@ -140,11 +123,7 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().pub_value_path,
         );
 
-        let prove_func = move || {
-            let s_ctx: ProveContext = prove_context;
-            Pipeline::new().prove_root(&s_ctx)
-        };
-        let result = run_back_task(prove_func).await;
+        let result = Pipeline::new().prove_root(&prove_context).await;
         let mut response = prover_service::ProveResponse {
             proof_id: request.get_ref().proof_id.clone(),
             computed_request_id: request.get_ref().computed_request_id.clone(),
@@ -181,11 +160,7 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().agg_pub_value_path,
         );
 
-        let agg_all_func = move || {
-            let agg_ctx = agg_context;
-            Pipeline::new().prove_aggregate(&agg_ctx)
-        };
-        let result = run_back_task(agg_all_func).await;
+        let result = Pipeline::new().prove_aggregate(&agg_context).await;
         let mut response = prover_service::AggregateResponse {
             proof_id: request.get_ref().proof_id.clone(),
             computed_request_id: request.get_ref().computed_request_id.clone(),
@@ -218,11 +193,7 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().output_dir,
         );
 
-        let agg_all_func = move || {
-            let s_ctx: AggAllContext = final_context;
-            Pipeline::new().prove_aggregate_all(&s_ctx)
-        };
-        let result = run_back_task(agg_all_func).await;
+        let result = Pipeline::new().prove_aggregate_all(&final_context).await;
         let mut response = prover_service::AggregateAllResponse {
             proof_id: request.get_ref().proof_id.clone(),
             computed_request_id: request.get_ref().computed_request_id.clone(),

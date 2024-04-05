@@ -29,15 +29,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(Config::new(ca_cert_path, cert_path, key_path).await?)
     };
 
-    let elf_data = read(&elf_path).unwrap();
+    let elf_data = read(&elf_path).await.unwrap();
     let mut block_data = Vec::new();
 
-    let files = list_files(&block_path).unwrap();
+    let files = list_files(&block_path).await.unwrap();
     for file_name in files {
         let file_path = format!("{}/{}", block_path, file_name);
         let block_file_item = BlockFileItem {
             file_name: file_name.to_string(),
-            file_content: read(&file_path).unwrap(),
+            file_content: read(&file_path).await.unwrap(),
         };
         block_data.push(block_file_item);
     }

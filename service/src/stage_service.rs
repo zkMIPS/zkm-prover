@@ -2,7 +2,7 @@ use common::tls::Config as TlsConfig;
 use stage_service::stage_service_server::StageService;
 use stage_service::{GenerateProofRequest, GenerateProofResponse};
 use stage_service::{GetStatusRequest, GetStatusResponse};
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 use stage::tasks::Task;
 use tokio::sync::mpsc;
@@ -55,7 +55,7 @@ impl StageService for StageServiceSVC {
         request: Request<GetStatusRequest>,
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
         // log::info!("{:?}", request);
-        let taskmap = GLOBAL_TASKMAP.lock().unwrap();
+        let taskmap = GLOBAL_TASKMAP.lock().await;
         let status = taskmap.get(&request.get_ref().proof_id);
         let mut response = stage_service::GetStatusResponse {
             proof_id: request.get_ref().proof_id.clone(),
@@ -86,42 +86,60 @@ impl StageService for StageServiceSVC {
 
         let base_dir = config::instance().lock().unwrap().base_dir.clone();
         let dir_path = format!("{}/proof/{}", base_dir, request.get_ref().proof_id);
-        create_dir_all(&dir_path).map_err(|e| Status::internal(e.to_string()))?;
+        create_dir_all(&dir_path)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let elf_path = format!("{}/elf", dir_path);
         write_file(&elf_path, &request.get_ref().elf_data)
+            .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
         let bolck_dir = format!("{}/0_{}", dir_path, request.get_ref().block_no);
-        create_dir_all(&bolck_dir).map_err(|e| Status::internal(e.to_string()))?;
+        create_dir_all(&bolck_dir)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         for file_block_item in &request.get_ref().block_data {
             let bolck_path = format!("{}/{}", bolck_dir, file_block_item.file_name);
             write_file(&bolck_path, &file_block_item.file_content)
+                .await
                 .map_err(|e| Status::internal(e.to_string()))?;
         }
 
         let seg_path = format!("{}/segment", dir_path);
-        create_dir_all(&seg_path).map_err(|e| Status::internal(e.to_string()))?;
+        create_dir_all(&seg_path)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let prove_path = format!("{}/prove", dir_path);
-        create_dir_all(&prove_path).map_err(|e| Status::internal(e.to_string()))?;
+        create_dir_all(&prove_path)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let prove_proof_path = format!("{}/proof", prove_path);
-        create_dir_all(&prove_proof_path).map_err(|e| Status::internal(e.to_string()))?;
+        create_dir_all(&prove_proof_path)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let prove_pub_value_path = format!("{}/pub_value", prove_path);
-        create_dir_all(&prove_pub_value_path).map_err(|e| Status::internal(e.to_string()))?;
+        create_dir_all(&prove_pub_value_path)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let agg_path = format!("{}/aggregate", dir_path);
-        create_dir_all(&agg_path).map_err(|e| Status::internal(e.to_string()))?;
+        create_dir_all(&agg_path)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let final_dir = format!("{}/final", dir_path);
-        create_dir_all(&final_dir).map_err(|e| Status::internal(e.to_string()))?;
+        create_dir_all(&final_dir)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
         let final_path = format!("{}/output", final_dir);
 
         {
-            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
+            let mut taskmap = GLOBAL_TASKMAP.lock().await;
             taskmap.insert(
                 request.get_ref().proof_id.clone(),
                 stage_service::ExecutorError::Unspecified.into(),
@@ -142,7 +160,7 @@ impl StageService for StageServiceSVC {
 
         let mut stage = stage::stage::Stage::new(generate_context);
         let (tx, mut rx) = mpsc::channel(128);
-        stage.dispatch();
+        stage.dispatch().await;
         loop {
             let split_task = stage.get_split_task();
             if let Some(split_task) = split_task {
@@ -214,7 +232,7 @@ impl StageService for StageServiceSVC {
             if stage.is_success() || stage.is_error() {
                 break;
             }
-            stage.dispatch();
+            stage.dispatch().await;
         }
 
         let mut response = stage_service::GenerateProofResponse {
@@ -222,7 +240,7 @@ impl StageService for StageServiceSVC {
             ..Default::default()
         };
         {
-            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
+            let mut taskmap = GLOBAL_TASKMAP.lock().await;
             if stage.is_error() {
                 response.executor_error = stage_service::ExecutorError::Error as u32;
                 taskmap.insert(
@@ -230,7 +248,7 @@ impl StageService for StageServiceSVC {
                     stage_service::ExecutorError::Error.into(),
                 );
             } else {
-                let result = read(&final_path).unwrap();
+                let result = read(&final_path).await.unwrap();
                 response.result.clone_from(&result);
                 response.executor_error = stage_service::ExecutorError::NoError as u32;
                 taskmap.insert(
