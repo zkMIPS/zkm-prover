@@ -162,7 +162,6 @@ impl StageService for StageServiceSVC {
         let (tx, mut rx) = mpsc::channel(128);
         stage.dispatch().await;
         loop {
-            println!("loop...");
             let split_task = stage.get_split_task();
             if let Some(split_task) = split_task {
                 let tx = tx.clone();
