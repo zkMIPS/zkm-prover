@@ -1,5 +1,5 @@
 use crate::split_context::SplitContext;
-use common::file::{create_dir_all_sync, read, write_file_sync};
+use common::file::{create_dir_all, read, write_file};
 use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;
 use zkm::mips_emulator::state::{InstrumentedState, State};
@@ -15,7 +15,7 @@ impl Executor {
 }
 
 impl Executor {
-    pub async fn split(&self, ctx: &SplitContext) -> std::result::Result<bool, String> {
+    pub fn split(&self, ctx: &SplitContext) -> std::result::Result<bool, String> {
         // 1. split ELF into segs
         let basedir = ctx.basedir.clone();
         let elf_path = ctx.elf_path.clone();
@@ -24,14 +24,14 @@ impl Executor {
         let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
         let args = "".to_string();
 
-        let data = read(&elf_path).await;
+        let data = read(&elf_path);
         let block_path = get_block_path(&basedir, &block_no, "");
-        let input_path = if block_path.ends_with("/") {
+        let input_path = if block_path.ends_with('/') {
             format!("{}input", block_path)
         } else {
             format!("{}/input", block_path)
         };
-        let input_data = read(&input_path.clone()).await.unwrap();
+        let input_data = read(&input_path).unwrap();
         if let core::result::Result::Ok(data) = data {
             let file_result = ElfBytes::<AnyEndian>::minimal_parse(data.as_slice());
             match file_result {
@@ -48,7 +48,7 @@ impl Executor {
                     let mut instrumented_state = InstrumentedState::new(state, block_path);
                     // proof is false would not return segments
                     let seg_path_clone = seg_path.clone();
-                    create_dir_all_sync(seg_path_clone).unwrap();
+                    create_dir_all(&seg_path_clone).unwrap();
 
                     instrumented_state.get_split_segments(false);
                     let mut segment_step: usize = seg_size;
@@ -64,7 +64,7 @@ impl Executor {
                             for segment in segments {
                                 let segment_path = format!("{}/{}", seg_path, segment.segment_id);
                                 let data = serde_json::to_vec(&segment).unwrap();
-                                write_file_sync(segment_path, data).unwrap();
+                                write_file(&segment_path, &data).unwrap();
                             }
                         }
                     }
@@ -72,7 +72,7 @@ impl Executor {
                     for segment in segments {
                         let segment_path = format!("{}/{}", seg_path, segment.segment_id);
                         let data = serde_json::to_vec(&segment).unwrap();
-                        write_file_sync(segment_path, data).unwrap();
+                        write_file(&segment_path, &data).unwrap();
                     }
                     return Ok(true);
                 }

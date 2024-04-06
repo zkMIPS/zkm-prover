@@ -9,9 +9,16 @@ use tokio::runtime::Runtime;
 
 use anyhow::Ok;
 
-pub async fn read(path: &str) -> anyhow::Result<Vec<u8>> {
+pub fn read(path: &str) -> anyhow::Result<Vec<u8>> {
     if is_s3_path(path) {
-        return s3_read(path).await;
+        let path = path.to_string();
+        let handle = thread::spawn(move || {
+            let rt = Runtime::new().unwrap();
+            rt.block_on(async { s3_read(&path).await })
+        });
+
+        let result = handle.join().unwrap();
+        return result;
     }
     Ok(std::fs::read(path)?)
 }
@@ -32,9 +39,9 @@ async fn s3_read(path: &str) -> anyhow::Result<Vec<u8>> {
     Ok(vec_bytes)
 }
 
-pub async fn read_to_string(path: &str) -> anyhow::Result<String> {
+pub fn read_to_string(path: &str) -> anyhow::Result<String> {
     if is_s3_path(path) {
-        let data = read(path).await?;
+        let data = read(path)?;
         return Ok(String::from_utf8(data)?);
     }
     let mut file_root = File::open(path)?;
@@ -43,22 +50,19 @@ pub async fn read_to_string(path: &str) -> anyhow::Result<String> {
     Ok(content)
 }
 
-pub async fn create_dir_all(path: &str) -> anyhow::Result<()> {
+pub fn create_dir_all(path: &str) -> anyhow::Result<()> {
     if is_s3_path(path) {
-        return s3_create_dir_all(path).await;
+        let path = path.to_string();
+        let handle = thread::spawn(move || {
+            let rt = Runtime::new().unwrap();
+            rt.block_on(async { s3_create_dir_all(&path).await })
+        });
+
+        let result = handle.join().unwrap();
+        return result;
     }
     fs::create_dir_all(path)?;
     Ok(())
-}
-
-pub fn create_dir_all_sync(path: String) -> anyhow::Result<()> {
-    let handle = thread::spawn(move || {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async { create_dir_all(&path).await })
-    });
-
-    let result = handle.join().unwrap();
-    result
 }
 
 async fn s3_create_dir_all(path: &str) -> anyhow::Result<()> {
@@ -79,19 +83,17 @@ async fn s3_create_dir_all(path: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn write_file_sync(path: String, buf: Vec<u8>) -> anyhow::Result<()> {
-    let handle = thread::spawn(move || {
-        let rt = Runtime::new().unwrap();
-        rt.block_on(async { write_file(&path, &buf).await })
-    });
-
-    let result = handle.join().unwrap();
-    result
-}
-
-pub async fn write_file(path: &str, buf: &[u8]) -> anyhow::Result<()> {
+pub fn write_file(path: &str, buf: &[u8]) -> anyhow::Result<()> {
     if is_s3_path(path) {
-        return s3_write_file(path, buf).await;
+        let path = path.to_string();
+        let buf = buf.to_vec();
+        let handle = thread::spawn(move || {
+            let rt = Runtime::new().unwrap();
+            rt.block_on(async { s3_write_file(&path, &buf).await })
+        });
+
+        let result = handle.join().unwrap();
+        return result;
     }
     let mut file = File::create(path)?;
     file.write_all(buf)?;
@@ -116,9 +118,16 @@ async fn s3_write_file(path: &str, buf: &[u8]) -> anyhow::Result<()> {
 }
 
 // list_files will return files of current dir
-pub async fn list_files(path: &str) -> anyhow::Result<Vec<String>> {
+pub fn list_files(path: &str) -> anyhow::Result<Vec<String>> {
     if is_s3_path(path) {
-        return list_files_in_s3(path).await;
+        let path = path.to_string();
+        let handle = thread::spawn(move || {
+            let rt = Runtime::new().unwrap();
+            rt.block_on(async { list_files_in_s3(&path).await })
+        });
+
+        let result = handle.join().unwrap();
+        return result;
     }
     let mut files = vec![];
     let dir_entries = fs::read_dir(path)?;

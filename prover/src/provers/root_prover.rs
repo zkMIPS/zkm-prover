@@ -24,7 +24,7 @@ impl RootProver {
 }
 
 impl Prover<ProveContext> for RootProver {
-    async fn prove(&self, ctx: &ProveContext) -> anyhow::Result<()> {
+    fn prove(&self, ctx: &ProveContext) -> anyhow::Result<()> {
         type F = GoldilocksField;
         const D: usize = 2;
         type C = PoseidonGoldilocksConfig;
@@ -47,7 +47,7 @@ impl Prover<ProveContext> for RootProver {
             &config,
         );
 
-        let seg_data = read(&seg_path).await?;
+        let seg_data = read(&seg_path)?;
         let input = segment_kernel_with_data(&basedir, &block_no, &file, seg_data, seg_size);
         let mut timing: TimingTree = TimingTree::new("prove root", log::Level::Info);
         let (agg_proof, updated_agg_public_values) =
@@ -58,11 +58,11 @@ impl Prover<ProveContext> for RootProver {
 
         // write agg_proof write file
         let json_string = serde_json::to_string(&agg_proof)?;
-        write_file(&proof_path, json_string.as_bytes()).await?;
+        write_file(&proof_path, json_string.as_bytes())?;
 
         // updated_agg_public_values file
         let json_string = serde_json::to_string(&updated_agg_public_values)?;
-        write_file(&pub_value_path, json_string.as_bytes()).await?;
+        write_file(&pub_value_path, json_string.as_bytes())?;
 
         Ok(())
     }

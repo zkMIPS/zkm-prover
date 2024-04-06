@@ -30,7 +30,7 @@ impl AggAllProver {
 }
 
 impl Prover<AggAllContext> for AggAllProver {
-    async fn prove(&self, ctx: &AggAllContext) -> anyhow::Result<()> {
+    fn prove(&self, ctx: &AggAllContext) -> anyhow::Result<()> {
         type InnerParameters = DefaultParameters;
         type OuterParameters = Groth16WrapperParameters;
         type F = GoldilocksField;
@@ -55,13 +55,13 @@ impl Prover<AggAllContext> for AggAllProver {
 
         for seg_no in 0..proof_num {
             let proof_path = format!("{}/{}", proof_dir, seg_no);
-            let root_proof_content = read_to_string(&proof_path).await?;
+            let root_proof_content = read_to_string(&proof_path)?;
             let root_proof: ProofWithPublicInputs<F, C, D> =
                 serde_json::from_str(&root_proof_content)?;
             root_proofs.push(root_proof);
 
             let pub_value_path = format!("{}/{}", pub_value_dir, seg_no);
-            let root_pub_value_content = read_to_string(&pub_value_path).await?;
+            let root_pub_value_content = read_to_string(&pub_value_path)?;
             let root_pub_value: PublicValues = serde_json::from_str(&root_pub_value_content)?;
             root_pub_values.push(root_pub_value);
         }
@@ -165,8 +165,8 @@ impl Prover<AggAllContext> for AggAllProver {
 
         let wrapped_proof = wrapped_circuit.prove(&block_proof).unwrap();
         // save wrapper_proof
-        create_dir_all(&path).await?;
-        let common_data_file = if path.ends_with("/") {
+        create_dir_all(&path)?;
+        let common_data_file = if path.ends_with('/') {
             format!("{}common_circuit_data.json", path)
         } else {
             format!("{}/common_circuit_data.json", path)
@@ -174,9 +174,8 @@ impl Prover<AggAllContext> for AggAllProver {
         write_file(
             &common_data_file,
             &serde_json::to_vec(&wrapped_proof.common_data)?,
-        )
-        .await?;
-        let verify_data_file = if path.ends_with("/") {
+        )?;
+        let verify_data_file = if path.ends_with('/') {
             format!("{}verifier_only_circuit_data.json", path)
         } else {
             format!("{}/verifier_only_circuit_data.json", path)
@@ -184,14 +183,13 @@ impl Prover<AggAllContext> for AggAllProver {
         write_file(
             &verify_data_file,
             &serde_json::to_vec(&wrapped_proof.verifier_data)?,
-        )
-        .await?;
-        let proof_file = if path.ends_with("/") {
+        )?;
+        let proof_file = if path.ends_with('/') {
             format!("{}proof_with_public_inputs.json", path)
         } else {
             format!("{}/proof_with_public_inputs.json", path)
         };
-        write_file(&proof_file, &serde_json::to_vec(&wrapped_proof.proof)?).await?;
+        write_file(&proof_file, &serde_json::to_vec(&wrapped_proof.proof)?)?;
         Ok(())
     }
 }

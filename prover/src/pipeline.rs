@@ -3,17 +3,14 @@ use crate::provers::{AggAllProver, AggProver, Prover, RootProver};
 
 // use anyhow::{anyhow, bail, Result};
 // use std::path::Path;
-use lazy_static::lazy_static;
-use tokio::sync::Mutex;
+use std::sync::Mutex;
 
 #[derive(Debug, Default)]
 pub struct Pipeline {
     _mutex: Mutex<usize>,
 }
 
-lazy_static! {
-    static ref PIPELINE_MUTEX: Mutex<usize> = Mutex::new(0);
-}
+static PIPELINE_MUTEX: Mutex<usize> = Mutex::new(0);
 
 impl Pipeline {
     pub fn new() -> Self {
@@ -22,13 +19,13 @@ impl Pipeline {
         }
     }
 
-    pub async fn prove_root(
+    pub fn prove_root(
         &mut self,
         prove_context: &ProveContext,
     ) -> std::result::Result<bool, String> {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
-            Ok(_) => match RootProver::new().prove(prove_context).await {
+            Ok(_) => match RootProver::new().prove(prove_context) {
                 Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_root error {:#?}", e);
@@ -42,13 +39,13 @@ impl Pipeline {
         }
     }
 
-    pub async fn prove_aggregate(
+    pub fn prove_aggregate(
         &mut self,
         agg_context: &AggContext,
     ) -> std::result::Result<bool, String> {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
-            Ok(_) => match AggProver::new().prove(agg_context).await {
+            Ok(_) => match AggProver::new().prove(agg_context) {
                 Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_aggregate error {:#?}", e);
@@ -62,13 +59,13 @@ impl Pipeline {
         }
     }
 
-    pub async fn prove_aggregate_all(
+    pub fn prove_aggregate_all(
         &mut self,
         final_context: &AggAllContext,
     ) -> std::result::Result<bool, String> {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
-            Ok(_) => match AggAllProver::new().prove(final_context).await {
+            Ok(_) => match AggAllProver::new().prove(final_context) {
                 Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_aggregate_all error {:#?}", e);
