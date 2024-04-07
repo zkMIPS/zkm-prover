@@ -136,9 +136,7 @@ impl Stage {
     }
 
     fn gen_prove_task(&mut self) {
-        println!("generate prove task begin");
         let prove_dir = self.generate_context.prove_path.clone();
-        println!("prove dir is {}", prove_dir);
         create_dir_all(&prove_dir).unwrap();
         let files = list_files(&self.generate_context.seg_path).unwrap();
         for file_name in files {
@@ -161,7 +159,6 @@ impl Stage {
             }
         }
         log::info!("gen_prove_task {:#?}", self.prove_tasks);
-        println!("gen_prove_task {:#?}", self.prove_tasks);
     }
 
     pub fn get_prove_task(&mut self) -> Option<ProveTask> {
