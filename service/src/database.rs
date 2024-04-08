@@ -50,7 +50,7 @@ impl Database {
 
     #[allow(dead_code)]
     pub async fn update_stage_task(
-        &mut self,
+        &self,
         proof_id: &str,
         status: i32,
         result: &str,

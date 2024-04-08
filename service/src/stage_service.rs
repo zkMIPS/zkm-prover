@@ -30,7 +30,7 @@ lazy_static! {
 
 pub struct StageServiceSVC {
     tls_config: Option<TlsConfig>,
-    _db: database::Database,
+    db: database::Database,
 }
 
 impl StageServiceSVC {
@@ -49,10 +49,7 @@ impl StageServiceSVC {
         };
         let database_url = config.database_url.as_str();
         let db = database::Database::new(database_url);
-        Ok(StageServiceSVC {
-            tls_config,
-            _db: db,
-        })
+        Ok(StageServiceSVC { tls_config, db })
     }
 }
 
@@ -148,14 +145,14 @@ impl StageService for StageServiceSVC {
             request.get_ref().seg_size,
         );
 
-        // let _ = self
-        //     .db
-        //     .insert_stage_task(
-        //         &request.get_ref().proof_id,
-        //         stage_service::ExecutorError::Unspecified as i32,
-        //         &serde_json::to_string(&generate_context).unwrap(),
-        //     )
-        //     .await;
+        let _ = self
+            .db
+            .insert_stage_task(
+                &request.get_ref().proof_id,
+                stage_service::ExecutorError::Unspecified as i32,
+                &serde_json::to_string(&generate_context).unwrap(),
+            )
+            .await;
 
         let mut stage = stage::stage::Stage::new(generate_context);
         let (tx, mut rx) = mpsc::channel(128);
@@ -256,6 +253,14 @@ impl StageService for StageServiceSVC {
                 );
             }
         }
+        let _ = self
+            .db
+            .update_stage_task(
+                &request.get_ref().proof_id,
+                response.executor_error as i32,
+                &String::from_utf8(response.result.clone()).expect("Invalid UTF-8 bytes"),
+            )
+            .await;
 
         log::info!("{}", stage.timecost_string());
         Ok(Response::new(response))
