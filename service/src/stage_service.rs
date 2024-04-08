@@ -16,6 +16,8 @@ use crate::prover_client;
 use crate::{config, database};
 use prover::provers::{self, read_file_bin};
 
+use stage::tasks::{TASK_STATE_FAILED, TASK_STATE_SUCCESS};
+
 #[allow(clippy::module_inception)]
 pub mod stage_service {
     tonic::include_proto!("stage.v1");
@@ -26,6 +28,21 @@ use std::collections::HashMap;
 
 lazy_static! {
     static ref GLOBAL_TASKMAP: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());
+}
+
+macro_rules! save_task {
+    ($task:ident, $db_pool:ident) => {
+        if $task.state == TASK_STATE_FAILED || $task.state == TASK_STATE_SUCCESS {
+            let prove_task = database::ProveTask {
+                id: $task.task_id,
+                proof_id: $task.proof_id,
+                status: $task.state as i32,
+                time_cost: ($task.finish_ts - $task.start_ts) as i64,
+                ..Default::default()
+            };
+            let _ = $db_pool.db.insert_prove_task(&prove_task).await;
+        }
+    };
 }
 
 pub struct StageServiceSVC {
@@ -207,8 +224,9 @@ impl StageService for StageServiceSVC {
                 task = rx.recv() => {
                     if let Some(task) = task {
                         match task {
-                            Task::Split(data) => {
-                                stage.on_split_task(data);
+                            Task::Split(mut data) => {
+                                stage.on_split_task(&mut data);
+                                save_task!(data, self);
                             },
                             Task::Prove(data) => {
                                 stage.on_prove_task(data);

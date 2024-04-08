@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO prove_task (id, proof_id, status, time_cost, node_info, request, response, check_at) values (?,?,?,?,?,?,?,?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "26a6971a8e8ca9fe4c4cb4b73c105c7a25822f8308eabfd6ad995b7c841b2edc"
+}
