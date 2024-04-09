@@ -7,10 +7,10 @@ use plonky2::field::goldilocks_field::GoldilocksField;
 use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::util::timing::TimingTree;
 
+use std::io::BufReader;
 use zkm::all_stark::AllStark;
 use zkm::config::StarkConfig;
 use zkm::cpu::kernel::assembler::segment_kernel;
-use std::io::BufReader;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 
 use common::file::{read, write_file};
