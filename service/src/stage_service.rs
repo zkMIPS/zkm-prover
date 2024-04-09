@@ -4,7 +4,7 @@ use stage_service::{GenerateProofRequest, GenerateProofResponse};
 use stage_service::{GetStatusRequest, GetStatusResponse};
 use std::sync::Mutex;
 
-use stage::tasks::Task;
+use stage::tasks::{Task, TASK_ITYPE_AGGALL, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT};
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -31,12 +31,15 @@ lazy_static! {
 }
 
 macro_rules! save_task {
-    ($task:ident, $db_pool:ident) => {
+    ($task:ident, $db_pool:ident, $type:expr) => {
         if $task.state == TASK_STATE_FAILED || $task.state == TASK_STATE_SUCCESS {
+            let content = serde_json::to_string(&$task).unwrap();
             let prove_task = database::ProveTask {
                 id: $task.task_id,
+                itype: $type,
                 proof_id: $task.proof_id,
                 status: $task.state as i32,
+                content: Some(content),
                 time_cost: ($task.finish_ts - $task.start_ts) as i64,
                 ..Default::default()
             };
@@ -66,6 +69,7 @@ impl StageServiceSVC {
         };
         let database_url = config.database_url.as_str();
         let db = database::Database::new(database_url);
+        sqlx::migrate!("./migrations").run(&db.db_pool).await?;
         Ok(StageServiceSVC { tls_config, db })
     }
 }
@@ -226,16 +230,19 @@ impl StageService for StageServiceSVC {
                         match task {
                             Task::Split(mut data) => {
                                 stage.on_split_task(&mut data);
-                                save_task!(data, self);
+                                save_task!(data, self, TASK_ITYPE_SPLIT);
                             },
-                            Task::Prove(data) => {
-                                stage.on_prove_task(data);
+                            Task::Prove(mut data) => {
+                                stage.on_prove_task(&mut data);
+                                save_task!(data, self, TASK_ITYPE_PROVE);
                             },
-                            Task::Agg(data) => {
-                                stage.on_agg_all_task(data);
+                            Task::Agg(mut data) => {
+                                stage.on_agg_all_task(&mut data);
+                                save_task!(data, self, TASK_ITYPE_AGGALL);
                             },
-                            Task::Final(data) => {
-                                stage.on_final_task(data);
+                            Task::Final(mut data) => {
+                                stage.on_final_task(&mut data);
+                                save_task!(data, self, TASK_ITYPE_FINAL);
                             },
                         };
                     }

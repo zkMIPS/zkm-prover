@@ -1,4 +1,7 @@
-#[derive(Debug, Default)]
+use serde::Deserialize;
+use serde::Serialize;
+
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct AggAllTask {
     pub task_id: String,
     pub state: u32,

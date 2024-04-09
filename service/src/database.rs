@@ -12,18 +12,17 @@ pub struct StageTask {
 #[derive(Serialize, Deserialize, Debug, Clone, Default, sqlx::FromRow)]
 pub struct ProveTask {
     pub id: String,
-    pub t: i32,
+    pub itype: i32,
     pub proof_id: String,
     pub status: i32,
     pub time_cost: i64,
     pub node_info: String,
-    pub request: Option<String>,
-    pub response: Option<String>,
+    pub content: Option<String>,
     pub check_at: i64,
 }
 
 pub struct Database {
-    db_pool: sqlx::mysql::MySqlPool,
+    pub db_pool: sqlx::mysql::MySqlPool,
 }
 
 impl Database {
@@ -83,14 +82,14 @@ impl Database {
     #[allow(dead_code)]
     pub async fn insert_prove_task(&self, task: &ProveTask) -> anyhow::Result<bool> {
         sqlx::query!(
-            "INSERT INTO prove_task (id, proof_id, status, time_cost, node_info, request, response, check_at) values (?,?,?,?,?,?,?,?)",
+            "INSERT INTO prove_task (id, itype, proof_id, status, time_cost, node_info, content, check_at) values (?,?,?,?,?,?,?,?)",
             task.id,
+            task.itype,
             task.proof_id,
             task.status,
             task.time_cost,
             task.node_info,
-            task.request,
-            task.response,
+            task.content,
             task.check_at
         )
         .execute(&self.db_pool)
