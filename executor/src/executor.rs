@@ -1,5 +1,5 @@
 use crate::split_context::SplitContext;
-use common::file::{create_dir_all, read, write_file};
+use common::file::{create_dir_all, read, Writer};
 use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;
 use zkm::mips_emulator::state::{InstrumentedState, State};
@@ -46,12 +46,12 @@ impl Executor {
                         .expect("set memory range failed");
 
                     let mut instrumented_state = InstrumentedState::new(state, block_path);
-                    // proof is false would not return segments
                     let seg_path_clone = seg_path.clone();
                     create_dir_all(&seg_path_clone).unwrap();
-
-                    instrumented_state.get_split_segments(false);
+                    let new_write = |_: &str| -> Option<std::fs::File> { None };
+                    instrumented_state.split_segment(false, &seg_path_clone, new_write);
                     let mut segment_step: usize = seg_size;
+                    let new_write = |name: &str| -> Option<Writer> { Some(Writer::new(name)) };
                     loop {
                         if instrumented_state.state.exited {
                             break;
@@ -60,20 +60,10 @@ impl Executor {
                         segment_step -= 1;
                         if segment_step == 0 {
                             segment_step = seg_size;
-                            let segments = instrumented_state.get_split_segments(true);
-                            for segment in segments {
-                                let segment_path = format!("{}/{}", seg_path, segment.segment_id);
-                                let data = serde_json::to_vec(&segment).unwrap();
-                                write_file(&segment_path, &data).unwrap();
-                            }
+                            instrumented_state.split_segment(true, &seg_path_clone, new_write);
                         }
                     }
-                    let segments = instrumented_state.get_split_segments(true);
-                    for segment in segments {
-                        let segment_path = format!("{}/{}", seg_path, segment.segment_id);
-                        let data = serde_json::to_vec(&segment).unwrap();
-                        write_file(&segment_path, &data).unwrap();
-                    }
+                    instrumented_state.split_segment(true, &seg_path_clone, new_write);
                     return Ok(true);
                 }
                 Err(e) => {

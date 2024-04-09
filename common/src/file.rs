@@ -1,3 +1,4 @@
+use anyhow::Ok;
 use aws_sdk_s3::primitives::ByteStream;
 use std::fs;
 use std::fs::File;
@@ -7,7 +8,35 @@ use std::thread;
 use tokio::io::AsyncReadExt;
 use tokio::runtime::Runtime;
 
-use anyhow::Ok;
+pub struct Writer {
+    path: String,
+}
+
+impl Writer {
+    pub fn new(path: &str) -> Self {
+        Writer {
+            path: path.to_string(),
+        }
+    }
+}
+
+impl Write for Writer {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if is_s3_path(&self.path) {
+            write_file(&self.path, buf)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{}", e)))?;
+            return std::result::Result::Ok(buf.len());
+        }
+        let mut file = File::create(&self.path)?;
+        file.write_all(buf)?;
+        file.flush()?;
+        std::result::Result::Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        std::result::Result::Ok(())
+    }
+}
 
 pub fn read(path: &str) -> anyhow::Result<Vec<u8>> {
     if is_s3_path(path) {
