@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE stage_task set check_at = ? where id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "8b7eec3975fa959571e127dc3f41dfc0007758938f92a26601b8c7331a95817e"
+}

@@ -13,6 +13,7 @@ mod prover_client;
 mod prover_node;
 mod prover_service;
 mod stage_service;
+mod stage_worker;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

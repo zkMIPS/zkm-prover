@@ -4,19 +4,14 @@ use stage_service::{GenerateProofRequest, GenerateProofResponse};
 use stage_service::{GetStatusRequest, GetStatusResponse};
 use std::sync::Mutex;
 
-use stage::tasks::{Task, TASK_ITYPE_AGGALL, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT};
+use prover::provers;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use tokio::sync::mpsc;
-use tokio::time;
 use tonic::{Request, Response, Status};
 
-use crate::prover_client;
+use crate::stage_worker;
 use crate::{config, database};
-use prover::provers::{self, read_file_bin};
-
-use stage::tasks::{TASK_STATE_FAILED, TASK_STATE_SUCCESS};
 
 #[allow(clippy::module_inception)]
 pub mod stage_service {
@@ -30,26 +25,7 @@ lazy_static! {
     static ref GLOBAL_TASKMAP: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());
 }
 
-macro_rules! save_task {
-    ($task:ident, $db_pool:ident, $type:expr) => {
-        if $task.state == TASK_STATE_FAILED || $task.state == TASK_STATE_SUCCESS {
-            let content = serde_json::to_string(&$task).unwrap();
-            let prove_task = database::ProveTask {
-                id: $task.task_id,
-                itype: $type,
-                proof_id: $task.proof_id,
-                status: $task.state as i32,
-                content: Some(content),
-                time_cost: ($task.finish_ts - $task.start_ts) as i64,
-                ..Default::default()
-            };
-            let _ = $db_pool.db.insert_prove_task(&prove_task).await;
-        }
-    };
-}
-
 pub struct StageServiceSVC {
-    tls_config: Option<TlsConfig>,
     db: database::Database,
 }
 
@@ -70,7 +46,8 @@ impl StageServiceSVC {
         let database_url = config.database_url.as_str();
         let db = database::Database::new(database_url);
         sqlx::migrate!("./migrations").run(&db.db_pool).await?;
-        Ok(StageServiceSVC { tls_config, db })
+        let _ = stage_worker::start(tls_config.clone(), db.clone()).await;
+        Ok(StageServiceSVC { db })
     }
 }
 
@@ -80,15 +57,13 @@ impl StageService for StageServiceSVC {
         &self,
         request: Request<GetStatusRequest>,
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
-        // log::info!("{:?}", request);
-        let taskmap = GLOBAL_TASKMAP.lock().unwrap();
-        let status = taskmap.get(&request.get_ref().proof_id);
+        let task = self.db.get_stage_task(&request.get_ref().proof_id).await;
         let mut response = stage_service::GetStatusResponse {
             proof_id: request.get_ref().proof_id.clone(),
             ..Default::default()
         };
-        if let Some(status) = status {
-            response.status = *status as u64;
+        if let Ok(task) = task {
+            response.status = task.status as u64;
         }
         Ok(Response::new(response))
     }
@@ -146,14 +121,6 @@ impl StageService for StageServiceSVC {
         fs::create_dir_all(final_dir.clone())?;
         let final_path = format!("{}/output", final_dir);
 
-        {
-            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
-            taskmap.insert(
-                request.get_ref().proof_id.clone(),
-                stage_service::ExecutorError::Unspecified.into(),
-            );
-        }
-
         let generate_context = stage::contexts::GenerateContext::new(
             &request.get_ref().proof_id,
             &dir_path,
@@ -174,120 +141,11 @@ impl StageService for StageServiceSVC {
                 &serde_json::to_string(&generate_context).unwrap(),
             )
             .await;
-
-        let mut stage = stage::stage::Stage::new(generate_context);
-        let (tx, mut rx) = mpsc::channel(128);
-        stage.dispatch();
-        loop {
-            let split_task = stage.get_split_task();
-            if let Some(split_task) = split_task {
-                let tx = tx.clone();
-                let tls_config = self.tls_config.clone();
-                tokio::spawn(async move {
-                    let response = prover_client::split(split_task, tls_config).await;
-                    if let Some(split_task) = response {
-                        let _ = tx.send(Task::Split(split_task)).await;
-                    }
-                });
-            }
-            let prove_task = stage.get_prove_task();
-            if let Some(prove_task) = prove_task {
-                let tx = tx.clone();
-                let tls_config = self.tls_config.clone();
-                tokio::spawn(async move {
-                    let response = prover_client::prove(prove_task, tls_config).await;
-                    if let Some(prove_task) = response {
-                        let _ = tx.send(Task::Prove(prove_task)).await;
-                    }
-                });
-            }
-            let agg_task = stage.get_agg_all_task();
-            if let Some(agg_task) = agg_task {
-                let tx = tx.clone();
-                let tls_config = self.tls_config.clone();
-                tokio::spawn(async move {
-                    let response = prover_client::aggregate_all(agg_task, tls_config).await;
-                    if let Some(agg_task) = response {
-                        let _ = tx.send(Task::Agg(agg_task)).await;
-                    }
-                });
-            }
-            let final_task = stage.get_final_task();
-            if let Some(final_task) = final_task {
-                let tx = tx.clone();
-                let tls_config = self.tls_config.clone();
-                tokio::spawn(async move {
-                    let response = prover_client::final_proof(final_task, tls_config).await;
-                    if let Some(final_task) = response {
-                        let _ = tx.send(Task::Final(final_task)).await;
-                    }
-                });
-            }
-
-            tokio::select! {
-                task = rx.recv() => {
-                    if let Some(task) = task {
-                        match task {
-                            Task::Split(mut data) => {
-                                stage.on_split_task(&mut data);
-                                save_task!(data, self, TASK_ITYPE_SPLIT);
-                            },
-                            Task::Prove(mut data) => {
-                                stage.on_prove_task(&mut data);
-                                save_task!(data, self, TASK_ITYPE_PROVE);
-                            },
-                            Task::Agg(mut data) => {
-                                stage.on_agg_all_task(&mut data);
-                                save_task!(data, self, TASK_ITYPE_AGGALL);
-                            },
-                            Task::Final(mut data) => {
-                                stage.on_final_task(&mut data);
-                                save_task!(data, self, TASK_ITYPE_FINAL);
-                            },
-                        };
-                    }
-                },
-                () = time::sleep(time::Duration::from_secs(1)) => {
-                }
-            };
-            if stage.is_success() || stage.is_error() {
-                break;
-            }
-            stage.dispatch();
-        }
-
-        let mut response = stage_service::GenerateProofResponse {
+        let response = stage_service::GenerateProofResponse {
             proof_id: request.get_ref().proof_id.clone(),
+            executor_error: stage_service::ExecutorError::NoError as u32,
             ..Default::default()
         };
-        {
-            let mut taskmap = GLOBAL_TASKMAP.lock().unwrap();
-            if stage.is_error() {
-                response.executor_error = stage_service::ExecutorError::Error as u32;
-                taskmap.insert(
-                    request.get_ref().proof_id.clone(),
-                    stage_service::ExecutorError::Error.into(),
-                );
-            } else {
-                let result = read_file_bin(&final_path).unwrap();
-                response.result.clone_from(&result);
-                response.executor_error = stage_service::ExecutorError::NoError as u32;
-                taskmap.insert(
-                    request.get_ref().proof_id.clone(),
-                    stage_service::ExecutorError::NoError.into(),
-                );
-            }
-        }
-        let _ = self
-            .db
-            .update_stage_task(
-                &request.get_ref().proof_id,
-                response.executor_error as i32,
-                &String::from_utf8(response.result.clone()).expect("Invalid UTF-8 bytes"),
-            )
-            .await;
-
-        log::info!("{}", stage.timecost_string());
         Ok(Response::new(response))
     }
 }

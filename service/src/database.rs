@@ -21,6 +21,7 @@ pub struct ProveTask {
     pub check_at: i64,
 }
 
+#[derive(Clone)]
 pub struct Database {
     pub db_pool: sqlx::mysql::MySqlPool,
 }
@@ -29,6 +30,23 @@ impl Database {
     pub fn new(database_url: &str) -> Self {
         let db_pool = sqlx::mysql::MySqlPool::connect_lazy(database_url).unwrap();
         Database { db_pool }
+    }
+
+    #[allow(dead_code)]
+    pub async fn get_incomplete_stage_tasks(
+        &self,
+        check_at: i64,
+        limit: i32,
+    ) -> anyhow::Result<Vec<StageTask>> {
+        let rows = sqlx::query_as!(
+            StageTask,
+            "SELECT id, status, context, result, check_at from stage_task where status = 0 and check_at < ? limit ?",
+            check_at,
+            limit,
+        )
+        .fetch_all(&self.db_pool)
+        .await?;
+        Ok(rows)
     }
 
     #[allow(dead_code)]
@@ -80,6 +98,22 @@ impl Database {
     }
 
     #[allow(dead_code)]
+    pub async fn update_stage_task_check_at(
+        &self,
+        proof_id: &str,
+        check_at: u64,
+    ) -> anyhow::Result<bool> {
+        sqlx::query!(
+            "UPDATE stage_task set check_at = ? where id = ?",
+            check_at,
+            proof_id
+        )
+        .execute(&self.db_pool)
+        .await?;
+        Ok(true)
+    }
+
+    #[allow(dead_code)]
     pub async fn insert_prove_task(&self, task: &ProveTask) -> anyhow::Result<bool> {
         sqlx::query!(
             "INSERT INTO prove_task (id, itype, proof_id, status, time_cost, node_info, content, check_at) values (?,?,?,?,?,?,?,?)",
@@ -95,5 +129,17 @@ impl Database {
         .execute(&self.db_pool)
         .await?;
         Ok(true)
+    }
+
+    #[allow(dead_code)]
+    pub async fn get_prove_tasks(&self, proof_id: &str) -> anyhow::Result<Vec<ProveTask>> {
+        let rows = sqlx::query_as!(
+            ProveTask,
+            "SELECT id, itype, proof_id, status, time_cost, node_info, content, check_at from prove_task where proof_id = ?",
+            proof_id,
+        )
+        .fetch_all(&self.db_pool)
+        .await?;
+        Ok(rows)
     }
 }
