@@ -13,6 +13,7 @@ pub struct SplitTask {
     pub seg_size: u32,
     pub start_ts: u64,
     pub finish_ts: u64,
+    pub node_info: String,
 }
 
 impl Clone for SplitTask {
@@ -28,6 +29,7 @@ impl Clone for SplitTask {
             seg_size: self.seg_size,
             start_ts: self.start_ts,
             finish_ts: self.finish_ts,
+            node_info: self.node_info.clone(),
         }
     }
 }

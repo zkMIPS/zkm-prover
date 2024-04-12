@@ -14,6 +14,7 @@ pub struct ProveTask {
     pub seg_path: String,
     pub start_ts: u64,
     pub finish_ts: u64,
+    pub node_info: String,
 }
 
 impl Clone for ProveTask {
@@ -30,6 +31,7 @@ impl Clone for ProveTask {
             seg_path: self.seg_path.clone(),
             start_ts: self.start_ts,
             finish_ts: self.finish_ts,
+            node_info: self.node_info.clone(),
         }
     }
 }
