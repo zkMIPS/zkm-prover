@@ -10,9 +10,13 @@ service StageService {
 
 enum Status {
     SUCCESS = 0;
-    UNSPECIFIED = 1;
-    COMPUTING = 2;
-    ERROR = 3;
+    COMPUTING = 1;
+    INTERNAL_ERROR = 2;
+    SPLIT_ERROR = 3;
+    PROVE_ERROR = 4;
+    AGG_ERROR = 5;
+    FINAL_ERROR = 6;
+    UNKNOWN = 7;
 }
 
 message BlockFileItem {
