@@ -19,6 +19,7 @@ macro_rules! save_task {
                 itype: $type,
                 proof_id: $task.proof_id,
                 status: $task.state as i32,
+                node_info: $task.node_info,
                 content: Some(content),
                 time_cost: ($task.finish_ts - $task.start_ts) as i64,
                 ..Default::default()

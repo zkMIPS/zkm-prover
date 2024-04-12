@@ -172,6 +172,7 @@ impl Stage {
                     seg_path: format!("{}/{}", self.generate_context.seg_path, file_name),
                     start_ts: 0,
                     finish_ts: 0,
+                    node_info: "".to_string(),
                 };
                 self.prove_tasks.push(prove_task);
             }
