@@ -13,7 +13,7 @@ use zkm::config::StarkConfig;
 use zkm::cpu::kernel::assembler::segment_kernel;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 
-use common::file::{read, write_file};
+use common::file;
 
 #[derive(Default)]
 pub struct RootProver {}
@@ -48,7 +48,7 @@ impl Prover<ProveContext> for RootProver {
             &config,
         );
 
-        let seg_data = read(&seg_path)?;
+        let seg_data = file::new(&seg_path).read()?;
         let seg_reader = BufReader::new(seg_data.as_slice());
         let input = segment_kernel(&basedir, &block_no, &file, seg_reader, seg_size);
         let mut timing: TimingTree = TimingTree::new("prove root", log::Level::Info);
@@ -60,11 +60,11 @@ impl Prover<ProveContext> for RootProver {
 
         // write agg_proof write file
         let json_string = serde_json::to_string(&agg_proof)?;
-        write_file(&proof_path, json_string.as_bytes())?;
+        let _ = file::new(&proof_path).write(json_string.as_bytes())?;
 
         // updated_agg_public_values file
         let json_string = serde_json::to_string(&updated_agg_public_values)?;
-        write_file(&pub_value_path, json_string.as_bytes())?;
+        let _ = file::new(&pub_value_path).write(json_string.as_bytes())?;
 
         Ok(())
     }

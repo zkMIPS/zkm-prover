@@ -1,5 +1,5 @@
 use crate::split_context::SplitContext;
-use common::file::{create_dir_all, read, Writer};
+use common::file;
 use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;
 use zkm::mips_emulator::state::{InstrumentedState, State};
@@ -24,14 +24,14 @@ impl Executor {
         let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
         let args = "".to_string();
 
-        let data = read(&elf_path);
+        let data = file::new(&elf_path).read();
         let block_path = get_block_path(&basedir, &block_no, "");
         let input_path = if block_path.ends_with('/') {
             format!("{}input", block_path)
         } else {
             format!("{}/input", block_path)
         };
-        let input_data = read(&input_path).unwrap();
+        let input_data = file::new(&input_path).read().unwrap();
         if let core::result::Result::Ok(data) = data {
             let file_result = ElfBytes::<AnyEndian>::minimal_parse(data.as_slice());
             match file_result {
@@ -47,11 +47,13 @@ impl Executor {
 
                     let mut instrumented_state = InstrumentedState::new(state, block_path);
                     let seg_path_clone = seg_path.clone();
-                    create_dir_all(&seg_path_clone).unwrap();
+                    file::new(&seg_path_clone).create_dir_all().unwrap();
                     let new_write = |_: &str| -> Option<std::fs::File> { None };
                     instrumented_state.split_segment(false, &seg_path_clone, new_write);
                     let mut segment_step: usize = seg_size;
-                    let new_write = |name: &str| -> Option<Writer> { Some(Writer::new(name)) };
+
+                    let new_write =
+                        |name: &str| -> Option<Box<dyn std::io::Write>> { Some(file::new(name)) };
                     loop {
                         if instrumented_state.state.exited {
                             break;

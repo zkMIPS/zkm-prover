@@ -11,7 +11,7 @@ use tonic::{Request, Response, Status};
 
 use crate::config;
 use crate::prover_client;
-use common::file::{create_dir_all, read, write_file};
+use common::file;
 use prover::provers::{self};
 
 #[allow(clippy::module_inception)]
@@ -86,38 +86,56 @@ impl StageService for StageServiceSVC {
 
         let base_dir = config::instance().lock().unwrap().base_dir.clone();
         let dir_path = format!("{}/proof/{}", base_dir, request.get_ref().proof_id);
-        create_dir_all(&dir_path).map_err(|e| Status::internal(e.to_string()))?;
-
-        let elf_path = format!("{}/elf", dir_path);
-        write_file(&elf_path, &request.get_ref().elf_data)
+        file::new(&dir_path)
+            .create_dir_all()
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let bolck_dir = format!("{}/0_{}", dir_path, request.get_ref().block_no);
-        create_dir_all(&bolck_dir).map_err(|e| Status::internal(e.to_string()))?;
+        let elf_path = format!("{}/elf", dir_path);
+        file::new(&elf_path)
+            .write(&request.get_ref().elf_data)
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let block_dir = format!("{}/0_{}", dir_path, request.get_ref().block_no);
+        file::new(&block_dir)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         for file_block_item in &request.get_ref().block_data {
-            let bolck_path = format!("{}/{}", bolck_dir, file_block_item.file_name);
-            write_file(&bolck_path, &file_block_item.file_content)
+            let block_path = format!("{}/{}", block_dir, file_block_item.file_name);
+            file::new(&block_path)
+                .write(&file_block_item.file_content)
                 .map_err(|e| Status::internal(e.to_string()))?;
         }
 
         let seg_path = format!("{}/segment", dir_path);
-        create_dir_all(&seg_path).map_err(|e| Status::internal(e.to_string()))?;
+        file::new(&seg_path)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let prove_path = format!("{}/prove", dir_path);
-        create_dir_all(&prove_path).map_err(|e| Status::internal(e.to_string()))?;
+        file::new(&prove_path)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let prove_proof_path = format!("{}/proof", prove_path);
-        create_dir_all(&prove_proof_path).map_err(|e| Status::internal(e.to_string()))?;
+        file::new(&prove_proof_path)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let prove_pub_value_path = format!("{}/pub_value", prove_path);
-        create_dir_all(&prove_pub_value_path).map_err(|e| Status::internal(e.to_string()))?;
+        file::new(&prove_pub_value_path)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let agg_path = format!("{}/aggregate", dir_path);
-        create_dir_all(&agg_path).map_err(|e| Status::internal(e.to_string()))?;
+        file::new(&agg_path)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let final_dir = format!("{}/final", dir_path);
-        create_dir_all(&final_dir).map_err(|e| Status::internal(e.to_string()))?;
+        file::new(&final_dir)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
         let final_path = format!("{}/output", final_dir);
 
         {
@@ -230,7 +248,7 @@ impl StageService for StageServiceSVC {
                     stage_service::ExecutorError::Error.into(),
                 );
             } else {
-                let result = read(&final_path).unwrap();
+                let result = file::new(&final_path).read().unwrap();
                 response.result.clone_from(&result);
                 response.executor_error = stage_service::ExecutorError::NoError as u32;
                 taskmap.insert(

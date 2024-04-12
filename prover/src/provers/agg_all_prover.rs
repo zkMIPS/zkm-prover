@@ -18,7 +18,7 @@ use zkm::config::StarkConfig;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 use zkm::proof::PublicValues;
 
-use common::file::{create_dir_all, read_to_string, write_file};
+use common::file;
 
 #[derive(Default)]
 pub struct AggAllProver {}
@@ -55,13 +55,13 @@ impl Prover<AggAllContext> for AggAllProver {
 
         for seg_no in 0..proof_num {
             let proof_path = format!("{}/{}", proof_dir, seg_no);
-            let root_proof_content = read_to_string(&proof_path)?;
+            let root_proof_content = file::new(&proof_path).read_to_string()?;
             let root_proof: ProofWithPublicInputs<F, C, D> =
                 serde_json::from_str(&root_proof_content)?;
             root_proofs.push(root_proof);
 
             let pub_value_path = format!("{}/{}", pub_value_dir, seg_no);
-            let root_pub_value_content = read_to_string(&pub_value_path)?;
+            let root_pub_value_content = file::new(&pub_value_path).read_to_string()?;
             let root_pub_value: PublicValues = serde_json::from_str(&root_pub_value_content)?;
             root_pub_values.push(root_pub_value);
         }
@@ -165,31 +165,27 @@ impl Prover<AggAllContext> for AggAllProver {
 
         let wrapped_proof = wrapped_circuit.prove(&block_proof).unwrap();
         // save wrapper_proof
-        create_dir_all(&path)?;
+        file::new(&path).create_dir_all()?;
         let common_data_file = if path.ends_with('/') {
             format!("{}common_circuit_data.json", path)
         } else {
             format!("{}/common_circuit_data.json", path)
         };
-        write_file(
-            &common_data_file,
-            &serde_json::to_vec(&wrapped_proof.common_data)?,
-        )?;
+        let _ =
+            file::new(&common_data_file).write(&serde_json::to_vec(&wrapped_proof.common_data)?)?;
         let verify_data_file = if path.ends_with('/') {
             format!("{}verifier_only_circuit_data.json", path)
         } else {
             format!("{}/verifier_only_circuit_data.json", path)
         };
-        write_file(
-            &verify_data_file,
-            &serde_json::to_vec(&wrapped_proof.verifier_data)?,
-        )?;
+        let _ = file::new(&verify_data_file)
+            .write(&serde_json::to_vec(&wrapped_proof.verifier_data)?)?;
         let proof_file = if path.ends_with('/') {
             format!("{}proof_with_public_inputs.json", path)
         } else {
             format!("{}/proof_with_public_inputs.json", path)
         };
-        write_file(&proof_file, &serde_json::to_vec(&wrapped_proof.proof)?)?;
+        let _ = file::new(&proof_file).write(&serde_json::to_vec(&wrapped_proof.proof)?)?;
         Ok(())
     }
 }

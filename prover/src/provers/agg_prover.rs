@@ -12,7 +12,7 @@ use zkm::config::StarkConfig;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 use zkm::proof::PublicValues;
 
-use common::file::{read_to_string, write_file};
+use common::file;
 
 #[derive(Default)]
 pub struct AggProver {}
@@ -52,16 +52,16 @@ impl Prover<AggContext> for AggProver {
             &config,
         );
 
-        let root_proof_content = read_to_string(&proof_path1)?;
+        let root_proof_content = file::new(&proof_path1).read_to_string()?;
         let root_proof: ProofWithPublicInputs<F, C, D> = serde_json::from_str(&root_proof_content)?;
 
-        let next_proof_content = read_to_string(&proof_path2)?;
+        let next_proof_content = file::new(&proof_path2).read_to_string()?;
         let next_proof: ProofWithPublicInputs<F, C, D> = serde_json::from_str(&next_proof_content)?;
 
-        let root_pub_value_content = read_to_string(&pub_value_path1)?;
+        let root_pub_value_content = file::new(&pub_value_path1).read_to_string()?;
         let root_pub_value: PublicValues = serde_json::from_str(&root_pub_value_content)?;
 
-        let next_pub_value_content = read_to_string(&pub_value_path2)?;
+        let next_pub_value_content = file::new(&pub_value_path2).read_to_string()?;
         let next_pub_value: PublicValues = serde_json::from_str(&next_pub_value_content)?;
 
         // Update public values for the aggregation.
@@ -81,11 +81,11 @@ impl Prover<AggContext> for AggProver {
 
         // write agg_proof write file
         let json_string = serde_json::to_string(&agg_proof)?;
-        write_file(&agg_proof_path, json_string.as_bytes())?;
+        let _ = file::new(&agg_proof_path).write(json_string.as_bytes())?;
 
         // updated_agg_public_values file
         let json_string = serde_json::to_string(&updated_agg_public_values)?;
-        write_file(&agg_pub_value_path, json_string.as_bytes())?;
+        let _ = file::new(&agg_pub_value_path).write(json_string.as_bytes())?;
 
         Ok(())
     }

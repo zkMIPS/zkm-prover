@@ -1,5 +1,4 @@
-use common::file::read;
-use common::file::write_file;
+use common::file;
 use common::tls::Config as TlsConfig;
 use prover_service::prover_service_client::ProverServiceClient;
 use prover_service::AggregateAllRequest;
@@ -234,9 +233,10 @@ pub async fn final_proof(
                 format!("{}/proof_with_public_inputs.json", final_task.input_dir),
             )
         };
-        let common_circuit_data = read(&common_circuit_data_file).unwrap();
-        let verifier_only_circuit_data = read(&verifier_only_circuit_data_file).unwrap();
-        let proof_with_public_inputs = read(&proof_with_public_inputs_file).unwrap();
+        let common_circuit_data = file::new(&common_circuit_data_file).read().unwrap();
+        let verifier_only_circuit_data =
+            file::new(&verifier_only_circuit_data_file).read().unwrap();
+        let proof_with_public_inputs = file::new(&proof_with_public_inputs_file).read().unwrap();
         let request = FinalProofRequest {
             chain_id: 0,
             timestamp: 0,
@@ -263,11 +263,9 @@ pub async fn final_proof(
                             if let Some(result) = task_result.result {
                                 if let Some(code) = ResultCode::from_i32(result.code) {
                                     if code == ResultCode::Ok {
-                                        write_file(
-                                            &final_task.output_path,
-                                            result.message.as_bytes(),
-                                        )
-                                        .unwrap();
+                                        let _ = file::new(&final_task.output_path)
+                                            .write(result.message.as_bytes())
+                                            .unwrap();
                                         final_task.state = TASK_STATE_SUCCESS;
                                         return Some(final_task);
                                     }

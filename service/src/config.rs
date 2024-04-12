@@ -1,4 +1,4 @@
-use common::file::read_to_string;
+use common::file;
 use log::error;
 use once_cell::sync::OnceCell;
 use serde_derive::Deserialize;
@@ -35,7 +35,7 @@ impl RuntimeConfig {
     }
 
     pub fn from_toml(path: &str) -> Option<Self> {
-        let contents = match read_to_string(path) {
+        let contents = match file::new(path).read_to_string() {
             Ok(c) => c,
             Err(e) => {
                 error!(
