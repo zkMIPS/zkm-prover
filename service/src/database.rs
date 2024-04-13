@@ -35,12 +35,14 @@ impl Database {
     #[allow(dead_code)]
     pub async fn get_incomplete_stage_tasks(
         &self,
+        status: i32,
         check_at: i64,
         limit: i32,
     ) -> anyhow::Result<Vec<StageTask>> {
         let rows = sqlx::query_as!(
             StageTask,
-            "SELECT id, status, context, result, check_at from stage_task where status = 0 and check_at < ? limit ?",
+            "SELECT id, status, context, result, check_at from stage_task where status = ? and check_at < ? limit ?",
+            status,
             check_at,
             limit,
         )

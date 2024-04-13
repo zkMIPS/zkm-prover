@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT id, status, context, result, check_at from stage_task where status = 0 and check_at < ? limit ?",
+  "query": "SELECT id, status, context, result, check_at from stage_task where status = ? and check_at < ? limit ?",
   "describe": {
     "columns": [
       {
@@ -55,7 +55,7 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false,
@@ -65,5 +65,5 @@
       false
     ]
   },
-  "hash": "4064b85f90e27cf6a7386e72f250c6c7bcdc6db45474c93365cfdb51c6259e2b"
+  "hash": "15acc9e35a09d7d61d74d2aad4b19962598d5c2d9568aef6d559170ffff8ef74"
 }
