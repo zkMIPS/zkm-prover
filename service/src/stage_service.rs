@@ -5,16 +5,14 @@ use stage_service::{GetStatusRequest, GetStatusResponse};
 use std::sync::Mutex;
 
 use stage::tasks::Task;
-use std::fs;
-use std::fs::File;
-use std::io::Write;
 use tokio::sync::mpsc;
 use tokio::time;
 use tonic::{Request, Response, Status};
 
 use crate::config;
 use crate::prover_client;
-use prover::provers::{self, read_file_bin};
+use common::file;
+use prover::provers::{self};
 
 #[allow(clippy::module_inception)]
 pub mod stage_service {
@@ -88,38 +86,56 @@ impl StageService for StageServiceSVC {
 
         let base_dir = config::instance().lock().unwrap().base_dir.clone();
         let dir_path = format!("{}/proof/{}", base_dir, request.get_ref().proof_id);
-        fs::create_dir_all(dir_path.clone())?;
+        file::new(&dir_path)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let elf_path = format!("{}/elf", dir_path);
-        let mut file = File::create(elf_path.clone())?;
-        file.write_all(&request.get_ref().elf_data)?;
+        file::new(&elf_path)
+            .write(&request.get_ref().elf_data)
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        let bolck_dir = format!("{}/0_{}", dir_path, request.get_ref().block_no);
-        fs::create_dir_all(bolck_dir.clone())?;
+        let block_dir = format!("{}/0_{}", dir_path, request.get_ref().block_no);
+        file::new(&block_dir)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         for file_block_item in &request.get_ref().block_data {
-            let bolck_path = format!("{}/{}", bolck_dir, file_block_item.file_name);
-            let mut file = File::create(bolck_path)?;
-            file.write_all(&file_block_item.file_content)?;
+            let block_path = format!("{}/{}", block_dir, file_block_item.file_name);
+            file::new(&block_path)
+                .write(&file_block_item.file_content)
+                .map_err(|e| Status::internal(e.to_string()))?;
         }
 
         let seg_path = format!("{}/segment", dir_path);
-        fs::create_dir_all(seg_path.clone())?;
+        file::new(&seg_path)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let prove_path = format!("{}/prove", dir_path);
-        fs::create_dir_all(prove_path.clone())?;
+        file::new(&prove_path)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let prove_proof_path = format!("{}/proof", prove_path);
-        fs::create_dir_all(prove_proof_path.clone())?;
+        file::new(&prove_proof_path)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let prove_pub_value_path = format!("{}/pub_value", prove_path);
-        fs::create_dir_all(prove_pub_value_path.clone())?;
+        file::new(&prove_pub_value_path)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let agg_path = format!("{}/aggregate", dir_path);
-        fs::create_dir_all(agg_path.clone())?;
+        file::new(&agg_path)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let final_dir = format!("{}/final", dir_path);
-        fs::create_dir_all(final_dir.clone())?;
+        file::new(&final_dir)
+            .create_dir_all()
+            .map_err(|e| Status::internal(e.to_string()))?;
         let final_path = format!("{}/output", final_dir);
 
         {
@@ -232,7 +248,7 @@ impl StageService for StageServiceSVC {
                     stage_service::ExecutorError::Error.into(),
                 );
             } else {
-                let result = read_file_bin(&final_path).unwrap();
+                let result = file::new(&final_path).read().unwrap();
                 response.result.clone_from(&result);
                 response.executor_error = stage_service::ExecutorError::NoError as u32;
                 taskmap.insert(

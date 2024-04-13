@@ -24,8 +24,7 @@ struct Args {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::try_init().unwrap_or_default();
     let args = Args::parse();
-    let conf_path = std::path::Path::new(&args.config);
-    let runtime_config = config::RuntimeConfig::from_toml(conf_path).expect("Config is missing");
+    let runtime_config = config::RuntimeConfig::from_toml(&args.config).expect("Config is missing");
     let addr = runtime_config.addr.as_str().parse()?;
     let nodes_lock = crate::prover_node::instance();
     {

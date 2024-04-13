@@ -1,3 +1,4 @@
+use common::file;
 use common::tls::Config as TlsConfig;
 use prover_service::prover_service_client::ProverServiceClient;
 use prover_service::AggregateAllRequest;
@@ -16,6 +17,7 @@ use tonic::Request;
 
 use self::prover_service::ResultCode;
 use crate::prover_node::ProverNode;
+use prover_service::GetTaskResultResponse;
 use std::time::Duration;
 use tonic::transport::Channel;
 use tonic::transport::Uri;
@@ -214,13 +216,35 @@ pub async fn final_proof(
 ) -> Option<FinalTask> {
     let client = get_snark_client(None).await;
     if let Some(mut client) = client {
+        let (
+            common_circuit_data_file,
+            verifier_only_circuit_data_file,
+            proof_with_public_inputs_file,
+        ) = if final_task.input_dir.ends_with('/') {
+            (
+                format!("{}common_circuit_data.json", final_task.input_dir),
+                format!("{}verifier_only_circuit_data.json", final_task.input_dir),
+                format!("{}proof_with_public_inputs.json", final_task.input_dir),
+            )
+        } else {
+            (
+                format!("{}/common_circuit_data.json", final_task.input_dir),
+                format!("{}/verifier_only_circuit_data.json", final_task.input_dir),
+                format!("{}/proof_with_public_inputs.json", final_task.input_dir),
+            )
+        };
+        let common_circuit_data = file::new(&common_circuit_data_file).read().unwrap();
+        let verifier_only_circuit_data =
+            file::new(&verifier_only_circuit_data_file).read().unwrap();
+        let proof_with_public_inputs = file::new(&proof_with_public_inputs_file).read().unwrap();
         let request = FinalProofRequest {
             chain_id: 0,
             timestamp: 0,
             proof_id: final_task.proof_id.clone(),
             computed_request_id: final_task.task_id.clone(),
-            input_dir: final_task.input_dir.clone(),
-            output_path: final_task.output_path.clone(),
+            common_circuit_data,
+            proof_with_public_inputs,
+            verifier_only_circuit_data,
         };
         log::info!("final_proof request {:#?}", request);
         let mut grpc_request = Request::new(request);
@@ -233,12 +257,19 @@ pub async fn final_proof(
                     let mut loop_count = 0;
                     loop {
                         let task_result =
-                            get_task_status(&mut client, &final_task.proof_id, &final_task.task_id)
+                            get_task_result(&mut client, &final_task.proof_id, &final_task.task_id)
                                 .await;
                         if let Some(task_result) = task_result {
-                            if task_result == ResultCode::Ok {
-                                final_task.state = TASK_STATE_SUCCESS;
-                                return Some(final_task);
+                            if let Some(result) = task_result.result {
+                                if let Some(code) = ResultCode::from_i32(result.code) {
+                                    if code == ResultCode::Ok {
+                                        let _ = file::new(&final_task.output_path)
+                                            .write(result.message.as_bytes())
+                                            .unwrap();
+                                        final_task.state = TASK_STATE_SUCCESS;
+                                        return Some(final_task);
+                                    }
+                                }
                             }
                         }
                         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
@@ -258,6 +289,7 @@ pub async fn final_proof(
     Some(final_task)
 }
 
+#[allow(dead_code)]
 pub async fn get_task_status(
     client: &mut ProverServiceClient<Channel>,
     proof_id: &str,
@@ -276,4 +308,22 @@ pub async fn get_task_status(
         }
     }
     Some(ResultCode::Unspecified)
+}
+
+pub async fn get_task_result(
+    client: &mut ProverServiceClient<Channel>,
+    proof_id: &str,
+    task_id: &str,
+) -> Option<GetTaskResultResponse> {
+    let request = GetTaskResultRequest {
+        proof_id: proof_id.to_owned(),
+        computed_request_id: task_id.to_owned(),
+    };
+    let mut grpc_request = Request::new(request);
+    grpc_request.set_timeout(Duration::from_secs(30));
+    let response = client.get_task_result(grpc_request).await;
+    if let Ok(response) = response {
+        return Some(response.into_inner());
+    }
+    None
 }

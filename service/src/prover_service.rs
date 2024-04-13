@@ -10,7 +10,6 @@ use prover_service::{GetTaskResultRequest, GetTaskResultResponse, Result};
 use prover_service::{ProveRequest, ProveResponse};
 use prover_service::{SplitElfRequest, SplitElfResponse};
 use std::time::Instant;
-
 use tonic::{Request, Response, Status};
 
 use self::prover_service::ResultCode;
@@ -18,9 +17,6 @@ use self::prover_service::ResultCode;
 pub mod prover_service {
     tonic::include_proto!("prover.v1");
 }
-
-#[derive(Debug, Default)]
-pub struct ProverServiceSVC {}
 
 async fn run_back_task<F: FnOnce() -> std::result::Result<bool, String> + Send + 'static>(
     callable: F,
@@ -35,6 +31,9 @@ async fn run_back_task<F: FnOnce() -> std::result::Result<bool, String> + Send +
         .await;
     rx.await.unwrap()
 }
+
+#[derive(Debug, Default)]
+pub struct ProverServiceSVC {}
 
 macro_rules! on_done {
     ($result:ident, $resp:ident) => {

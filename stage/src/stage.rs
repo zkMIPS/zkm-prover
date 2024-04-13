@@ -4,22 +4,9 @@ use crate::tasks::{AggAllTask, FinalTask, ProveTask, SplitTask};
 use crate::tasks::{
     TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED,
 };
-use std::fs;
-use std::fs::File;
-use std::io::Read;
-use std::io::Write;
-use std::path::Path;
+use common::file;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
-
-pub fn copy_file_bin(src: &String, dst: &String) {
-    let mut file_src = File::open(src).unwrap();
-    let mut content = Vec::new();
-    file_src.read_to_end(&mut content).unwrap();
-
-    let mut file_dst = File::open(dst).unwrap();
-    file_dst.write_all(content.as_slice()).unwrap();
-}
 
 pub fn get_timestamp() -> u64 {
     let now = SystemTime::now();
@@ -150,13 +137,11 @@ impl Stage {
 
     fn gen_prove_task(&mut self) {
         let prove_dir = self.generate_context.prove_path.clone();
-        fs::create_dir_all(prove_dir.clone()).unwrap();
-        let seg_dir_path = Path::new(&self.generate_context.seg_path);
-        let dir_entries = fs::read_dir(seg_dir_path).unwrap();
-        for entry in dir_entries {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            let file_name = path.file_name().unwrap().to_str().unwrap();
+        file::new(&prove_dir).create_dir_all().unwrap();
+        let files = file::new(&self.generate_context.seg_path)
+            .read_dir()
+            .unwrap();
+        for file_name in files {
             let result: Result<usize, <usize as FromStr>::Err> = file_name.parse();
             if let Ok(file_no) = result {
                 let prove_task = ProveTask {

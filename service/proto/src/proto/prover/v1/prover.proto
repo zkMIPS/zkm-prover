@@ -153,15 +153,9 @@ message FinalProofRequest {
     uint64 timestamp = 2;
     string proof_id = 3;
     string computed_request_id = 4;
-
-    // There are three files in the folder
-    // common_circuit_data.json
-    // verifier_only_circuit_data.json
-    // proof_with_public_inputs.json
-    string input_dir = 5;
-
-    // The file path for storing the results
-    string output_path = 6;
+    bytes common_circuit_data = 5;
+    bytes verifier_only_circuit_data = 6;
+    bytes proof_with_public_inputs = 7;
 }
 
 message FinalProofResponse {

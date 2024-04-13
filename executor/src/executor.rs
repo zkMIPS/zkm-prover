@@ -1,8 +1,7 @@
 use crate::split_context::SplitContext;
+use common::file;
 use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;
-use std::fs;
-
 use zkm::mips_emulator::state::{InstrumentedState, State};
 use zkm::mips_emulator::utils::get_block_path;
 
@@ -25,7 +24,14 @@ impl Executor {
         let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
         let args = "".to_string();
 
-        let data = fs::read(elf_path);
+        let data = file::new(&elf_path).read();
+        let block_path = get_block_path(&basedir, &block_no, "");
+        let input_path = if block_path.ends_with('/') {
+            format!("{}input", block_path)
+        } else {
+            format!("{}/input", block_path)
+        };
+        let input_data = file::new(&input_path).read().unwrap();
         if let core::result::Result::Ok(data) = data {
             let file_result = ElfBytes::<AnyEndian>::minimal_parse(data.as_slice());
             match file_result {
@@ -34,12 +40,20 @@ impl Executor {
                     state.patch_go(&file);
                     state.patch_stack(&args);
 
-                    let block_path = get_block_path(&basedir, &block_no, "");
-                    state.load_input(&block_path);
+                    state
+                        .memory
+                        .set_memory_range(0x30000000, Box::new(input_data.as_slice()))
+                        .expect("set memory range failed");
 
                     let mut instrumented_state = InstrumentedState::new(state, block_path);
-                    instrumented_state.split_segment(false, &seg_path);
+                    let seg_path_clone = seg_path.clone();
+                    file::new(&seg_path_clone).create_dir_all().unwrap();
+                    let new_write = |_: &str| -> Option<std::fs::File> { None };
+                    instrumented_state.split_segment(false, &seg_path_clone, new_write);
                     let mut segment_step: usize = seg_size;
+
+                    let new_write =
+                        |name: &str| -> Option<Box<dyn std::io::Write>> { Some(file::new(name)) };
                     loop {
                         if instrumented_state.state.exited {
                             break;
@@ -48,10 +62,10 @@ impl Executor {
                         segment_step -= 1;
                         if segment_step == 0 {
                             segment_step = seg_size;
-                            instrumented_state.split_segment(true, &seg_path);
+                            instrumented_state.split_segment(true, &seg_path_clone, new_write);
                         }
                     }
-                    instrumented_state.split_segment(true, &seg_path);
+                    instrumented_state.split_segment(true, &seg_path_clone, new_write);
                     return Ok(true);
                 }
                 Err(e) => {

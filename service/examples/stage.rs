@@ -1,9 +1,8 @@
+use common::file;
 use common::tls::Config;
 use stage_service::stage_service_client::StageServiceClient;
 use stage_service::{BlockFileItem, GenerateProofRequest};
 use std::env;
-use std::fs;
-use std::path::Path;
 use std::time::Instant;
 use tonic::transport::ClientTlsConfig;
 use tonic::transport::Endpoint;
@@ -30,19 +29,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(Config::new(ca_cert_path, cert_path, key_path).await?)
     };
 
-    let elf_data = prover::provers::read_file_bin(&elf_path).unwrap();
+    let elf_data = file::new(&elf_path).read().unwrap();
     let mut block_data = Vec::new();
 
-    let block_dir_path = Path::new(&block_path);
-    let dir_entries = fs::read_dir(block_dir_path).unwrap();
-    for entry in dir_entries {
-        let entry = entry.unwrap();
-        let path = entry.path();
-        let file_name = path.file_name().unwrap().to_str().unwrap();
+    let files = file::new(&block_path).read_dir().unwrap();
+    for file_name in files {
         let file_path = format!("{}/{}", block_path, file_name);
         let block_file_item = BlockFileItem {
             file_name: file_name.to_string(),
-            file_content: prover::provers::read_file_bin(&file_path).unwrap(),
+            file_content: file::new(&file_path).read().unwrap(),
         };
         block_data.push(block_file_item);
     }

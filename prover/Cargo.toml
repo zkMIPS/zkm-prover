@@ -48,3 +48,4 @@ ff = { package = "ff", version = "0.13", features = ["derive"] }
 ethers = { version = "2.0" }
 dotenv = "0.15.0"
 env_logger = "0.10.0"
+common = {path = "../common"}
