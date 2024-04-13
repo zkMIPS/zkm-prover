@@ -35,6 +35,7 @@ macro_rules! on_task {
             if TASK_STATE_UNPROCESSED != $src.state {
                 log::info!("on_task {:#?}", $dst);
                 $dst.finish_ts = get_timestamp();
+                $src.finish_ts = $dst.finish_ts;
             }
             if TASK_STATE_FAILED == $src.state {
                 $stage.is_error = true;
@@ -130,7 +131,7 @@ impl Stage {
         get_task!(src);
     }
 
-    pub fn on_split_task(&mut self, split_task: SplitTask) {
+    pub fn on_split_task(&mut self, split_task: &mut SplitTask) {
         let dst = &mut self.split_task;
         on_task!(split_task, dst, self);
     }
@@ -156,6 +157,7 @@ impl Stage {
                     seg_path: format!("{}/{}", self.generate_context.seg_path, file_name),
                     start_ts: 0,
                     finish_ts: 0,
+                    node_info: "".to_string(),
                 };
                 self.prove_tasks.push(prove_task);
             }
@@ -174,7 +176,7 @@ impl Stage {
         None
     }
 
-    pub fn on_prove_task(&mut self, prove_task: ProveTask) {
+    pub fn on_prove_task(&mut self, prove_task: &mut ProveTask) {
         for mut item_task in &mut self.prove_tasks {
             if item_task.task_id == prove_task.task_id && item_task.state == TASK_STATE_PROCESSING {
                 let dst = &mut item_task;
@@ -210,7 +212,7 @@ impl Stage {
         get_task!(src);
     }
 
-    pub fn on_agg_all_task(&mut self, agg_all_task: AggAllTask) {
+    pub fn on_agg_all_task(&mut self, agg_all_task: &mut AggAllTask) {
         let dst = &mut self.agg_all_task;
         on_task!(agg_all_task, dst, self);
     }
@@ -236,7 +238,7 @@ impl Stage {
         get_task!(src);
     }
 
-    pub fn on_final_task(&mut self, final_task: FinalTask) {
+    pub fn on_final_task(&mut self, final_task: &mut FinalTask) {
         let dst = &mut self.final_task;
         on_task!(final_task, dst, self);
     }

@@ -8,10 +8,11 @@ service StageService {
     rpc GetStatus(GetStatusRequest) returns (GetStatusResponse) {}
 }
 
-enum ExecutorError {
-    EXECUTOR_ERROR_UNSPECIFIED = 0;
-    EXECUTOR_ERROR_NO_ERROR = 1;
-    EXECUTOR_ERROR_ERROR = 2;
+enum Status {
+    SUCCESS = 0;
+    UNSPECIFIED = 1;
+    COMPUTING = 2;
+    ERROR = 3;
 }
 
 message BlockFileItem {
@@ -30,7 +31,7 @@ message GenerateProofRequest {
 }
 
 message GenerateProofResponse {
-    uint32 executor_error = 1;
+    uint32 status = 1;
     string error_message = 2;
     string proof_id = 3;
     bytes result = 4;
@@ -42,5 +43,6 @@ message GetStatusRequest {
 
 message GetStatusResponse {
     string proof_id = 1;
-    uint64 status = 2;
+    uint32 status = 2;
+    bytes result = 3;
 }

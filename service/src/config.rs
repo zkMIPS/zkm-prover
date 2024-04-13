@@ -13,6 +13,7 @@ pub fn instance() -> &'static Mutex<RuntimeConfig> {
 #[derive(Debug, Deserialize, Clone)]
 pub struct RuntimeConfig {
     pub addr: String,
+    pub database_url: String,
     pub prover_addrs: Vec<String>,
     pub snark_addrs: Vec<String>,
     pub base_dir: String,
@@ -25,6 +26,7 @@ impl RuntimeConfig {
     pub fn new() -> Self {
         RuntimeConfig {
             addr: "0.0.0.0:50000".to_string(),
+            database_url: "mysql://user:password@localhost:3306/dbname".to_string(),
             prover_addrs: ["0.0.0.0:50000".to_string()].to_vec(),
             snark_addrs: ["0.0.0.0:50000".to_string()].to_vec(),
             base_dir: "/tmp".to_string(),
