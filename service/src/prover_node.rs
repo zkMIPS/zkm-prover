@@ -1,16 +1,26 @@
 use once_cell::sync::OnceCell;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
 pub struct ProverNode {
     pub addr: String,
+    pub client: Arc<Mutex<Option<tonic::transport::channel::Channel>>>,
 }
 
 impl ProverNode {
     pub fn new(addr: &String) -> Self {
         ProverNode {
             addr: addr.to_string(),
+            client: Arc::new(Mutex::new(None)),
         }
+    }
+
+    pub fn get_client(&self) -> Option<tonic::transport::channel::Channel> {
+        self.client.lock().unwrap().clone()
+    }
+
+    pub fn set_client(&mut self, client: Option<tonic::transport::channel::Channel>) {
+        *self.client.lock().unwrap() = client;
     }
 }
 

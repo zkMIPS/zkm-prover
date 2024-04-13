@@ -1,4 +1,7 @@
-#[derive(Debug, Default)]
+use serde::Deserialize;
+use serde::Serialize;
+
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct AggAllTask {
     pub task_id: String,
     pub state: u32,
@@ -12,6 +15,7 @@ pub struct AggAllTask {
     pub output_dir: String,
     pub start_ts: u64,
     pub finish_ts: u64,
+    pub node_info: String,
 }
 
 impl Clone for AggAllTask {
@@ -29,6 +33,7 @@ impl Clone for AggAllTask {
             output_dir: self.output_dir.clone(),
             start_ts: self.start_ts,
             finish_ts: self.finish_ts,
+            node_info: self.node_info.clone(),
         }
     }
 }
