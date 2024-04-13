@@ -165,7 +165,9 @@ async fn load_stage_task(tls_config: Option<TlsConfig>, db: database::Database) 
         let limit = 5;
         let status = crate::stage_service::stage_service::Status::Computing.into();
         let check_at = now_timestamp() - 60;
-        let result = db.get_incomplete_stage_tasks(status, check_at as i64, limit).await;
+        let result = db
+            .get_incomplete_stage_tasks(status, check_at as i64, limit)
+            .await;
         match result {
             Ok(tasks) => {
                 if tasks.is_empty() {

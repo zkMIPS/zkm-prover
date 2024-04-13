@@ -70,7 +70,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let get_status_request = GetStatusRequest {
                 proof_id: proof_id.clone(),
             };
-            let get_status_response = stage_client.get_status(get_status_request).await?.into_inner();
+            let get_status_response = stage_client
+                .get_status(get_status_request)
+                .await?
+                .into_inner();
             if get_status_response.status != crate::stage_service::Status::Computing as u32 {
                 println!("get_status_response response: {:?}", response);
                 break;
