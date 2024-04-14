@@ -1,12 +1,12 @@
 use common::file;
 use common::tls::Config;
 use stage_service::stage_service_client::StageServiceClient;
-use stage_service::{BlockFileItem, GenerateProofRequest};
+use stage_service::{BlockFileItem, GenerateProofRequest, GetStatusRequest};
 use std::env;
 use std::time::Instant;
+use tokio::time;
 use tonic::transport::ClientTlsConfig;
 use tonic::transport::Endpoint;
-
 pub mod stage_service {
     tonic::include_proto!("stage.v1");
 }
@@ -42,15 +42,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         block_data.push(block_file_item);
     }
 
+    let proof_id = uuid::Uuid::new_v4().to_string();
     let request = GenerateProofRequest {
-        proof_id: uuid::Uuid::new_v4().to_string(),
+        proof_id: proof_id.clone(),
         elf_data,
         block_data,
         block_no,
         seg_size,
         ..Default::default()
     };
-    println!("request: {:?}", request.proof_id.clone());
+    println!("request: {:?}", proof_id);
     let start = Instant::now();
     let endpoint = match ssl_config {
         Some(config) => {
@@ -63,7 +64,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let mut stage_client = StageServiceClient::connect(endpoint).await?;
     let response = stage_client.generate_proof(request).await?.into_inner();
-    println!("response: {:?}", response);
+    println!("generate_proof response: {:?}", response);
+    if response.status == crate::stage_service::Status::Computing as u32 {
+        loop {
+            let get_status_request = GetStatusRequest {
+                proof_id: proof_id.clone(),
+            };
+            let get_status_response = stage_client
+                .get_status(get_status_request)
+                .await?
+                .into_inner();
+            if get_status_response.status != crate::stage_service::Status::Computing as u32 {
+                println!("get_status_response response: {:?}", response);
+                break;
+            }
+            time::sleep(time::Duration::from_secs(1)).await;
+        }
+    }
     let end = Instant::now();
     let elapsed = end.duration_since(start);
     println!("Elapsed time: {:?} secs", elapsed.as_secs());

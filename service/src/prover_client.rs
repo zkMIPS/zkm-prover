@@ -6,8 +6,6 @@ use prover_service::FinalProofRequest;
 use prover_service::GetTaskResultRequest;
 use prover_service::ProveRequest;
 use prover_service::SplitElfRequest;
-use prover_service::{get_status_response, GetStatusRequest};
-use tonic::transport::ClientTlsConfig;
 
 use stage::tasks::{
     AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
@@ -20,7 +18,6 @@ use crate::prover_node::ProverNode;
 use prover_service::GetTaskResultResponse;
 use std::time::Duration;
 use tonic::transport::Channel;
-use tonic::transport::Uri;
 
 pub mod prover_service {
     tonic::include_proto!("prover.v1");
@@ -34,12 +31,12 @@ pub fn get_nodes() -> Vec<ProverNode> {
 
 pub async fn get_idle_client(
     tls_config: Option<TlsConfig>,
-) -> Option<ProverServiceClient<Channel>> {
+) -> Option<(String, ProverServiceClient<Channel>)> {
     let nodes: Vec<ProverNode> = get_nodes();
-    for node in nodes {
-        let client = is_active(&node.addr, tls_config.clone()).await;
+    for mut node in nodes {
+        let client = node.is_active(tls_config.clone()).await;
         if let Some(client) = client {
-            return Some(client);
+            return Some((node.addr.clone(), client));
         }
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
@@ -54,48 +51,15 @@ pub fn get_snark_nodes() -> Vec<ProverNode> {
 
 pub async fn get_snark_client(
     tls_config: Option<TlsConfig>,
-) -> Option<ProverServiceClient<Channel>> {
+) -> Option<(String, ProverServiceClient<Channel>)> {
     let nodes: Vec<ProverNode> = get_snark_nodes();
-    for node in nodes {
-        let client = is_active(&node.addr, tls_config.clone()).await;
+    for mut node in nodes {
+        let client = node.is_active(tls_config.clone()).await;
         if let Some(client) = client {
-            return Some(client);
+            return Some((node.addr.clone(), client));
         }
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    None
-}
-
-pub async fn is_active(
-    addr: &String,
-    tls_config: Option<TlsConfig>,
-) -> Option<ProverServiceClient<Channel>> {
-    let uri = format!("grpc://{}", addr).parse::<Uri>().unwrap();
-    let mut endpoint = tonic::transport::Channel::builder(uri)
-        .connect_timeout(Duration::from_secs(5))
-        .timeout(Duration::from_secs(TASK_TIMEOUT))
-        .concurrency_limit(256);
-    if let Some(config) = tls_config {
-        let tls_config = ClientTlsConfig::new()
-            .ca_certificate(config.ca_cert)
-            .identity(config.identity);
-        endpoint = endpoint.tls_config(tls_config).unwrap();
-    }
-    let client = ProverServiceClient::connect(endpoint).await;
-    if let Ok(mut client) = client {
-        let request = GetStatusRequest {};
-        let response = client.get_status(Request::new(request)).await;
-        if let Ok(response) = response {
-            let status = response.get_ref().status;
-            if get_status_response::Status::from_i32(status)
-                == Some(get_status_response::Status::Idle)
-                || get_status_response::Status::from_i32(status)
-                    == Some(get_status_response::Status::Unspecified)
-            {
-                return Some(client);
-            }
-        }
-    }
     None
 }
 
@@ -113,7 +77,7 @@ pub fn result_code_to_state(code: i32) -> u32 {
 pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> Option<SplitTask> {
     split_task.state = TASK_STATE_UNPROCESSED;
     let client = get_idle_client(tls_config).await;
-    if let Some(mut client) = client {
+    if let Some((addrs, mut client)) = client {
         let request = SplitElfRequest {
             chain_id: 0,
             timestamp: 0,
@@ -127,12 +91,13 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
         };
         log::info!("split request {:#?}", request);
         let mut grpc_request = Request::new(request);
-        grpc_request.set_timeout(Duration::from_secs(300));
+        grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.split_elf(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("split response {:#?}", response);
                 split_task.state = result_code_to_state(response_result.code);
+                split_task.node_info = addrs;
                 return Some(split_task);
             }
         }
@@ -144,7 +109,7 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
 pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> Option<ProveTask> {
     prove_task.state = TASK_STATE_UNPROCESSED;
     let client = get_idle_client(tls_config).await;
-    if let Some(mut client) = client {
+    if let Some((addrs, mut client)) = client {
         let request = ProveRequest {
             chain_id: 0,
             timestamp: 0,
@@ -159,12 +124,13 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
         };
         log::info!("prove request {:#?}", request);
         let mut grpc_request = Request::new(request);
-        grpc_request.set_timeout(Duration::from_secs(3000));
+        grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.prove(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("prove response {:#?}", response);
                 prove_task.state = result_code_to_state(response_result.code);
+                prove_task.node_info = addrs;
                 return Some(prove_task);
             }
         }
@@ -179,7 +145,7 @@ pub async fn aggregate_all(
 ) -> Option<AggAllTask> {
     agg_all_task.state = TASK_STATE_UNPROCESSED;
     let client = get_idle_client(tls_config).await;
-    if let Some(mut client) = client {
+    if let Some((addrs, mut client)) = client {
         let request = AggregateAllRequest {
             chain_id: 0,
             timestamp: 0,
@@ -196,12 +162,13 @@ pub async fn aggregate_all(
         };
         log::info!("aggregate request {:#?}", request);
         let mut grpc_request = Request::new(request);
-        grpc_request.set_timeout(Duration::from_secs(3000));
+        grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.aggregate_all(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::info!("aggregate response {:#?}", response);
                 agg_all_task.state = result_code_to_state(response_result.code);
+                agg_all_task.node_info = addrs;
                 return Some(agg_all_task);
             }
         }
@@ -215,7 +182,7 @@ pub async fn final_proof(
     _tls_config: Option<TlsConfig>,
 ) -> Option<FinalTask> {
     let client = get_snark_client(None).await;
-    if let Some(mut client) = client {
+    if let Some((addrs, mut client)) = client {
         let (
             common_circuit_data_file,
             verifier_only_circuit_data_file,
@@ -248,7 +215,7 @@ pub async fn final_proof(
         };
         log::info!("final_proof request {:#?}", request);
         let mut grpc_request = Request::new(request);
-        grpc_request.set_timeout(Duration::from_secs(3000));
+        grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.final_proof(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
@@ -267,6 +234,7 @@ pub async fn final_proof(
                                             .write(result.message.as_bytes())
                                             .unwrap();
                                         final_task.state = TASK_STATE_SUCCESS;
+                                        final_task.node_info = addrs;
                                         return Some(final_task);
                                     }
                                 }
@@ -300,7 +268,7 @@ pub async fn get_task_status(
         computed_request_id: task_id.to_owned(),
     };
     let mut grpc_request = Request::new(request);
-    grpc_request.set_timeout(Duration::from_secs(30));
+    grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
     let response = client.get_task_result(grpc_request).await;
     if let Ok(response) = response {
         if let Some(response_result) = response.get_ref().result.as_ref() {

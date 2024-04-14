@@ -13,6 +13,7 @@ env:
   DATABASE_URL: postgresql://root:password@localhost:5432/state
   RUST_BACKTRACE: 1
   RUST_LOG: info
+  SQLX_OFFLINE: 1
 
 jobs:
   build_and_test:
