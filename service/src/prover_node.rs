@@ -29,7 +29,7 @@ impl ProverNode {
         self.client.lock().unwrap().clone()
     }
 
-    pub fn set_client(&mut self, client: Option<tonic::transport::channel::Channel>) {
+    fn set_client(&mut self, client: Option<tonic::transport::channel::Channel>) {
         *self.client.lock().unwrap() = client;
     }
 
