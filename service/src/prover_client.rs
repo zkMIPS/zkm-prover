@@ -6,8 +6,6 @@ use prover_service::FinalProofRequest;
 use prover_service::GetTaskResultRequest;
 use prover_service::ProveRequest;
 use prover_service::SplitElfRequest;
-use prover_service::{get_status_response, GetStatusRequest};
-use tonic::transport::ClientTlsConfig;
 
 use stage::tasks::{
     AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
@@ -20,7 +18,6 @@ use crate::prover_node::ProverNode;
 use prover_service::GetTaskResultResponse;
 use std::time::Duration;
 use tonic::transport::Channel;
-use tonic::transport::Uri;
 
 pub mod prover_service {
     tonic::include_proto!("prover.v1");
@@ -37,7 +34,7 @@ pub async fn get_idle_client(
 ) -> Option<(String, ProverServiceClient<Channel>)> {
     let nodes: Vec<ProverNode> = get_nodes();
     for mut node in nodes {
-        let client = is_active(&mut node, tls_config.clone()).await;
+        let client = node.is_active(tls_config.clone()).await;
         if let Some(client) = client {
             return Some((node.addr.clone(), client));
         }
@@ -57,59 +54,12 @@ pub async fn get_snark_client(
 ) -> Option<(String, ProverServiceClient<Channel>)> {
     let nodes: Vec<ProverNode> = get_snark_nodes();
     for mut node in nodes {
-        let client = is_active(&mut node, tls_config.clone()).await;
+        let client = node.is_active(tls_config.clone()).await;
         if let Some(client) = client {
             return Some((node.addr.clone(), client));
         }
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    None
-}
-
-pub async fn is_active(
-    node: &mut ProverNode,
-    tls_config: Option<TlsConfig>,
-) -> Option<ProverServiceClient<Channel>> {
-    let mut client = node.get_client();
-    match client {
-        Some(_) => {}
-        None => {
-            let uri = format!("grpc://{}", node.addr).parse::<Uri>().unwrap();
-            let mut endpoint = tonic::transport::Channel::builder(uri)
-                .connect_timeout(Duration::from_secs(5))
-                .timeout(Duration::from_secs(TASK_TIMEOUT))
-                .concurrency_limit(256);
-            if let Some(config) = tls_config {
-                let tls_config = ClientTlsConfig::new()
-                    .ca_certificate(config.ca_cert)
-                    .identity(config.identity);
-                endpoint = endpoint.tls_config(tls_config).unwrap();
-            }
-            let client_init = endpoint.connect().await;
-            if let Ok(client_init) = client_init {
-                node.set_client(Some(client_init.clone()));
-                client = Some(client_init.clone());
-            }
-        }
-    }
-
-    if let Some(client) = client {
-        let mut client = ProverServiceClient::<Channel>::new(client);
-        let request = GetStatusRequest {};
-        let response = client.get_status(Request::new(request)).await;
-        if let Ok(response) = response {
-            let status = response.get_ref().status;
-            if get_status_response::Status::from_i32(status)
-                == Some(get_status_response::Status::Idle)
-                || get_status_response::Status::from_i32(status)
-                    == Some(get_status_response::Status::Unspecified)
-            {
-                return Some(client);
-            }
-        } else {
-            node.set_client(None);
-        }
-    }
     None
 }
 
