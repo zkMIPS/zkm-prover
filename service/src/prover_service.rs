@@ -53,7 +53,7 @@ macro_rules! on_done {
             }
             Err(e) => {
                 $resp.result = Some(Result {
-                    code: (ResultCode::Error.into()),
+                    code: (ResultCode::InternalError.into()),
                     message: (e.to_string()),
                 });
             }

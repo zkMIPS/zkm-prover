@@ -67,10 +67,9 @@ pub fn result_code_to_state(code: i32) -> u32 {
     match ResultCode::from_i32(code) {
         Some(ResultCode::Unspecified) => TASK_STATE_PROCESSING,
         Some(ResultCode::Ok) => TASK_STATE_SUCCESS,
-        Some(ResultCode::Error) => TASK_STATE_FAILED,
         Some(ResultCode::InternalError) => TASK_STATE_FAILED,
         Some(ResultCode::Busy) => TASK_STATE_UNPROCESSED,
-        _ => TASK_STATE_UNPROCESSED,
+        _ => TASK_STATE_FAILED,
     }
 }
 
