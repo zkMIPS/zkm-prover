@@ -1,5 +1,6 @@
 use common::file;
 use common::tls::Config as TlsConfig;
+use num::{bigint::Sign, BigInt};
 use prover_service::prover_service_client::ProverServiceClient;
 use prover_service::AggregateAllRequest;
 use prover_service::FinalProofRequest;
@@ -230,6 +231,16 @@ pub async fn final_proof(
                             if let Some(result) = task_result.result {
                                 if let Some(code) = ResultCode::from_i32(result.code) {
                                     if code == ResultCode::Ok {
+                                        log::info!("final_proof result {:#?}", result);
+                                        let result_ref = &result.message.as_bytes();
+                                        let count = result_ref.len() / 32;
+                                        for index in 0..count {
+                                            let data = BigInt::from_bytes_be(
+                                                Sign::Plus,
+                                                &result_ref[(32 * index)..(32 * index + 32)],
+                                            );
+                                            log::info!("index {} data {}", index, data);
+                                        }
                                         let _ = file::new(&final_task.output_path)
                                             .write(result.message.as_bytes())
                                             .unwrap();

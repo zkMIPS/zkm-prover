@@ -20,6 +20,8 @@ mod stage_worker;
 struct Args {
     #[arg(short = 'c', long = "config", default_value_t = String::from("./config/config.toml"))]
     config: String,
+    #[arg(short = 's', long = "stage", default_value_t = false)]
+    stage: bool,
 }
 
 #[tokio::main]
@@ -38,32 +40,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             nodes_data.add_snark_node(ProverNode::new(node));
         }
     }
-    let prover = prover_service::ProverServiceSVC::default();
-    let stage = stage_service::StageServiceSVC::new(runtime_config.clone()).await?;
+    let mut server = Server::builder();
     if runtime_config.ca_cert_path.is_some() {
         let tls_config = TlsConfig::new(
-            runtime_config.ca_cert_path.unwrap(),
-            runtime_config.cert_path.unwrap(),
-            runtime_config.key_path.unwrap(),
+            runtime_config.ca_cert_path.clone().unwrap(),
+            runtime_config.cert_path.clone().unwrap(),
+            runtime_config.key_path.clone().unwrap(),
         )
         .await?;
-        Server::builder()
-            .tls_config(
-                ServerTlsConfig::new()
-                    .identity(tls_config.identity)
-                    .client_ca_root(tls_config.ca_cert),
-            )?
-            .add_service(ProverServiceServer::new(prover))
+        server = server.tls_config(
+            ServerTlsConfig::new()
+                .identity(tls_config.identity)
+                .client_ca_root(tls_config.ca_cert),
+        )?;
+    }
+    if args.stage {
+        let stage = stage_service::StageServiceSVC::new(runtime_config.clone()).await?;
+        server
             .add_service(StageServiceServer::new(stage))
             .serve(addr)
             .await?;
     } else {
-        Server::builder()
+        let prover = prover_service::ProverServiceSVC::default();
+        server
             .add_service(ProverServiceServer::new(prover))
-            .add_service(StageServiceServer::new(stage))
             .serve(addr)
             .await?;
     }
-
     Ok(())
 }

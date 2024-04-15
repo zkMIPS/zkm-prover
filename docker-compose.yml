@@ -23,7 +23,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/usr/local/bin/service --config /usr/local/bin/config.toml"
+      - "/usr/local/bin/service --config /usr/local/bin/config.toml --stage"
 
   zkm-prover:
     container_name: zkm-prover

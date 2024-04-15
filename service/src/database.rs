@@ -103,16 +103,19 @@ impl Database {
     pub async fn update_stage_task_check_at(
         &self,
         proof_id: &str,
+        old_check_at: u64,
         check_at: u64,
-    ) -> anyhow::Result<bool> {
-        sqlx::query!(
-            "UPDATE stage_task set check_at = ? where id = ?",
+    ) -> anyhow::Result<u64> {
+        let rows_affected = sqlx::query!(
+            "UPDATE stage_task set check_at = ? where id = ? and check_at = ?",
             check_at,
-            proof_id
+            proof_id,
+            old_check_at
         )
         .execute(&self.db_pool)
-        .await?;
-        Ok(true)
+        .await?
+        .rows_affected();
+        Ok(rows_affected)
     }
 
     #[allow(dead_code)]
