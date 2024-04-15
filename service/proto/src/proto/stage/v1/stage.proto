@@ -10,14 +10,14 @@ service StageService {
 
 enum Status {
     SUCCESS = 0;
-    COMPUTING = 1;
-    WRONG_PARAMETER = 2;
-    INTERNAL_ERROR = 3;
-    SPLIT_ERROR = 4;
-    PROVE_ERROR = 5;
-    AGG_ERROR = 6;
-    FINAL_ERROR = 7;
-    UNSPECIFIED = 8;
+    UNSPECIFIED = 1;
+    COMPUTING = 2;
+    WRONG_PARAMETER = 3;
+    INTERNAL_ERROR = 4;
+    SPLIT_ERROR = 5;
+    PROVE_ERROR = 6;
+    AGG_ERROR = 7;
+    FINAL_ERROR = 8;
 }
 
 message BlockFileItem {
