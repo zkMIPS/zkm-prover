@@ -139,13 +139,26 @@ async fn run_stage_task(
                     }
                 }
                 if stage.is_error() {
-                    let _ = db
-                        .update_stage_task(
-                            &task.id,
-                            crate::stage_service::stage_service::Status::Error.into(),
-                            "",
-                        )
-                        .await;
+                    let get_status = || {
+                        if stage.split_task.state != TASK_STATE_SUCCESS {
+                            crate::stage_service::stage_service::Status::SplitError
+                        } else {
+                            for task in &stage.prove_tasks {
+                                if task.state != TASK_STATE_SUCCESS {
+                                    return crate::stage_service::stage_service::Status::ProveError;
+                                }
+                            }
+                            if stage.agg_all_task.state != TASK_STATE_SUCCESS {
+                                crate::stage_service::stage_service::Status::AggError
+                            } else if stage.final_task.state != TASK_STATE_SUCCESS {
+                                return crate::stage_service::stage_service::Status::FinalError;
+                            } else {
+                                return crate::stage_service::stage_service::Status::InternalError;
+                            }
+                        }
+                    };
+                    let status = get_status();
+                    let _ = db.update_stage_task(&task.id, status.into(), "").await;
                 } else {
                     let result = file::new(&generate_context.final_path).read().unwrap();
                     let _ = db
@@ -161,7 +174,7 @@ async fn run_stage_task(
                 let _ = db
                     .update_stage_task(
                         &task.id,
-                        crate::stage_service::stage_service::Status::Error.into(),
+                        crate::stage_service::stage_service::Status::InternalError.into(),
                         "",
                     )
                     .await;

@@ -82,7 +82,7 @@ impl StageService for StageServiceSVC {
         if !provers::valid_seg_size(request.get_ref().seg_size as usize) {
             let response = stage_service::GenerateProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
-                status: stage_service::Status::Unspecified as u32,
+                status: stage_service::Status::InvalidParameter as u32,
                 error_message: "invalid seg_size".to_string(),
                 ..Default::default()
             };
