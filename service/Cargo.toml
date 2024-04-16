@@ -25,5 +25,6 @@ toml = "0.5.1"
 lazy_static = "1.4"
 clap = "4.5.2"
 anyhow = "1.0.75"
+num = "0.4"
 [build-dependencies]
 tonic-build = "0.8.0"

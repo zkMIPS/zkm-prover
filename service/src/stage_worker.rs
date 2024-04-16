@@ -37,7 +37,11 @@ pub fn now_timestamp() -> u64 {
         .as_secs()
 }
 
-async fn run_stage_task(task: StageTask, tls_config: Option<TlsConfig>, db: database::Database) {
+async fn run_stage_task(
+    mut task: StageTask,
+    tls_config: Option<TlsConfig>,
+    db: database::Database,
+) {
     if let Some(context) = task.context {
         match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
             Ok(generate_context) => {
@@ -124,7 +128,14 @@ async fn run_stage_task(task: StageTask, tls_config: Option<TlsConfig>, db: data
                     let ts_now = now_timestamp();
                     if check_at + 10 < ts_now {
                         check_at = ts_now;
-                        let _ = db.update_stage_task_check_at(&task.id, check_at).await;
+                        let rows_affected = db
+                            .update_stage_task_check_at(&task.id, task.check_at as u64, check_at)
+                            .await;
+                        if let Ok(rows_affected) = rows_affected {
+                            if rows_affected == 1 {
+                                task.check_at = check_at as i64;
+                            }
+                        }
                     }
                 }
                 if stage.is_error() {
@@ -164,30 +175,42 @@ async fn load_stage_task(tls_config: Option<TlsConfig>, db: database::Database) 
     loop {
         let limit = 5;
         let status = crate::stage_service::stage_service::Status::Computing.into();
-        let check_at = now_timestamp() - 60;
+        let check_at = now_timestamp();
         let result = db
-            .get_incomplete_stage_tasks(status, check_at as i64, limit)
+            .get_incomplete_stage_tasks(status, (check_at - 60) as i64, limit)
             .await;
         match result {
             Ok(tasks) => {
                 if tasks.is_empty() {
                     time::sleep(time::Duration::from_secs(1)).await;
                 } else {
-                    for task in tasks {
+                    for mut task in tasks {
                         {
                             if store.lock().unwrap().contains_key(&task.id) {
                                 continue;
                             }
-                            store.lock().unwrap().insert(task.id.clone(), check_at);
+                            let rows_affected = db
+                                .update_stage_task_check_at(
+                                    &task.id,
+                                    task.check_at as u64,
+                                    check_at,
+                                )
+                                .await;
+                            if let Ok(rows_affected) = rows_affected {
+                                if rows_affected == 1 {
+                                    task.check_at = check_at as i64;
+                                    store.lock().unwrap().insert(task.id.clone(), check_at);
+                                    let store_arc = store.clone();
+                                    let tls_config_copy = tls_config.clone();
+                                    let db_copy = db.clone();
+                                    tokio::spawn(async move {
+                                        let id = task.id.clone();
+                                        run_stage_task(task, tls_config_copy, db_copy).await;
+                                        store_arc.lock().unwrap().remove(&id);
+                                    });
+                                }
+                            }
                         }
-                        let store_arc = store.clone();
-                        let tls_config_copy = tls_config.clone();
-                        let db_copy = db.clone();
-                        tokio::spawn(async move {
-                            let id = task.id.clone();
-                            run_stage_task(task, tls_config_copy, db_copy).await;
-                            store_arc.lock().unwrap().remove(&id);
-                        });
                     }
                 }
             }
