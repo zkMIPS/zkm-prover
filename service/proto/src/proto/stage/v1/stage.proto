@@ -12,7 +12,7 @@ enum Status {
     SUCCESS = 0;
     UNSPECIFIED = 1;
     COMPUTING = 2;
-    WRONG_PARAMETER = 3;
+    INVALID_PARAMETER = 3;
     INTERNAL_ERROR = 4;
     SPLIT_ERROR = 5;
     PROVE_ERROR = 6;

@@ -10,7 +10,7 @@ message Version {
 
 enum ResultCode {
     OK = 0;
-    WRONG_PARAMETER = 1;
+    INVALID_PARAMETER = 1;
     INTERNAL_ERROR = 2;
     BUSY = 3;
     UNSPECIFIED = 4;
