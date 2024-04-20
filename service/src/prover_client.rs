@@ -3,13 +3,14 @@ use common::tls::Config as TlsConfig;
 use num::{bigint::Sign, BigInt};
 use prover_service::prover_service_client::ProverServiceClient;
 use prover_service::AggregateAllRequest;
+use prover_service::AggregateRequest;
 use prover_service::FinalProofRequest;
 use prover_service::GetTaskResultRequest;
 use prover_service::ProveRequest;
 use prover_service::SplitElfRequest;
 
 use stage::tasks::{
-    AggAllTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
+    AggAllTask, AggTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
     TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, TASK_TIMEOUT,
 };
 use tonic::Request;
@@ -139,6 +140,47 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
     Some(prove_task)
 }
 
+pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> Option<AggTask> {
+    agg_task.state = TASK_STATE_UNPROCESSED;
+    let client = get_idle_client(tls_config).await;
+    if let Some((addrs, mut client)) = client {
+        let request = AggregateRequest {
+            chain_id: 0,
+            timestamp: 0,
+            proof_id: agg_task.proof_id.clone(),
+            computed_request_id: agg_task.task_id.clone(),
+            base_dir: agg_task.base_dir.clone(),
+            seg_path: "".to_string(),
+            block_no: agg_task.block_no,
+            seg_size: agg_task.seg_size,
+            proof_path1: agg_task.proof_path1.clone(),
+            proof_path2: agg_task.proof_path2.clone(),
+            pub_value_path1: agg_task.pub_value_path1.clone(),
+            pub_value_path2: agg_task.pub_value_path2.clone(),
+            agg_proof_path: agg_task.output_proof_path.clone(),
+            agg_pub_value_path: agg_task.output_pub_value_path.clone(),
+            output_dir: agg_task.output_dir.clone(),
+            is_agg_1: agg_task.is_agg1,
+            is_agg_2: agg_task.is_agg2,
+            is_final: agg_task.is_final,
+        };
+        log::info!("aggregate request {:#?}", request);
+        let mut grpc_request = Request::new(request);
+        grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
+        let response = client.aggregate(grpc_request).await;
+        if let Ok(response) = response {
+            if let Some(response_result) = response.get_ref().result.as_ref() {
+                log::info!("aggregate response {:#?}", response);
+                agg_task.state = result_code_to_state(response_result.code);
+                agg_task.node_info = addrs;
+                return Some(agg_task);
+            }
+        }
+    }
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    Some(agg_task)
+}
+
 pub async fn aggregate_all(
     mut agg_all_task: AggAllTask,
     tls_config: Option<TlsConfig>,
@@ -160,13 +202,13 @@ pub async fn aggregate_all(
             pub_value_dir: agg_all_task.pub_value_dir.clone(),
             output_dir: agg_all_task.output_dir.clone(),
         };
-        log::info!("aggregate request {:#?}", request);
+        log::info!("aggregate_all request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.aggregate_all(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::info!("aggregate response {:#?}", response);
+                log::info!("aggregate_all response {:#?}", response);
                 agg_all_task.state = result_code_to_state(response_result.code);
                 agg_all_task.node_info = addrs;
                 return Some(agg_all_task);
@@ -213,7 +255,7 @@ pub async fn final_proof(
             proof_with_public_inputs,
             verifier_only_circuit_data,
         };
-        log::info!("final_proof request {:#?}", request);
+        log::info!("final_proof request {:?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.final_proof(grpc_request).await;

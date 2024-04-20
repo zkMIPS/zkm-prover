@@ -118,6 +118,8 @@ message AggregateRequest {
     bool is_agg_2 = 14;
     string agg_proof_path = 15;
     string agg_pub_value_path = 16;
+    bool is_final = 17;
+    string output_dir = 18;
 }
 
 message AggregateResponse {

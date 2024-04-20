@@ -3,6 +3,7 @@ use serde::Serialize;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct ProveTask {
+    pub file_no: usize,
     pub task_id: String,
     pub state: u32,
     pub base_dir: String,
@@ -20,6 +21,7 @@ pub struct ProveTask {
 impl Clone for ProveTask {
     fn clone(&self) -> Self {
         ProveTask {
+            file_no: self.file_no,
             task_id: self.task_id.clone(),
             state: self.state,
             base_dir: self.base_dir.clone(),

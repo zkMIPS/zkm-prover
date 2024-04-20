@@ -176,15 +176,17 @@ impl ProverService for ProverServiceSVC {
             &request.get_ref().pub_value_path2,
             request.get_ref().is_agg_1,
             request.get_ref().is_agg_2,
+            request.get_ref().is_final,
             &request.get_ref().agg_proof_path,
             &request.get_ref().agg_pub_value_path,
+            &request.get_ref().output_dir,
         );
 
-        let agg_all_func = move || {
+        let agg_func = move || {
             let agg_ctx = agg_context;
             Pipeline::new().prove_aggregate(&agg_ctx)
         };
-        let result = run_back_task(agg_all_func).await;
+        let result = run_back_task(agg_func).await;
         let mut response = prover_service::AggregateResponse {
             proof_id: request.get_ref().proof_id.clone(),
             computed_request_id: request.get_ref().computed_request_id.clone(),

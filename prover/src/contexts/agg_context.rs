@@ -11,8 +11,10 @@ pub struct AggContext {
     pub pub_value_path2: String,
     pub is_agg_1: bool,
     pub is_agg_2: bool,
+    pub is_final: bool,
     pub agg_proof_path: String,
     pub agg_pub_value_path: String,
+    pub output_dir: String,
 }
 
 impl AggContext {
@@ -27,8 +29,10 @@ impl AggContext {
         pub_value_path2: &String,
         is_agg_1: bool,
         is_agg_2: bool,
+        is_final: bool,
         agg_proof_path: &String,
         agg_pub_value_path: &String,
+        output_dir: &String,
     ) -> Self {
         AggContext {
             basedir: basedir.to_string(),
@@ -40,8 +44,10 @@ impl AggContext {
             pub_value_path2: pub_value_path2.to_string(),
             is_agg_1,
             is_agg_2,
+            is_final,
             agg_proof_path: agg_proof_path.to_string(),
             agg_pub_value_path: agg_pub_value_path.to_string(),
+            output_dir: output_dir.to_string(),
         }
     }
 }

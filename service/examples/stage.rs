@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await?
                 .into_inner();
             if get_status_response.status != crate::stage_service::Status::Computing as u32 {
-                println!("get_status_response response: {:?}", response);
+                println!("get_status_response response: {:?}", get_status_response);
                 break;
             }
             time::sleep(time::Duration::from_secs(1)).await;
