@@ -187,7 +187,7 @@ impl AggTask {
             seg_size: left.seg_size,
             proof_id: left.proof_id.clone(),
             input1: left.to_agg_input(),
-            input2: left.to_agg_input(),
+            input2: right.to_agg_input(),
             ..Default::default()
         };
         if !left.from_prove {
