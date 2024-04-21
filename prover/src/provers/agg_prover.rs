@@ -48,8 +48,6 @@ impl Prover<AggContext> for AggProver {
         let is_agg1 = ctx.is_agg_1;
         let is_agg2 = ctx.is_agg_2;
         let output_dir = ctx.output_dir.clone();
-        let _file = String::from("");
-        let _args = "".to_string();
 
         let all_stark = AllStark::<F, D>::default();
         let config = StarkConfig::standard_fast_config();

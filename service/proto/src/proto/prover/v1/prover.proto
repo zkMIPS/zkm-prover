@@ -100,6 +100,12 @@ message ProveResponse {
     Result result = 3;
 }
 
+message AggregateInput {
+    string proof_path = 1;
+    string pub_value_path = 2;
+    bool is_agg = 3;
+};
+
 message AggregateRequest {
     uint64 chain_id = 1;
     uint64 timestamp = 2;
@@ -110,16 +116,12 @@ message AggregateRequest {
     string seg_path = 6;
     uint64 block_no = 7;
     uint32 seg_size = 8;
-    string proof_path1 = 9;
-    string proof_path2 = 10;
-    string pub_value_path1 = 11;
-    string pub_value_path2 = 12;
-    bool is_agg_1 = 13;
-    bool is_agg_2 = 14;
-    string agg_proof_path = 15;
-    string agg_pub_value_path = 16;
-    bool is_final = 17;
-    string output_dir = 18;
+    AggregateInput input1 = 9;
+    AggregateInput input2 = 10;
+    string agg_proof_path = 11;
+    string agg_pub_value_path = 12;
+    bool is_final = 13;
+    string output_dir = 14;
 }
 
 message AggregateResponse {

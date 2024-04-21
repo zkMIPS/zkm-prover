@@ -40,6 +40,23 @@ impl Clone for AggAllTask {
     }
 }
 
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+pub struct AggInput {
+    pub proof_path: String,
+    pub pub_value_path: String,
+    pub is_agg: bool,
+}
+
+impl AggInput {
+    pub fn from_prove_task(prove_task: &ProveTask) -> AggInput {
+        AggInput {
+            proof_path: prove_task.prove_path.clone(),
+            pub_value_path: prove_task.pub_value_path.clone(),
+            is_agg: false,
+        }
+    }
+}
+
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct AggTask {
     pub file_key: String,
@@ -49,12 +66,8 @@ pub struct AggTask {
     pub block_no: u64,
     pub seg_size: u32,
     pub proof_id: String,
-    pub proof_path1: String,
-    pub proof_path2: String,
-    pub pub_value_path1: String,
-    pub pub_value_path2: String,
-    pub is_agg1: bool,
-    pub is_agg2: bool,
+    pub input1: AggInput,
+    pub input2: AggInput,
     pub is_final: bool,
     pub from_prove: bool,
     pub output_proof_path: String,
@@ -79,12 +92,8 @@ impl Clone for AggTask {
             block_no: self.block_no,
             seg_size: self.seg_size,
             proof_id: self.proof_id.clone(),
-            proof_path1: self.proof_path1.clone(),
-            proof_path2: self.proof_path2.clone(),
-            pub_value_path1: self.pub_value_path1.clone(),
-            pub_value_path2: self.pub_value_path2.clone(),
-            is_agg1: self.is_agg1,
-            is_agg2: self.is_agg2,
+            input1: self.input1.clone(),
+            input2: self.input2.clone(),
             is_final: self.is_final,
             from_prove: self.from_prove,
             output_proof_path: self.output_proof_path.clone(),
@@ -123,6 +132,14 @@ impl AggTask {
         self.output_pub_value_path = format!("{}/pub_value/{}", prove_dir, self.file_key);
     }
 
+    pub fn to_agg_input(&self) -> AggInput {
+        AggInput {
+            proof_path: self.output_proof_path.clone(),
+            pub_value_path: self.output_pub_value_path.clone(),
+            is_agg: !self.from_prove,
+        }
+    }
+
     pub fn init_from_single_prove_task(prove_task: &ProveTask, prove_dir: &str) -> AggTask {
         let mut agg_task = AggTask {
             file_key: format!("{}", prove_task.file_no),
@@ -142,8 +159,6 @@ impl AggTask {
     pub fn init_from_two_prove_task(
         left: &ProveTask,
         right: &ProveTask,
-        left_is_agg: bool,
-        right_is_agg: bool,
         prove_dir: &str,
     ) -> AggTask {
         let mut agg_task = AggTask {
@@ -154,12 +169,8 @@ impl AggTask {
             state: TASK_STATE_UNPROCESSED,
             seg_size: left.seg_size,
             proof_id: left.proof_id.clone(),
-            proof_path1: left.prove_path.clone(),
-            proof_path2: right.prove_path.clone(),
-            pub_value_path1: left.pub_value_path.clone(),
-            pub_value_path2: right.pub_value_path.clone(),
-            is_agg1: left_is_agg,
-            is_agg2: right_is_agg,
+            input1: AggInput::from_prove_task(left),
+            input2: AggInput::from_prove_task(right),
             ..Default::default()
         };
         agg_task.set_out_path(prove_dir);
@@ -175,12 +186,8 @@ impl AggTask {
             state: TASK_STATE_UNPROCESSED,
             seg_size: left.seg_size,
             proof_id: left.proof_id.clone(),
-            proof_path1: left.output_proof_path.clone(),
-            proof_path2: right.output_proof_path.clone(),
-            pub_value_path1: left.output_pub_value_path.clone(),
-            pub_value_path2: right.output_pub_value_path.clone(),
-            is_agg1: !left.from_prove,
-            is_agg2: !right.from_prove,
+            input1: left.to_agg_input(),
+            input2: left.to_agg_input(),
             ..Default::default()
         };
         if !left.from_prove {

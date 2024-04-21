@@ -12,7 +12,7 @@ use stage::tasks::{
     Task, TASK_ITYPE_AGG, TASK_ITYPE_AGGALL, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT,
 };
 
-use stage::stage::{STEP_IN_AGG, STEP_IN_AGG_ALL, STEP_IN_FINAL, STEP_IN_PROVE, STEP_IN_SPLIT};
+use stage::stage::Step;
 
 use stage::tasks::{TASK_STATE_FAILED, TASK_STATE_SUCCESS};
 
@@ -56,7 +56,7 @@ async fn run_stage_task(
                 stage.dispatch();
                 loop {
                     match stage.step {
-                        STEP_IN_SPLIT => {
+                        Step::InSplit => {
                             let split_task = stage.get_split_task();
                             if let Some(split_task) = split_task {
                                 let tx = tx.clone();
@@ -70,7 +70,7 @@ async fn run_stage_task(
                                 });
                             }
                         }
-                        STEP_IN_PROVE => {
+                        Step::InProve => {
                             let prove_task = stage.get_prove_task();
                             if let Some(prove_task) = prove_task {
                                 let tx = tx.clone();
@@ -84,7 +84,7 @@ async fn run_stage_task(
                                 });
                             }
                         }
-                        STEP_IN_AGG => {
+                        Step::InAgg => {
                             let agg_task = stage.get_agg_task();
                             if let Some(agg_task) = agg_task {
                                 let tx = tx.clone();
@@ -98,7 +98,7 @@ async fn run_stage_task(
                                 });
                             }
                         }
-                        STEP_IN_AGG_ALL => {
+                        Step::InAggAll => {
                             let agg_all_task = stage.get_agg_all_task();
                             if let Some(agg_all_task) = agg_all_task {
                                 let tx = tx.clone();
@@ -113,7 +113,7 @@ async fn run_stage_task(
                                 });
                             }
                         }
-                        STEP_IN_FINAL => {
+                        Step::InFinal => {
                             let final_task = stage.get_final_task();
                             if let Some(final_task) = final_task {
                                 let tx = tx.clone();
@@ -178,11 +178,11 @@ async fn run_stage_task(
                 }
                 if stage.is_error() {
                     let get_status = || match stage.step {
-                        STEP_IN_SPLIT => crate::stage_service::stage_service::Status::SplitError,
-                        STEP_IN_PROVE => crate::stage_service::stage_service::Status::ProveError,
-                        STEP_IN_AGG => crate::stage_service::stage_service::Status::AggError,
-                        STEP_IN_AGG_ALL => crate::stage_service::stage_service::Status::AggError,
-                        STEP_IN_FINAL => crate::stage_service::stage_service::Status::FinalError,
+                        Step::InSplit => crate::stage_service::stage_service::Status::SplitError,
+                        Step::InProve => crate::stage_service::stage_service::Status::ProveError,
+                        Step::InAgg => crate::stage_service::stage_service::Status::AggError,
+                        Step::InAggAll => crate::stage_service::stage_service::Status::AggError,
+                        Step::InFinal => crate::stage_service::stage_service::Status::FinalError,
                         _ => crate::stage_service::stage_service::Status::InternalError,
                     };
                     let status = get_status();

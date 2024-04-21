@@ -15,13 +15,17 @@ pub fn get_timestamp() -> u64 {
     duration_since_epoch.as_secs()
 }
 
-pub const STEP_INIT: i32 = 0;
-pub const STEP_IN_SPLIT: i32 = 1;
-pub const STEP_IN_PROVE: i32 = 2;
-pub const STEP_IN_AGG: i32 = 3;
-pub const STEP_IN_AGG_ALL: i32 = 4;
-pub const STEP_IN_FINAL: i32 = 5;
-pub const STEP_END: i32 = 6;
+#[derive(Default)]
+pub enum Step {
+    #[default]
+    Init,
+    InSplit,
+    InProve,
+    InAgg,
+    InAggAll,
+    InFinal,
+    End,
+}
 
 #[derive(Default)]
 pub struct Stage {
@@ -33,7 +37,7 @@ pub struct Stage {
     pub final_task: FinalTask,
     pub is_error: bool,
     pub errmsg: String,
-    pub step: i32,
+    pub step: Step,
 }
 
 macro_rules! on_task {
@@ -78,23 +82,23 @@ impl Stage {
             final_task: FinalTask::default(),
             is_error: false,
             errmsg: "".to_string(),
-            step: 0,
+            step: Step::Init,
         }
     }
 
     pub fn dispatch(&mut self) {
         match self.step {
-            STEP_INIT => {
+            Step::Init => {
                 self.gen_split_task();
-                self.step = STEP_IN_SPLIT;
+                self.step = Step::InSplit;
             }
-            STEP_IN_SPLIT => {
+            Step::InSplit => {
                 if self.split_task.state == TASK_STATE_SUCCESS {
                     self.gen_prove_task();
-                    self.step = STEP_IN_PROVE;
+                    self.step = Step::InProve;
                 }
             }
-            STEP_IN_PROVE => {
+            Step::InProve => {
                 if self
                     .prove_tasks
                     .iter()
@@ -102,32 +106,32 @@ impl Stage {
                 {
                     if self.prove_tasks.len() > 3 {
                         self.gen_agg_tasks();
-                        self.step = STEP_IN_AGG;
+                        self.step = Step::InAgg;
                     } else {
                         self.gen_agg_all_task();
-                        self.step = STEP_IN_AGG_ALL;
+                        self.step = Step::InAggAll;
                     }
                 }
             }
-            STEP_IN_AGG => {
+            Step::InAgg => {
                 if self
                     .agg_tasks
                     .iter()
                     .all(|task| task.state == TASK_STATE_SUCCESS)
                 {
                     self.gen_final_task();
-                    self.step = STEP_IN_FINAL;
+                    self.step = Step::InFinal;
                 }
             }
-            STEP_IN_AGG_ALL => {
+            Step::InAggAll => {
                 if self.agg_all_task.state == TASK_STATE_SUCCESS {
                     self.gen_final_task();
-                    self.step = STEP_IN_FINAL;
+                    self.step = Step::InFinal;
                 }
             }
-            STEP_IN_FINAL => {
+            Step::InFinal => {
                 if self.final_task.state == TASK_STATE_SUCCESS {
-                    self.step = STEP_END;
+                    self.step = Step::End;
                 }
             }
             _ => {}
@@ -235,8 +239,6 @@ impl Stage {
             result.push(agg_task::AggTask::init_from_two_prove_task(
                 &(self.prove_tasks[i]),
                 &(self.prove_tasks[i + 1]),
-                false,
-                false,
                 &self.generate_context.prove_path,
             ));
         }
@@ -415,7 +417,10 @@ mod tests {
             stage.agg_tasks.iter().for_each(|element| {
                 println!(
                     "key:{} left:{} right:{} final:{}",
-                    element.file_key, element.is_agg1, element.is_agg2, element.is_final
+                    element.file_key,
+                    element.input1.is_agg,
+                    element.input2.is_agg,
+                    element.is_final,
                 );
             });
             assert!(stage.agg_tasks.len() <= n);

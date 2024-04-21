@@ -16,6 +16,7 @@ use stage::tasks::{
 use tonic::Request;
 
 use self::prover_service::ResultCode;
+use crate::prover_client::prover_service::AggregateInput;
 use crate::prover_node::ProverNode;
 use prover_service::GetTaskResultResponse;
 use std::time::Duration;
@@ -153,15 +154,19 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             seg_path: "".to_string(),
             block_no: agg_task.block_no,
             seg_size: agg_task.seg_size,
-            proof_path1: agg_task.proof_path1.clone(),
-            proof_path2: agg_task.proof_path2.clone(),
-            pub_value_path1: agg_task.pub_value_path1.clone(),
-            pub_value_path2: agg_task.pub_value_path2.clone(),
+            input1: Some(AggregateInput {
+                proof_path: agg_task.input1.proof_path.clone(),
+                pub_value_path: agg_task.input1.pub_value_path.clone(),
+                is_agg: agg_task.input1.is_agg,
+            }),
+            input2: Some(AggregateInput {
+                proof_path: agg_task.input2.proof_path.clone(),
+                pub_value_path: agg_task.input2.pub_value_path.clone(),
+                is_agg: agg_task.input2.is_agg,
+            }),
             agg_proof_path: agg_task.output_proof_path.clone(),
             agg_pub_value_path: agg_task.output_pub_value_path.clone(),
             output_dir: agg_task.output_dir.clone(),
-            is_agg_1: agg_task.is_agg1,
-            is_agg_2: agg_task.is_agg2,
             is_final: agg_task.is_final,
         };
         log::info!("aggregate request {:#?}", request);
