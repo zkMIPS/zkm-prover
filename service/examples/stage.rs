@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         seg_size,
         ..Default::default()
     };
-    println!("request: {:?}", proof_id);
+    log::info!("request: {:?}", proof_id);
     let start = Instant::now();
     let endpoint = match ssl_config {
         Some(config) => {
@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let mut stage_client = StageServiceClient::connect(endpoint).await?;
     let response = stage_client.generate_proof(request).await?.into_inner();
-    println!("generate_proof response: {:?}", response);
+    log::info!("generate_proof response: {:?}", response);
     if response.status == crate::stage_service::Status::Computing as u32 {
         loop {
             let get_status_request = GetStatusRequest {
@@ -75,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await?
                 .into_inner();
             if get_status_response.status != crate::stage_service::Status::Computing as u32 {
-                println!("get_status_response response: {:?}", response);
+                log::info!("get_status_response response: {:?}", get_status_response);
                 break;
             }
             time::sleep(time::Duration::from_secs(1)).await;
@@ -83,6 +83,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let end = Instant::now();
     let elapsed = end.duration_since(start);
-    println!("Elapsed time: {:?} secs", elapsed.as_secs());
+    log::info!("Elapsed time: {:?} secs", elapsed.as_secs());
     Ok(())
 }

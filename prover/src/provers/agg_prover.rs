@@ -7,6 +7,11 @@ use plonky2::field::goldilocks_field::GoldilocksField;
 use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::plonk::proof::ProofWithPublicInputs;
 
+use plonky2x::backend::circuit::Groth16WrapperParameters;
+use plonky2x::backend::wrapper::wrap::WrappedCircuit;
+use plonky2x::frontend::builder::CircuitBuilder as WrapperBuilder;
+use plonky2x::prelude::DefaultParameters;
+
 use zkm::all_stark::AllStark;
 use zkm::config::StarkConfig;
 use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
@@ -25,6 +30,8 @@ impl AggProver {
 
 impl Prover<AggContext> for AggProver {
     fn prove(&self, ctx: &AggContext) -> anyhow::Result<()> {
+        type InnerParameters = DefaultParameters;
+        type OuterParameters = Groth16WrapperParameters;
         type F = GoldilocksField;
         const D: usize = 2;
         type C = PoseidonGoldilocksConfig;
@@ -40,8 +47,7 @@ impl Prover<AggContext> for AggProver {
         let agg_pub_value_path = ctx.agg_pub_value_path.clone();
         let is_agg1 = ctx.is_agg_1;
         let is_agg2 = ctx.is_agg_2;
-        let _file = String::from("");
-        let _args = "".to_string();
+        let output_dir = ctx.output_dir.clone();
 
         let all_stark = AllStark::<F, D>::default();
         let config = StarkConfig::standard_fast_config();
@@ -72,9 +78,9 @@ impl Prover<AggContext> for AggProver {
         // We can duplicate the proofs here because the state hasn't mutated.
         let (agg_proof, updated_agg_public_values) = all_circuits.prove_aggregation(
             is_agg1,
-            &next_proof,
-            is_agg2,
             &root_proof,
+            is_agg2,
+            &next_proof,
             agg_public_values.clone(),
         )?;
         all_circuits.verify_aggregation(&agg_proof)?;
@@ -86,6 +92,49 @@ impl Prover<AggContext> for AggProver {
         // updated_agg_public_values file
         let json_string = serde_json::to_string(&updated_agg_public_values)?;
         let _ = file::new(&agg_pub_value_path).write(json_string.as_bytes())?;
+
+        if ctx.is_final {
+            let (block_proof, _block_public_values) =
+                all_circuits.prove_block(None, &agg_proof, updated_agg_public_values)?;
+
+            log::info!(
+                "proof size: {:?}",
+                serde_json::to_string(&block_proof.proof).unwrap().len()
+            );
+            let _result = all_circuits.verify_block(&block_proof);
+
+            let path = output_dir.to_string();
+            let builder = WrapperBuilder::<DefaultParameters, 2>::new();
+            let mut circuit = builder.build();
+            circuit.set_data(all_circuits.block.circuit);
+            let wrapped_circuit =
+                WrappedCircuit::<InnerParameters, OuterParameters, D>::build(circuit);
+            println!("build finish");
+
+            let wrapped_proof = wrapped_circuit.prove(&block_proof).unwrap();
+            // save wrapper_proof
+            file::new(&path).create_dir_all()?;
+            let common_data_file = if path.ends_with('/') {
+                format!("{}common_circuit_data.json", path)
+            } else {
+                format!("{}/common_circuit_data.json", path)
+            };
+            let _ = file::new(&common_data_file)
+                .write(&serde_json::to_vec(&wrapped_proof.common_data)?)?;
+            let verify_data_file = if path.ends_with('/') {
+                format!("{}verifier_only_circuit_data.json", path)
+            } else {
+                format!("{}/verifier_only_circuit_data.json", path)
+            };
+            let _ = file::new(&verify_data_file)
+                .write(&serde_json::to_vec(&wrapped_proof.verifier_data)?)?;
+            let proof_file = if path.ends_with('/') {
+                format!("{}proof_with_public_inputs.json", path)
+            } else {
+                format!("{}/proof_with_public_inputs.json", path)
+            };
+            let _ = file::new(&proof_file).write(&serde_json::to_vec(&wrapped_proof.proof)?)?;
+        }
 
         Ok(())
     }

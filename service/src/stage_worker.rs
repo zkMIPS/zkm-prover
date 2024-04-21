@@ -8,7 +8,12 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::time;
 
-use stage::tasks::{Task, TASK_ITYPE_AGGALL, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT};
+use stage::tasks::{
+    Task, TASK_ITYPE_AGG, TASK_ITYPE_AGGALL, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT,
+};
+
+use stage::stage::Step;
+
 use stage::tasks::{TASK_STATE_FAILED, TASK_STATE_SUCCESS};
 
 macro_rules! save_task {
@@ -50,51 +55,80 @@ async fn run_stage_task(
                 let (tx, mut rx) = tokio::sync::mpsc::channel(128);
                 stage.dispatch();
                 loop {
-                    let split_task = stage.get_split_task();
-                    if let Some(split_task) = split_task {
-                        let tx = tx.clone();
-                        let tls_config = tls_config.clone();
-                        tokio::spawn(async move {
-                            let response = prover_client::split(split_task, tls_config).await;
-                            if let Some(split_task) = response {
-                                let _ = tx.send(Task::Split(split_task)).await;
+                    match stage.step {
+                        Step::InSplit => {
+                            let split_task = stage.get_split_task();
+                            if let Some(split_task) = split_task {
+                                let tx = tx.clone();
+                                let tls_config = tls_config.clone();
+                                tokio::spawn(async move {
+                                    let response =
+                                        prover_client::split(split_task, tls_config).await;
+                                    if let Some(split_task) = response {
+                                        let _ = tx.send(Task::Split(split_task)).await;
+                                    }
+                                });
                             }
-                        });
-                    }
-                    let prove_task = stage.get_prove_task();
-                    if let Some(prove_task) = prove_task {
-                        let tx = tx.clone();
-                        let tls_config = tls_config.clone();
-                        tokio::spawn(async move {
-                            let response = prover_client::prove(prove_task, tls_config).await;
-                            if let Some(prove_task) = response {
-                                let _ = tx.send(Task::Prove(prove_task)).await;
+                        }
+                        Step::InProve => {
+                            let prove_task = stage.get_prove_task();
+                            if let Some(prove_task) = prove_task {
+                                let tx = tx.clone();
+                                let tls_config = tls_config.clone();
+                                tokio::spawn(async move {
+                                    let response =
+                                        prover_client::prove(prove_task, tls_config).await;
+                                    if let Some(prove_task) = response {
+                                        let _ = tx.send(Task::Prove(prove_task)).await;
+                                    }
+                                });
                             }
-                        });
-                    }
-                    let agg_task = stage.get_agg_all_task();
-                    if let Some(agg_task) = agg_task {
-                        let tx = tx.clone();
-                        let tls_config = tls_config.clone();
-                        tokio::spawn(async move {
-                            let response = prover_client::aggregate_all(agg_task, tls_config).await;
-                            if let Some(agg_task) = response {
-                                let _ = tx.send(Task::Agg(agg_task)).await;
+                        }
+                        Step::InAgg => {
+                            let agg_task = stage.get_agg_task();
+                            if let Some(agg_task) = agg_task {
+                                let tx = tx.clone();
+                                let tls_config = tls_config.clone();
+                                tokio::spawn(async move {
+                                    let response =
+                                        prover_client::aggregate(agg_task, tls_config).await;
+                                    if let Some(agg_task) = response {
+                                        let _ = tx.send(Task::Agg(agg_task)).await;
+                                    }
+                                });
                             }
-                        });
-                    }
-                    let final_task = stage.get_final_task();
-                    if let Some(final_task) = final_task {
-                        let tx = tx.clone();
-                        let tls_config = tls_config.clone();
-                        tokio::spawn(async move {
-                            let response = prover_client::final_proof(final_task, tls_config).await;
-                            if let Some(final_task) = response {
-                                let _ = tx.send(Task::Final(final_task)).await;
+                        }
+                        Step::InAggAll => {
+                            let agg_all_task = stage.get_agg_all_task();
+                            if let Some(agg_all_task) = agg_all_task {
+                                let tx = tx.clone();
+                                let tls_config = tls_config.clone();
+                                tokio::spawn(async move {
+                                    let response =
+                                        prover_client::aggregate_all(agg_all_task, tls_config)
+                                            .await;
+                                    if let Some(agg_all_task) = response {
+                                        let _ = tx.send(Task::AggAll(agg_all_task)).await;
+                                    }
+                                });
                             }
-                        });
+                        }
+                        Step::InFinal => {
+                            let final_task = stage.get_final_task();
+                            if let Some(final_task) = final_task {
+                                let tx = tx.clone();
+                                let tls_config = tls_config.clone();
+                                tokio::spawn(async move {
+                                    let response =
+                                        prover_client::final_proof(final_task, tls_config).await;
+                                    if let Some(final_task) = response {
+                                        let _ = tx.send(Task::Final(final_task)).await;
+                                    }
+                                });
+                            }
+                        }
+                        _ => {}
                     }
-
                     tokio::select! {
                         task = rx.recv() => {
                             if let Some(task) = task {
@@ -108,6 +142,10 @@ async fn run_stage_task(
                                         save_task!(data, db, TASK_ITYPE_PROVE);
                                     },
                                     Task::Agg(mut data) => {
+                                        stage.on_agg_task(&mut data);
+                                        save_task!(data, db, TASK_ITYPE_AGG);
+                                    },
+                                    Task::AggAll(mut data) => {
                                         stage.on_agg_all_task(&mut data);
                                         save_task!(data, db, TASK_ITYPE_AGGALL);
                                     },
@@ -139,23 +177,13 @@ async fn run_stage_task(
                     }
                 }
                 if stage.is_error() {
-                    let get_status = || {
-                        if stage.split_task.state != TASK_STATE_SUCCESS {
-                            crate::stage_service::stage_service::Status::SplitError
-                        } else {
-                            for task in &stage.prove_tasks {
-                                if task.state != TASK_STATE_SUCCESS {
-                                    return crate::stage_service::stage_service::Status::ProveError;
-                                }
-                            }
-                            if stage.agg_all_task.state != TASK_STATE_SUCCESS {
-                                crate::stage_service::stage_service::Status::AggError
-                            } else if stage.final_task.state != TASK_STATE_SUCCESS {
-                                return crate::stage_service::stage_service::Status::FinalError;
-                            } else {
-                                return crate::stage_service::stage_service::Status::InternalError;
-                            }
-                        }
+                    let get_status = || match stage.step {
+                        Step::InSplit => crate::stage_service::stage_service::Status::SplitError,
+                        Step::InProve => crate::stage_service::stage_service::Status::ProveError,
+                        Step::InAgg => crate::stage_service::stage_service::Status::AggError,
+                        Step::InAggAll => crate::stage_service::stage_service::Status::AggError,
+                        Step::InFinal => crate::stage_service::stage_service::Status::FinalError,
+                        _ => crate::stage_service::stage_service::Status::InternalError,
                     };
                     let status = get_status();
                     let _ = db.update_stage_task(&task.id, status.into(), "").await;

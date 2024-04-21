@@ -14,6 +14,7 @@ pub use prove_task::ProveTask;
 
 pub mod agg_task;
 pub use agg_task::AggAllTask;
+pub use agg_task::AggTask;
 
 pub mod final_task;
 pub use final_task::FinalTask;
@@ -27,6 +28,7 @@ pub const TASK_ITYPE_FINAL: i32 = 5;
 pub enum Task {
     Split(SplitTask),
     Prove(ProveTask),
-    Agg(AggAllTask),
+    Agg(AggTask),
+    AggAll(AggAllTask),
     Final(FinalTask),
 }
