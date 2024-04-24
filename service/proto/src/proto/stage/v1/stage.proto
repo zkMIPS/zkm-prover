@@ -39,7 +39,6 @@ message GenerateProofResponse {
     uint32 status = 1;
     string error_message = 2;
     string proof_id = 3;
-    bytes result = 4;
 }
 
 message GetStatusRequest {
@@ -50,4 +49,6 @@ message GetStatusResponse {
     string proof_id = 1;
     uint32 status = 2;
     bytes result = 3;
+    bytes proof_with_public_inputs = 4; // public_inputs
+    bytes verifier_only_circuit_data = 5;
 }
