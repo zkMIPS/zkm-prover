@@ -68,6 +68,44 @@ impl StageService for StageServiceSVC {
             if let Some(result) = task.result {
                 response.result = result.into_bytes();
             }
+            if response.status == stage_service::Status::Success as u32 {
+                if let Some(context) = task.context {
+                    if let Ok(generate_context) =
+                        serde_json::from_str::<stage::contexts::GenerateContext>(&context)
+                    {
+                        let (verifier_only_circuit_data_file, proof_with_public_inputs_file) =
+                            if generate_context.agg_path.ends_with('/') {
+                                (
+                                    format!(
+                                        "{}verifier_only_circuit_data.json",
+                                        generate_context.agg_path
+                                    ),
+                                    format!(
+                                        "{}proof_with_public_inputs.json",
+                                        generate_context.agg_path
+                                    ),
+                                )
+                            } else {
+                                (
+                                    format!(
+                                        "{}/verifier_only_circuit_data.json",
+                                        generate_context.agg_path
+                                    ),
+                                    format!(
+                                        "{}/proof_with_public_inputs.json",
+                                        generate_context.agg_path
+                                    ),
+                                )
+                            };
+                        let verifier_only_circuit_data =
+                            file::new(&verifier_only_circuit_data_file).read().unwrap();
+                        let proof_with_public_inputs =
+                            file::new(&proof_with_public_inputs_file).read().unwrap();
+                        response.verifier_only_circuit_data = verifier_only_circuit_data;
+                        response.proof_with_public_inputs = proof_with_public_inputs;
+                    }
+                }
+            }
         }
         Ok(Response::new(response))
     }
@@ -84,7 +122,6 @@ impl StageService for StageServiceSVC {
                 proof_id: request.get_ref().proof_id.clone(),
                 status: stage_service::Status::InvalidParameter as u32,
                 error_message: "invalid seg_size".to_string(),
-                ..Default::default()
             };
             return Ok(Response::new(response));
         }
