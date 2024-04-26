@@ -2,8 +2,9 @@ use common::file;
 use common::tls::Config;
 use stage_service::stage_service_client::StageServiceClient;
 use stage_service::{BlockFileItem, GenerateProofRequest, GetStatusRequest};
-use std::env;
+use std::path::Path;
 use std::time::Instant;
+use std::{env, u32};
 use tokio::time;
 use tonic::transport::ClientTlsConfig;
 use tonic::transport::Endpoint;
@@ -15,8 +16,9 @@ pub mod stage_service {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::try_init().unwrap_or_default();
     let elf_path = env::var("ELF_PATH").unwrap_or("/tmp/zkm/test/hello_world".to_string());
-    let block_path = env::var("BLOCK_PATH").unwrap_or("/tmp/zkm/test/0_13284491".to_string());
-    let block_no = env::var("BLOCK_NO").unwrap_or("13284491".to_string());
+    let output_dir = env::var("OUTPUT_DIR").unwrap_or("/tmp/zkm/test".to_string());
+    let block_path = env::var("BLOCK_PATH").unwrap_or("".to_string());
+    let block_no = env::var("BLOCK_NO").unwrap_or("0".to_string());
     let block_no = block_no.parse::<_>().unwrap_or(0);
     let seg_size = env::var("SEG_SIZE").unwrap_or("262144".to_string());
     let seg_size = seg_size.parse::<_>().unwrap_or(262144);
@@ -78,7 +80,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await?
                 .into_inner();
             if get_status_response.status != crate::stage_service::Status::Computing as u32 {
-                log::info!("get_status_response response: {:?}", get_status_response);
+                if let Some(status) =
+                    crate::stage_service::Status::from_i32(get_status_response.status as i32)
+                {
+                    match status {
+                        crate::stage_service::Status::Success => {
+                            log::info!(
+                                "generate_proof success proof_size: {} public_inputs_size: {} circuit_data_size: {}",
+                                get_status_response.result.len(),
+                                get_status_response.proof_with_public_inputs.len(),
+                                get_status_response.verifier_only_circuit_data.len(),
+                            );
+                            let output_dir = Path::new(&output_dir);
+                            let proof_path = output_dir.join("proof");
+                            let public_inputs_path = output_dir.join("proof_with_public_inputs");
+                            let circuit_data_path = output_dir.join("verifier_only_circuit_data");
+                            let _ = file::new(&proof_path.to_string_lossy())
+                                .write(get_status_response.result.as_slice());
+                            let _ = file::new(&public_inputs_path.to_string_lossy())
+                                .write(get_status_response.proof_with_public_inputs.as_slice());
+                            let _ = file::new(&circuit_data_path.to_string_lossy())
+                                .write(get_status_response.verifier_only_circuit_data.as_slice());
+                        }
+                        _ => {
+                            log::info!(
+                                "generate_proof failed status: {}",
+                                get_status_response.status
+                            );
+                        }
+                    }
+                }
                 break;
             }
             time::sleep(time::Duration::from_secs(1)).await;

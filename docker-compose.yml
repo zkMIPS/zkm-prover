@@ -42,8 +42,20 @@ services:
   zkm-snark:
     container_name: zkm-snark
     restart: unless-stopped
-    image: zkmips/gnark-plonky2-verifier:latest
-    volumes:
-      - /tmp/zkm-prover/data:/zkm/data
+    image: zkmips/gnark-plonky2-verifier:stage
+    #volumes:
+    #  - /tmp/zkm-prover/data:/zkm/data
     command: >
       /usr/local/bin/start.sh
+  
+  zkm-mysql:
+    image: mysql:latest
+    container_name: zkm-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: zkm
+      MYSQL_USER: stage
+      MYSQL_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: 123456
+    volumes:
+      - ./initdb.d:/docker-entrypoint-initdb.d/initdb.sql

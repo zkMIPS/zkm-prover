@@ -39,6 +39,7 @@ impl Prover<ProveContext> for RootProver {
         let file = String::from("");
         let _args = "".to_string();
 
+        let mut timing = TimingTree::new("root_prove init all_circuits", log::Level::Info);
         let all_stark = AllStark::<F, D>::default();
         let config = StarkConfig::standard_fast_config();
         // Preprocess all circuits.
@@ -47,17 +48,23 @@ impl Prover<ProveContext> for RootProver {
             &select_degree_bits(seg_size),
             &config,
         );
+        timing.filter(Duration::from_millis(100)).print();
+
+        timing = TimingTree::new("root_prove load input", log::Level::Info);
 
         let seg_data = file::new(&seg_path).read()?;
         let seg_reader = BufReader::new(seg_data.as_slice());
         let input = segment_kernel(&basedir, &block_no, &file, seg_reader, seg_size);
-        let mut timing: TimingTree = TimingTree::new("prove root", log::Level::Info);
+        timing.filter(Duration::from_millis(100)).print();
+
+        timing = TimingTree::new("root_prove root", log::Level::Info);
         let (agg_proof, updated_agg_public_values) =
             all_circuits.prove_root(&all_stark, &input, &config, &mut timing)?;
 
-        timing.filter(Duration::from_millis(100)).print();
         all_circuits.verify_root(agg_proof.clone())?;
+        timing.filter(Duration::from_millis(100)).print();
 
+        timing = TimingTree::new("root_prove write result", log::Level::Info);
         // write agg_proof write file
         let json_string = serde_json::to_string(&agg_proof)?;
         let _ = file::new(&proof_path).write(json_string.as_bytes())?;
@@ -65,6 +72,7 @@ impl Prover<ProveContext> for RootProver {
         // updated_agg_public_values file
         let json_string = serde_json::to_string(&updated_agg_public_values)?;
         let _ = file::new(&pub_value_path).write(json_string.as_bytes())?;
+        timing.filter(Duration::from_millis(100)).print();
 
         Ok(())
     }

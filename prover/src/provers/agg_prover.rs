@@ -6,6 +6,8 @@ use num::ToPrimitive;
 use plonky2::field::goldilocks_field::GoldilocksField;
 use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::plonk::proof::ProofWithPublicInputs;
+use plonky2::util::timing::TimingTree;
+use std::time::Duration;
 
 use plonky2x::backend::circuit::Groth16WrapperParameters;
 use plonky2x::backend::wrapper::wrap::WrappedCircuit;
@@ -49,6 +51,7 @@ impl Prover<AggContext> for AggProver {
         let is_agg2 = ctx.is_agg_2;
         let output_dir = ctx.output_dir.clone();
 
+        let mut timing = TimingTree::new("agg init all_circuits", log::Level::Info);
         let all_stark = AllStark::<F, D>::default();
         let config = StarkConfig::standard_fast_config();
         // Preprocess all circuits.
@@ -57,6 +60,9 @@ impl Prover<AggContext> for AggProver {
             &select_degree_bits(seg_size),
             &config,
         );
+        timing.filter(Duration::from_millis(100)).print();
+
+        timing = TimingTree::new("agg load from file", log::Level::Info);
 
         let root_proof_content = file::new(&proof_path1).read_to_string()?;
         let root_proof: ProofWithPublicInputs<F, C, D> = serde_json::from_str(&root_proof_content)?;
@@ -69,7 +75,9 @@ impl Prover<AggContext> for AggProver {
 
         let next_pub_value_content = file::new(&pub_value_path2).read_to_string()?;
         let next_pub_value: PublicValues = serde_json::from_str(&next_pub_value_content)?;
+        timing.filter(Duration::from_millis(100)).print();
 
+        timing = TimingTree::new("agg agg", log::Level::Info);
         // Update public values for the aggregation.
         let agg_public_values = PublicValues {
             roots_before: root_pub_value.roots_before,
@@ -84,6 +92,7 @@ impl Prover<AggContext> for AggProver {
             agg_public_values.clone(),
         )?;
         all_circuits.verify_aggregation(&agg_proof)?;
+        timing.filter(Duration::from_millis(100)).print();
 
         // write agg_proof write file
         let json_string = serde_json::to_string(&agg_proof)?;
@@ -94,6 +103,7 @@ impl Prover<AggContext> for AggProver {
         let _ = file::new(&agg_pub_value_path).write(json_string.as_bytes())?;
 
         if ctx.is_final {
+            timing = TimingTree::new("agg prove_block", log::Level::Info);
             let (block_proof, _block_public_values) =
                 all_circuits.prove_block(None, &agg_proof, updated_agg_public_values)?;
 
@@ -109,8 +119,9 @@ impl Prover<AggContext> for AggProver {
             circuit.set_data(all_circuits.block.circuit);
             let wrapped_circuit =
                 WrappedCircuit::<InnerParameters, OuterParameters, D>::build(circuit);
-            println!("build finish");
+            timing.filter(Duration::from_millis(100)).print();
 
+            timing = TimingTree::new("agg write result", log::Level::Info);
             let wrapped_proof = wrapped_circuit.prove(&block_proof).unwrap();
             // save wrapper_proof
             file::new(&path).create_dir_all()?;
@@ -134,6 +145,7 @@ impl Prover<AggContext> for AggProver {
                 format!("{}/proof_with_public_inputs.json", path)
             };
             let _ = file::new(&proof_file).write(&serde_json::to_vec(&wrapped_proof.proof)?)?;
+            timing.filter(Duration::from_millis(100)).print();
         }
 
         Ok(())
