@@ -24,14 +24,15 @@ impl Executor {
         let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
         let args = "".to_string();
 
+        log::info!("split {} load elf file", elf_path);
         let data = file::new(&elf_path).read();
-        let block_path = get_block_path(&basedir, &block_no, "");
+        let mut block_path = get_block_path(&basedir, &block_no, "");
         let input_path = if block_path.ends_with('/') {
             format!("{}input", block_path)
         } else {
             format!("{}/input", block_path)
         };
-        let input_data = file::new(&input_path).read().unwrap();
+
         if let core::result::Result::Ok(data) = data {
             let file_result = ElfBytes::<AnyEndian>::minimal_parse(data.as_slice());
             match file_result {
@@ -40,10 +41,17 @@ impl Executor {
                     state.patch_go(&file);
                     state.patch_stack(&args);
 
-                    state
-                        .memory
-                        .set_memory_range(0x30000000, Box::new(input_data.as_slice()))
-                        .expect("set memory range failed");
+                    let block_no = block_no.parse::<_>().unwrap_or(0);
+                    if block_no > 0 {
+                        log::info!("split set input data {}", input_path);
+                        let input_data = file::new(&input_path).read().unwrap();
+                        state
+                            .memory
+                            .set_memory_range(0x30000000, Box::new(input_data.as_slice()))
+                            .expect("set memory range failed");
+                    } else {
+                        block_path = "".to_string();
+                    }
 
                     let mut instrumented_state = InstrumentedState::new(state, block_path);
                     let seg_path_clone = seg_path.clone();
@@ -69,6 +77,7 @@ impl Executor {
                     return Ok(true);
                 }
                 Err(e) => {
+                    log::error!("split minimal_parse error {}", e.to_string());
                     return Err(e.to_string());
                 }
             }

@@ -8,9 +8,11 @@ use plonky2::field::goldilocks_field::GoldilocksField;
 use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::plonk::proof::ProofWithPublicInputs;
 
+use plonky2::util::timing::TimingTree;
 use plonky2x::backend::circuit::Groth16WrapperParameters;
 use plonky2x::backend::wrapper::wrap::WrappedCircuit;
 use plonky2x::frontend::builder::CircuitBuilder as WrapperBuilder;
+use std::time::Duration;
 
 use plonky2x::prelude::DefaultParameters;
 use zkm::all_stark::AllStark;
@@ -49,10 +51,10 @@ impl Prover<AggAllContext> for AggAllProver {
             return Ok(());
         }
 
+        let mut timing = TimingTree::new("agg_all load from file", log::Level::Info);
         // read all proof and pub_value
         let mut root_proofs: Vec<ProofWithPublicInputs<F, C, D>> = Vec::new();
         let mut root_pub_values: Vec<PublicValues> = Vec::new();
-
         for seg_no in 0..proof_num {
             let proof_path = format!("{}/{}", proof_dir, seg_no);
             let root_proof_content = file::new(&proof_path).read_to_string()?;
@@ -66,14 +68,20 @@ impl Prover<AggAllContext> for AggAllProver {
             root_pub_values.push(root_pub_value);
         }
 
+        timing.filter(Duration::from_millis(100)).print();
+
+        timing = TimingTree::new("agg_all init all_stark", log::Level::Info);
         let all_stark = AllStark::<F, D>::default();
+        timing.filter(Duration::from_millis(100)).print();
         let config = StarkConfig::standard_fast_config();
+        timing = TimingTree::new("agg_all init all_circuits", log::Level::Info);
         // Preprocess all circuits.
         let all_circuits = AllRecursiveCircuits::<F, C, D>::new(
             &all_stark,
             &select_degree_bits(seg_size),
             &config,
         );
+        timing.filter(Duration::from_millis(100)).print();
 
         let mut agg_proof: ProofWithPublicInputs<F, C, D> = root_proofs.first().unwrap().clone();
         let mut updated_agg_public_values: PublicValues = root_pub_values.first().unwrap().clone();
@@ -81,6 +89,7 @@ impl Prover<AggAllContext> for AggAllProver {
         let mut base_seg: usize = 1;
         let mut is_agg = false;
 
+        timing = TimingTree::new("agg_all agg", log::Level::Info);
         if proof_num % 2 == 0 {
             let root_proof: ProofWithPublicInputs<F, C, D> = root_proofs.get(1).unwrap().clone();
             let public_values: PublicValues = root_pub_values.get(1).unwrap().clone();
@@ -98,7 +107,6 @@ impl Prover<AggAllContext> for AggAllProver {
                 agg_public_values.clone(),
             )?;
             all_circuits.verify_aggregation(&agg_proof)?;
-
             is_agg = true;
             base_seg = 2;
         }
@@ -146,7 +154,9 @@ impl Prover<AggAllContext> for AggAllProver {
                 is_agg = true;
             }
         }
+        timing.filter(Duration::from_millis(100)).print();
 
+        timing = TimingTree::new("agg_all prove_block", log::Level::Info);
         let (block_proof, _block_public_values) =
             all_circuits.prove_block(None, &agg_proof, updated_agg_public_values)?;
 
@@ -155,14 +165,15 @@ impl Prover<AggAllContext> for AggAllProver {
             serde_json::to_string(&block_proof.proof).unwrap().len()
         );
         let _result = all_circuits.verify_block(&block_proof);
+        timing.filter(Duration::from_millis(100)).print();
 
         let path = output_dir.to_string();
         let builder = WrapperBuilder::<DefaultParameters, 2>::new();
         let mut circuit = builder.build();
         circuit.set_data(all_circuits.block.circuit);
         let wrapped_circuit = WrappedCircuit::<InnerParameters, OuterParameters, D>::build(circuit);
-        println!("build finish");
 
+        timing = TimingTree::new("agg_all write result", log::Level::Info);
         let wrapped_proof = wrapped_circuit.prove(&block_proof).unwrap();
         // save wrapper_proof
         file::new(&path).create_dir_all()?;
@@ -186,6 +197,8 @@ impl Prover<AggAllContext> for AggAllProver {
             format!("{}/proof_with_public_inputs.json", path)
         };
         let _ = file::new(&proof_file).write(&serde_json::to_vec(&wrapped_proof.proof)?)?;
+        timing.filter(Duration::from_millis(100)).print();
+
         Ok(())
     }
 }

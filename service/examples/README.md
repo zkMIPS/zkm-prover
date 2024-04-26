@@ -4,18 +4,41 @@
 
 * Compile the Go code to MIPS
 
-Write your own hello.go, and compile with
+Write your own hello.go, and compile with(Recommended use golang1.20)
 
 ```
 $ GOOS=linux GOARCH=mips GOMIPS=softfloat go build hello.go -o /tmp/zkm/test/hello_world
 ```
 
-* Adjust parameter request stage service
+If you build your own server, you can use Docker Compose (The image is built based on AMD64)
+
+Minimum Requirements
+| SEG_SIZE | RAM |
+| ------- | ------- |
+| 1024 | 16G |
+| 16384 | 28.2G |
+| 32768 | 95.2G |
+| 65536 | 96.3G |
+| 262144 | 130.1G |
 
 ```
-$ export RUST_LOG=info
-$ cargo run --release --example stage
+$ docker-compose up -d
 ```
+
+* Adjust parameter request stage service
+- `ELF_PATH`: The go program path compiled in the above steps
+- `ENDPOINT`: The access address of stage service
+- `RUST_LOG`: Log level
+- `OUTPUT_DIR`: Store results folder path
+- `SEG_SIZE`: SEG_SIZE default 262144
+
+The smaller the SEG_SIZE, the longer the cost will be
+```
+$ RUST_LOG=info ELF_PATH=/tmp/zkm/test/hello_world OUTPUT_DIR=/tmp/zkm/test ENDPOINT=http://127.0.0.1:50000 cargo run --release --example stage
+```
+
+* If SEG_SIZE=262144, Wait for about 20 minutes. If you see "success", a proof will be generated. You can see the corresponding file in OUTPUT_DIR
+
 
 ## [Minigeth](https://github.com/zkMIPS/cannon-mips)
 
