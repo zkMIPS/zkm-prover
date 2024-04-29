@@ -1,8 +1,8 @@
 use super::Prover;
 use crate::contexts::AggContext;
-use crate::provers::select_degree_bits;
 
-use num::ToPrimitive;
+use std::marker::PhantomData;
+
 use plonky2::field::goldilocks_field::GoldilocksField;
 use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::plonk::proof::ProofWithPublicInputs;
@@ -14,9 +14,9 @@ use plonky2x::backend::wrapper::wrap::WrappedCircuit;
 use plonky2x::frontend::builder::CircuitBuilder as WrapperBuilder;
 use plonky2x::prelude::DefaultParameters;
 
-use zkm::all_stark::AllStark;
-use zkm::config::StarkConfig;
-use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
+use plonky2::plonk::circuit_data::CircuitData;
+use plonky2::util::serialization::{DefaultGateSerializer, DefaultGeneratorSerializer};
+
 use zkm::proof::PublicValues;
 
 use common::file;
@@ -40,7 +40,7 @@ impl Prover<AggContext> for AggProver {
 
         let _basedir = ctx.basedir.clone();
         let _block_no = ctx.block_no.to_string();
-        let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
+        // let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
         let proof_path1 = ctx.proof_path1.clone();
         let proof_path2 = ctx.proof_path2.clone();
         let pub_value_path1 = ctx.pub_value_path1.clone();
@@ -52,14 +52,7 @@ impl Prover<AggContext> for AggProver {
         let output_dir = ctx.output_dir.clone();
 
         let mut timing = TimingTree::new("agg init all_circuits", log::Level::Info);
-        let all_stark = AllStark::<F, D>::default();
-        let config = StarkConfig::standard_fast_config();
-        // Preprocess all circuits.
-        let all_circuits = AllRecursiveCircuits::<F, C, D>::new(
-            &all_stark,
-            &select_degree_bits(seg_size),
-            &config,
-        );
+        let all_circuits = &*crate::provers::instance().lock().unwrap();
         timing.filter(Duration::from_millis(100)).print();
 
         timing = TimingTree::new("agg load from file", log::Level::Info);
@@ -112,17 +105,37 @@ impl Prover<AggContext> for AggProver {
                 serde_json::to_string(&block_proof.proof).unwrap().len()
             );
             let _result = all_circuits.verify_block(&block_proof);
+            timing.filter(Duration::from_millis(100)).print();
+            timing = TimingTree::new("agg circuit_data", log::Level::Info);
+            let gate_serializer = DefaultGateSerializer;
+            let generator_serializer = DefaultGeneratorSerializer {
+                _phantom: PhantomData::<C>,
+            };
+            let circuit_data = all_circuits
+                .block
+                .circuit
+                .to_bytes(&gate_serializer, &generator_serializer)
+                .unwrap();
+            let circuit_data = CircuitData::<F, C, D>::from_bytes(
+                circuit_data.as_slice(),
+                &gate_serializer,
+                &generator_serializer,
+            )
+            .unwrap();
 
             let path = output_dir.to_string();
             let builder = WrapperBuilder::<DefaultParameters, 2>::new();
             let mut circuit = builder.build();
-            circuit.set_data(all_circuits.block.circuit);
+            circuit.set_data(circuit_data);
             let wrapped_circuit =
                 WrappedCircuit::<InnerParameters, OuterParameters, D>::build(circuit);
             timing.filter(Duration::from_millis(100)).print();
 
-            timing = TimingTree::new("agg write result", log::Level::Info);
+            timing = TimingTree::new("agg wrapped_circuit.prove", log::Level::Info);
             let wrapped_proof = wrapped_circuit.prove(&block_proof).unwrap();
+            timing.filter(Duration::from_millis(100)).print();
+
+            timing = TimingTree::new("agg write result", log::Level::Info);
             // save wrapper_proof
             file::new(&path).create_dir_all()?;
             let common_data_file = if path.ends_with('/') {

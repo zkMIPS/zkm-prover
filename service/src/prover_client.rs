@@ -1,6 +1,5 @@
 use common::file;
 use common::tls::Config as TlsConfig;
-use num::{bigint::Sign, BigInt};
 use prover_service::prover_service_client::ProverServiceClient;
 use prover_service::AggregateAllRequest;
 use prover_service::AggregateRequest;
@@ -260,7 +259,11 @@ pub async fn final_proof(
             proof_with_public_inputs,
             verifier_only_circuit_data,
         };
-        log::info!("final_proof request {:?}", request);
+        log::info!(
+            "final_proof request proof_id:{} computed_request_id:{} ",
+            request.proof_id,
+            request.computed_request_id,
+        );
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.final_proof(grpc_request).await;
@@ -278,15 +281,6 @@ pub async fn final_proof(
                                 if let Some(code) = ResultCode::from_i32(result.code) {
                                     if code == ResultCode::Ok {
                                         log::info!("final_proof result {:#?}", result);
-                                        let result_ref = &result.message.as_bytes();
-                                        let count = result_ref.len() / 32;
-                                        for index in 0..count {
-                                            let data = BigInt::from_bytes_be(
-                                                Sign::Plus,
-                                                &result_ref[(32 * index)..(32 * index + 32)],
-                                            );
-                                            log::info!("index {} data {}", index, data);
-                                        }
                                         let _ = file::new(&final_task.output_path)
                                             .write(result.message.as_bytes())
                                             .unwrap();
