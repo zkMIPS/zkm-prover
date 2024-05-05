@@ -1,6 +1,5 @@
 use super::Prover;
 use crate::contexts::AggAllContext;
-use crate::provers::select_degree_bits;
 
 use anyhow::Ok;
 
@@ -14,10 +13,11 @@ use plonky2x::backend::wrapper::wrap::WrappedCircuit;
 use plonky2x::frontend::builder::CircuitBuilder as WrapperBuilder;
 use std::time::Duration;
 
+use plonky2::plonk::circuit_data::CircuitData;
+use plonky2::util::serialization::{DefaultGateSerializer, DefaultGeneratorSerializer};
+use std::marker::PhantomData;
+
 use plonky2x::prelude::DefaultParameters;
-use zkm::all_stark::AllStark;
-use zkm::config::StarkConfig;
-use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 use zkm::proof::PublicValues;
 
 use common::file;
@@ -39,7 +39,7 @@ impl Prover<AggAllContext> for AggAllProver {
         const D: usize = 2;
         type C = PoseidonGoldilocksConfig;
 
-        let seg_size = ctx.seg_size as usize;
+        // let seg_size = ctx.seg_size as usize;
         let proof_num = ctx.proof_num as usize;
         let proof_dir = ctx.proof_dir.clone();
         let pub_value_dir = ctx.pub_value_dir.clone();
@@ -69,18 +69,8 @@ impl Prover<AggAllContext> for AggAllProver {
         }
 
         timing.filter(Duration::from_millis(100)).print();
-
-        timing = TimingTree::new("agg_all init all_stark", log::Level::Info);
-        let all_stark = AllStark::<F, D>::default();
-        timing.filter(Duration::from_millis(100)).print();
-        let config = StarkConfig::standard_fast_config();
         timing = TimingTree::new("agg_all init all_circuits", log::Level::Info);
-        // Preprocess all circuits.
-        let all_circuits = AllRecursiveCircuits::<F, C, D>::new(
-            &all_stark,
-            &select_degree_bits(seg_size),
-            &config,
-        );
+        let all_circuits = &*crate::provers::instance().lock().unwrap();
         timing.filter(Duration::from_millis(100)).print();
 
         let mut agg_proof: ProofWithPublicInputs<F, C, D> = root_proofs.first().unwrap().clone();
@@ -167,14 +157,37 @@ impl Prover<AggAllContext> for AggAllProver {
         let _result = all_circuits.verify_block(&block_proof);
         timing.filter(Duration::from_millis(100)).print();
 
+        timing = TimingTree::new("agg_all circuit_data to_bytes", log::Level::Info);
+        let gate_serializer = DefaultGateSerializer;
+        let generator_serializer = DefaultGeneratorSerializer {
+            _phantom: PhantomData::<C>,
+        };
+        let circuit_data = all_circuits
+            .block
+            .circuit
+            .to_bytes(&gate_serializer, &generator_serializer)
+            .unwrap();
+        timing.filter(Duration::from_millis(100)).print();
+        timing = TimingTree::new("agg_all circuit_data from_bytes", log::Level::Info);
+        let circuit_data = CircuitData::<F, C, D>::from_bytes(
+            circuit_data.as_slice(),
+            &gate_serializer,
+            &generator_serializer,
+        )
+        .unwrap();
+        timing.filter(Duration::from_millis(100)).print();
+
         let path = output_dir.to_string();
         let builder = WrapperBuilder::<DefaultParameters, 2>::new();
         let mut circuit = builder.build();
-        circuit.set_data(all_circuits.block.circuit);
+        circuit.set_data(circuit_data);
         let wrapped_circuit = WrappedCircuit::<InnerParameters, OuterParameters, D>::build(circuit);
 
-        timing = TimingTree::new("agg_all write result", log::Level::Info);
+        timing = TimingTree::new("agg_all wrapped_circuit.prove", log::Level::Info);
         let wrapped_proof = wrapped_circuit.prove(&block_proof).unwrap();
+        timing.filter(Duration::from_millis(100)).print();
+
+        timing = TimingTree::new("agg_all write result", log::Level::Info);
         // save wrapper_proof
         file::new(&path).create_dir_all()?;
         let common_data_file = if path.ends_with('/') {

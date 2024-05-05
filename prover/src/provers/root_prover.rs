@@ -1,17 +1,14 @@
 use super::Prover;
 use crate::contexts::ProveContext;
-use crate::provers::select_degree_bits;
 use std::time::Duration;
 
 use plonky2::field::goldilocks_field::GoldilocksField;
-use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::util::timing::TimingTree;
 
 use std::io::BufReader;
 use zkm::all_stark::AllStark;
 use zkm::config::StarkConfig;
 use zkm::cpu::kernel::assembler::segment_kernel;
-use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 
 use common::file;
 
@@ -28,7 +25,7 @@ impl Prover<ProveContext> for RootProver {
     fn prove(&self, ctx: &ProveContext) -> anyhow::Result<()> {
         type F = GoldilocksField;
         const D: usize = 2;
-        type C = PoseidonGoldilocksConfig;
+        // type C = PoseidonGoldilocksConfig;
 
         let basedir = ctx.basedir.clone();
         let block_no = ctx.block_no.to_string();
@@ -39,15 +36,12 @@ impl Prover<ProveContext> for RootProver {
         let file = String::from("");
         let _args = "".to_string();
 
-        let mut timing = TimingTree::new("root_prove init all_circuits", log::Level::Info);
+        let mut timing = TimingTree::new("root_prove init all_stark", log::Level::Info);
         let all_stark = AllStark::<F, D>::default();
         let config = StarkConfig::standard_fast_config();
-        // Preprocess all circuits.
-        let all_circuits = AllRecursiveCircuits::<F, C, D>::new(
-            &all_stark,
-            &select_degree_bits(seg_size),
-            &config,
-        );
+        timing.filter(Duration::from_millis(100)).print();
+        timing = TimingTree::new("root_prove init all_circuits", log::Level::Info);
+        let all_circuits = &*crate::provers::instance().lock().unwrap();
         timing.filter(Duration::from_millis(100)).print();
 
         timing = TimingTree::new("root_prove load input", log::Level::Info);

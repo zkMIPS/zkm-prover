@@ -120,7 +120,7 @@ impl AggTask {
             if let Some(right) = &self.right {
                 if *right == task_id {
                     self.right = None;
-                    return false;
+                    return true;
                 }
             }
         }
@@ -198,5 +198,78 @@ impl AggTask {
         }
         agg_task.set_out_path(prove_dir);
         agg_task
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_clear_child_task() {
+        let left_task_id = "test_id_1";
+        let right_task_id = "test_id_2";
+        let mut agg_task = AggTask {
+            state: TASK_STATE_UNPROCESSED,
+            left: Some(left_task_id.to_string()),
+            right: Some(right_task_id.to_string()),
+            ..Default::default()
+        };
+        agg_task.clear_child_task(left_task_id);
+        agg_task.clear_child_task(right_task_id);
+        assert!(agg_task.left.is_none());
+        assert!(agg_task.right.is_none());
+    }
+
+    #[test]
+    fn test_init_from_single_prove_task() {
+        let prove_task = ProveTask {
+            file_no: 1,
+            ..Default::default()
+        };
+        let agg_task = crate::tasks::AggTask::init_from_single_prove_task(&prove_task, "/test");
+        assert!(agg_task.state == TASK_STATE_SUCCESS);
+        assert!(agg_task.file_key == format!("{}", prove_task.file_no));
+    }
+
+    #[test]
+    fn test_init_from_two_prove_task() {
+        let left_prove_task = ProveTask {
+            file_no: 1,
+            ..Default::default()
+        };
+        let right_prove_task = ProveTask {
+            file_no: 2,
+            ..Default::default()
+        };
+        let agg_task = crate::tasks::AggTask::init_from_two_prove_task(
+            &left_prove_task,
+            &right_prove_task,
+            "/test",
+        );
+        assert!(agg_task.state == TASK_STATE_UNPROCESSED);
+        assert!(
+            agg_task.file_key
+                == format!("{}-{}", left_prove_task.file_no, right_prove_task.file_no)
+        );
+    }
+
+    #[test]
+    fn test_init_from_two_agg_task() {
+        let left_agg_task = AggTask {
+            file_key: "1".to_string(),
+            ..Default::default()
+        };
+        let right_agg_task = AggTask {
+            file_key: "2".to_string(),
+            ..Default::default()
+        };
+        let agg_task =
+            crate::tasks::AggTask::init_from_two_agg_task(&left_agg_task, &right_agg_task, "/test");
+        assert!(agg_task.state == TASK_STATE_UNPROCESSED);
+        assert!(
+            agg_task.file_key == format!("{}-{}", left_agg_task.file_key, right_agg_task.file_key)
+        );
+        assert!(agg_task.left.is_some());
+        assert!(agg_task.right.is_some());
     }
 }
