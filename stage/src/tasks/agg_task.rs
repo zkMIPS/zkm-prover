@@ -160,9 +160,11 @@ impl AggTask {
         left: &ProveTask,
         right: &ProveTask,
         prove_dir: &str,
+        agg_index: i32,
     ) -> AggTask {
         let mut agg_task = AggTask {
-            file_key: format!("{}-{}", left.file_no, right.file_no),
+            // file_key: format!("{}-{}", left.file_no, right.file_no),
+            file_key: format!("agg{}", agg_index),
             task_id: uuid::Uuid::new_v4().to_string(),
             base_dir: left.base_dir.clone(),
             block_no: left.block_no,
@@ -177,9 +179,15 @@ impl AggTask {
         agg_task
     }
 
-    pub fn init_from_two_agg_task(left: &AggTask, right: &AggTask, prove_dir: &str) -> AggTask {
+    pub fn init_from_two_agg_task(
+        left: &AggTask,
+        right: &AggTask,
+        prove_dir: &str,
+        agg_index: i32,
+    ) -> AggTask {
         let mut agg_task = AggTask {
-            file_key: format!("{}-{}", left.file_key, right.file_key),
+            // file_key: format!("{}-{}", left.file_key, right.file_key),
+            file_key: format!("agg{}", agg_index),
             task_id: uuid::Uuid::new_v4().to_string(),
             base_dir: left.base_dir.clone(),
             block_no: left.block_no,
@@ -245,12 +253,10 @@ mod tests {
             &left_prove_task,
             &right_prove_task,
             "/test",
+            1,
         );
         assert!(agg_task.state == TASK_STATE_UNPROCESSED);
-        assert!(
-            agg_task.file_key
-                == format!("{}-{}", left_prove_task.file_no, right_prove_task.file_no)
-        );
+        assert!(agg_task.file_key == format!("agg{}", 1));
     }
 
     #[test]
@@ -263,12 +269,14 @@ mod tests {
             file_key: "2".to_string(),
             ..Default::default()
         };
-        let agg_task =
-            crate::tasks::AggTask::init_from_two_agg_task(&left_agg_task, &right_agg_task, "/test");
-        assert!(agg_task.state == TASK_STATE_UNPROCESSED);
-        assert!(
-            agg_task.file_key == format!("{}-{}", left_agg_task.file_key, right_agg_task.file_key)
+        let agg_task = crate::tasks::AggTask::init_from_two_agg_task(
+            &left_agg_task,
+            &right_agg_task,
+            "/test",
+            1,
         );
+        assert!(agg_task.state == TASK_STATE_UNPROCESSED);
+        assert!(agg_task.file_key == format!("agg{}", 1));
         assert!(agg_task.left.is_some());
         assert!(agg_task.right.is_some());
     }
