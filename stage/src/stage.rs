@@ -233,13 +233,16 @@ impl Stage {
     }
 
     pub fn gen_agg_tasks(&mut self) {
+        let mut agg_index = 0;
         let mut result = Vec::new();
         let mut current_length = self.prove_tasks.len();
         for i in (0..current_length - 1).step_by(2) {
+            agg_index += 1;
             result.push(agg_task::AggTask::init_from_two_prove_task(
                 &(self.prove_tasks[i]),
                 &(self.prove_tasks[i + 1]),
                 &self.generate_context.prove_path,
+                agg_index,
             ));
         }
         if current_length % 2 == 1 {
@@ -254,10 +257,12 @@ impl Stage {
         while current_length > 1 {
             let mut new_result = Vec::new();
             for i in (0..current_length - 1).step_by(2) {
+                agg_index += 1;
                 let agg_task = agg_task::AggTask::init_from_two_agg_task(
                     &result[i],
                     &result[i + 1],
                     &self.generate_context.prove_path,
+                    agg_index,
                 );
                 self.agg_tasks.push(agg_task.clone());
                 new_result.push(agg_task);
