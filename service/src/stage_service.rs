@@ -1,3 +1,4 @@
+use anyhow::Error;
 use common::tls::Config as TlsConfig;
 use stage_service::stage_service_server::StageService;
 use stage_service::{GenerateProofRequest, GenerateProofResponse};
@@ -10,6 +11,9 @@ use crate::config;
 use common::file;
 use prover::provers;
 use std::io::Write;
+
+use ethers::types::Signature;
+use std::str::FromStr;
 
 use crate::database;
 use crate::stage_worker;
@@ -28,6 +32,7 @@ lazy_static! {
 
 pub struct StageServiceSVC {
     db: database::Database,
+    fileserver_url: Option<String>,
 }
 
 impl StageServiceSVC {
@@ -48,7 +53,20 @@ impl StageServiceSVC {
         let db = database::Database::new(database_url);
         sqlx::migrate!("./migrations").run(&db.db_pool).await?;
         let _ = stage_worker::start(tls_config.clone(), db.clone()).await;
-        Ok(StageServiceSVC { db })
+        Ok(StageServiceSVC {
+            db,
+            fileserver_url: config.fileserver_url.clone(),
+        })
+    }
+
+    pub fn valid_signature(&self, request: &GenerateProofRequest) -> Result<String, Error> {
+        let sign_data = format!(
+            "{}&{}&{}&{}",
+            request.proof_id, request.block_no, request.seg_size, request.args
+        );
+        let signature = Signature::from_str(&request.signature)?;
+        let recovered = signature.recover(sign_data)?;
+        Ok(hex::encode(recovered))
     }
 }
 
@@ -66,45 +84,14 @@ impl StageService for StageServiceSVC {
         if let Ok(task) = task {
             response.status = task.status as u32;
             if let Some(result) = task.result {
-                response.result = result.into_bytes();
+                response.proof_with_public_inputs = result.into_bytes();
             }
-            if response.status == stage_service::Status::Success as u32 {
-                if let Some(context) = task.context {
-                    if let Ok(generate_context) =
-                        serde_json::from_str::<stage::contexts::GenerateContext>(&context)
-                    {
-                        let (verifier_only_circuit_data_file, proof_with_public_inputs_file) =
-                            if generate_context.agg_path.ends_with('/') {
-                                (
-                                    format!(
-                                        "{}verifier_only_circuit_data.json",
-                                        generate_context.agg_path
-                                    ),
-                                    format!(
-                                        "{}proof_with_public_inputs.json",
-                                        generate_context.agg_path
-                                    ),
-                                )
-                            } else {
-                                (
-                                    format!(
-                                        "{}/verifier_only_circuit_data.json",
-                                        generate_context.agg_path
-                                    ),
-                                    format!(
-                                        "{}/proof_with_public_inputs.json",
-                                        generate_context.agg_path
-                                    ),
-                                )
-                            };
-                        let verifier_only_circuit_data =
-                            file::new(&verifier_only_circuit_data_file).read().unwrap();
-                        let proof_with_public_inputs =
-                            file::new(&proof_with_public_inputs_file).read().unwrap();
-                        response.verifier_only_circuit_data = verifier_only_circuit_data;
-                        response.proof_with_public_inputs = proof_with_public_inputs;
-                    }
-                }
+            if let Some(fileserver_url) = &self.fileserver_url {
+                response.download_url = format!(
+                    "{}/{}/final/proof_with_public_inputs.json",
+                    fileserver_url,
+                    request.get_ref().proof_id
+                );
             }
         }
         Ok(Response::new(response))
@@ -122,8 +109,35 @@ impl StageService for StageServiceSVC {
                 proof_id: request.get_ref().proof_id.clone(),
                 status: stage_service::Status::InvalidParameter as u32,
                 error_message: "invalid seg_size".to_string(),
+                ..Default::default()
             };
             return Ok(Response::new(response));
+        }
+        // check signature
+        match self.valid_signature(request.get_ref()) {
+            Ok(address) => {
+                // check white list
+                let users = self.db.get_user(&address).await.unwrap();
+                if users.is_empty() {
+                    let response = stage_service::GenerateProofResponse {
+                        proof_id: request.get_ref().proof_id.clone(),
+                        status: stage_service::Status::InvalidParameter as u32,
+                        error_message: "permission denied".to_string(),
+                        ..Default::default()
+                    };
+                    return Ok(Response::new(response));
+                }
+            }
+            Err(e) => {
+                let response = stage_service::GenerateProofResponse {
+                    proof_id: request.get_ref().proof_id.clone(),
+                    status: stage_service::Status::InvalidParameter as u32,
+                    error_message: "invalid signature".to_string(),
+                    ..Default::default()
+                };
+                log::warn!("{:?} invalid signature {:?}", request.get_ref().proof_id, e);
+                return Ok(Response::new(response));
+            }
         }
 
         let base_dir = config::instance().lock().unwrap().base_dir.clone();
@@ -178,7 +192,7 @@ impl StageService for StageServiceSVC {
         file::new(&final_dir)
             .create_dir_all()
             .map_err(|e| Status::internal(e.to_string()))?;
-        let final_path = format!("{}/output", final_dir);
+        let final_path = format!("{}/proof_with_public_inputs.json", final_dir);
 
         let generate_context = stage::contexts::GenerateContext::new(
             &request.get_ref().proof_id,
@@ -188,6 +202,7 @@ impl StageService for StageServiceSVC {
             &prove_path,
             &agg_path,
             &final_path,
+            &request.get_ref().args,
             request.get_ref().block_no,
             request.get_ref().seg_size,
         );
@@ -200,9 +215,18 @@ impl StageService for StageServiceSVC {
                 &serde_json::to_string(&generate_context).unwrap(),
             )
             .await;
+        let mut download_url = "".to_string();
+        if let Some(fileserver_url) = &self.fileserver_url {
+            download_url = format!(
+                "{}/{}/final/proof_with_public_inputs.json",
+                fileserver_url,
+                request.get_ref().proof_id
+            );
+        }
         let response = stage_service::GenerateProofResponse {
             proof_id: request.get_ref().proof_id.clone(),
             status: stage_service::Status::Computing as u32,
+            download_url,
             ..Default::default()
         };
         Ok(Response::new(response))

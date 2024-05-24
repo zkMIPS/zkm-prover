@@ -33,12 +33,15 @@ message GenerateProofRequest {
     repeated BlockFileItem block_data = 5;
     uint64 block_no = 6;
     uint32 seg_size = 7;
+    string args = 8;
+    string signature = 9; 
 }
 
 message GenerateProofResponse {
     uint32 status = 1;
     string error_message = 2;
     string proof_id = 3;
+    string download_url = 4;
 }
 
 message GetStatusRequest {
@@ -48,7 +51,6 @@ message GetStatusRequest {
 message GetStatusResponse {
     string proof_id = 1;
     uint32 status = 2;
-    bytes result = 3;
-    bytes proof_with_public_inputs = 4; // public_inputs
-    bytes verifier_only_circuit_data = 5;
+    bytes proof_with_public_inputs = 3;
+    string download_url = 4;
 }

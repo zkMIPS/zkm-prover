@@ -72,6 +72,7 @@ message SplitElfRequest {
     string seg_path = 7;
     uint64 block_no = 8;
     uint32 seg_size = 9;
+    string args = 10;
 }
 
 message SplitElfResponse {

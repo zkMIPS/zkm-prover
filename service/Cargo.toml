@@ -26,5 +26,11 @@ lazy_static = "1.4"
 clap = "4.5.2"
 anyhow = "1.0.75"
 num = "0.4"
+secp256k1 = "0.29"
+hex = "0.4.3"
+digest = "0.10"  
+sha3 = { version = "0.10"}
+ethers = "2.0.14"
+
 [build-dependencies]
 tonic-build = "0.8.0"

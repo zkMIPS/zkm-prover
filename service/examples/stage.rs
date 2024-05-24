@@ -8,8 +8,23 @@ use std::time::Instant;
 use tokio::time;
 use tonic::transport::ClientTlsConfig;
 use tonic::transport::Endpoint;
+
+use ethers::signers::{LocalWallet, Signer};
+
 pub mod stage_service {
     tonic::include_proto!("stage.v1");
+}
+
+async fn sign_ecdsa(request: &mut GenerateProofRequest, private_key: &str) {
+    if !private_key.is_empty() {
+        let wallet = private_key.parse::<LocalWallet>().unwrap();
+        let sign_data = format!(
+            "{}&{}&{}&{}",
+            request.proof_id, request.block_no, request.seg_size, request.args
+        );
+        let signature = wallet.sign_message(sign_data).await.unwrap();
+        request.signature = signature.to_string();
+    }
 }
 
 #[tokio::main]
@@ -22,10 +37,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let block_no = block_no.parse::<_>().unwrap_or(0);
     let seg_size = env::var("SEG_SIZE").unwrap_or("262144".to_string());
     let seg_size = seg_size.parse::<_>().unwrap_or(262144);
+    let args = env::var("ARGS").unwrap_or("".to_string());
     let endpoint = env::var("ENDPOINT").unwrap_or("http://127.0.0.1:50000".to_string());
     let ca_cert_path = env::var("CA_CERT_PATH").unwrap_or("".to_string());
     let cert_path = env::var("CERT_PATH").unwrap_or("".to_string());
     let key_path = env::var("KEY_PATH").unwrap_or("".to_string());
+    let private_key = env::var("PRIVATE_KEY").unwrap_or("".to_string());
     let ssl_config = if ca_cert_path.is_empty() {
         None
     } else {
@@ -48,14 +65,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let proof_id = uuid::Uuid::new_v4().to_string();
-    let request = GenerateProofRequest {
+    let mut request = GenerateProofRequest {
         proof_id: proof_id.clone(),
         elf_data,
         block_data,
         block_no,
         seg_size,
+        args,
         ..Default::default()
     };
+    sign_ecdsa(&mut request, &private_key).await;
     log::info!("request: {:?}", proof_id);
     let start = Instant::now();
     let endpoint = match ssl_config {
@@ -86,21 +105,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     match status {
                         crate::stage_service::Status::Success => {
                             log::info!(
-                                "generate_proof success proof_size: {} public_inputs_size: {} circuit_data_size: {}",
-                                get_status_response.result.len(),
+                                "generate_proof success public_inputs_size: {}",
                                 get_status_response.proof_with_public_inputs.len(),
-                                get_status_response.verifier_only_circuit_data.len(),
                             );
                             let output_dir = Path::new(&output_dir);
-                            let proof_path = output_dir.join("proof");
                             let public_inputs_path = output_dir.join("proof_with_public_inputs");
-                            let circuit_data_path = output_dir.join("verifier_only_circuit_data");
-                            let _ = file::new(&proof_path.to_string_lossy())
-                                .write(get_status_response.result.as_slice());
                             let _ = file::new(&public_inputs_path.to_string_lossy())
                                 .write(get_status_response.proof_with_public_inputs.as_slice());
-                            let _ = file::new(&circuit_data_path.to_string_lossy())
-                                .write(get_status_response.verifier_only_circuit_data.as_slice());
                         }
                         _ => {
                             log::info!(
