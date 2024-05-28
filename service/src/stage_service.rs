@@ -215,14 +215,14 @@ impl StageService for StageServiceSVC {
                 &serde_json::to_string(&generate_context).unwrap(),
             )
             .await;
-        let mut download_url = "".to_string();
-        if let Some(fileserver_url) = &self.fileserver_url {
-            download_url = format!(
+        let download_url = match &self.fileserver_url {
+            Some(fileserver_url) => format!(
                 "{}/{}/final/proof_with_public_inputs.json",
                 fileserver_url,
                 request.get_ref().proof_id
-            );
-        }
+            ),
+            None => "".to_string(),
+        };
         let response = stage_service::GenerateProofResponse {
             proof_id: request.get_ref().proof_id.clone(),
             status: stage_service::Status::Computing as u32,
