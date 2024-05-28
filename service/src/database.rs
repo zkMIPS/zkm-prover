@@ -21,6 +21,12 @@ pub struct ProveTask {
     pub check_at: i64,
 }
 
+#[warn(unused_macros)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, sqlx::FromRow)]
+pub struct User {
+    pub address: String,
+}
+
 #[derive(Clone)]
 pub struct Database {
     pub db_pool: sqlx::mysql::MySqlPool,
@@ -145,6 +151,14 @@ impl Database {
         )
         .fetch_all(&self.db_pool)
         .await?;
+        Ok(rows)
+    }
+
+    #[allow(dead_code)]
+    pub async fn get_user(&self, address: &str) -> anyhow::Result<Vec<User>> {
+        let rows = sqlx::query_as!(User, "SELECT address from user where address = ?", address)
+            .fetch_all(&self.db_pool)
+            .await?;
         Ok(rows)
     }
 }

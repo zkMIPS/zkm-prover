@@ -41,18 +41,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     let mut server = Server::builder();
-    if runtime_config.ca_cert_path.is_some() {
+    if runtime_config.key_path.is_some() {
         let tls_config = TlsConfig::new(
-            runtime_config.ca_cert_path.clone().unwrap(),
+            runtime_config
+                .ca_cert_path
+                .clone()
+                .unwrap_or("".to_string()),
             runtime_config.cert_path.clone().unwrap(),
             runtime_config.key_path.clone().unwrap(),
         )
         .await?;
-        server = server.tls_config(
-            ServerTlsConfig::new()
-                .identity(tls_config.identity)
-                .client_ca_root(tls_config.ca_cert),
-        )?;
+        let mut server_tls_config = ServerTlsConfig::new();
+        if let Some(ca_cert) = tls_config.ca_cert {
+            server_tls_config = server_tls_config.client_ca_root(ca_cert);
+        }
+        if let Some(identity) = tls_config.identity {
+            server_tls_config = server_tls_config.identity(identity);
+        }
+        server = server.tls_config(server_tls_config)?;
     }
     if args.stage {
         let stage = stage_service::StageServiceSVC::new(runtime_config.clone()).await?;

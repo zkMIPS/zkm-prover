@@ -7,6 +7,7 @@ pub struct SplitContext {
     pub block_no: u64,
     pub seg_size: u32,
     pub seg_path: String,
+    pub args: String,
 }
 
 impl SplitContext {
@@ -16,6 +17,7 @@ impl SplitContext {
         block_no: u64,
         seg_size: u32,
         seg_path: &String,
+        args: &str,
     ) -> Self {
         SplitContext {
             basedir: basedir.to_string(),
@@ -23,6 +25,7 @@ impl SplitContext {
             block_no,
             seg_size,
             seg_path: seg_path.to_string(),
+            args: args.to_string(),
         }
     }
 }

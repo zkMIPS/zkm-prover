@@ -9,6 +9,7 @@ pub struct GenerateContext {
     pub prove_path: String,
     pub agg_path: String,
     pub final_path: String,
+    pub args: String,
     pub block_no: u64,
     pub seg_size: u32,
 }
@@ -23,6 +24,7 @@ impl GenerateContext {
         prove_path: &str,
         agg_path: &str,
         final_path: &str,
+        args: &str,
         block_no: u64,
         seg_size: u32,
     ) -> Self {
@@ -34,6 +36,7 @@ impl GenerateContext {
             prove_path: prove_path.to_string(),
             agg_path: agg_path.to_string(),
             final_path: final_path.to_string(),
+            args: args.to_string(),
             block_no,
             seg_size,
         }

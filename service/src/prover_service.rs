@@ -101,6 +101,7 @@ impl ProverService for ProverServiceSVC {
             request.get_ref().block_no,
             request.get_ref().seg_size,
             &request.get_ref().seg_path,
+            &request.get_ref().args,
         );
         let split_func = move || {
             let s_ctx: SplitContext = split_context;

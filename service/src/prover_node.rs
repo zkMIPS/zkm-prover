@@ -47,9 +47,13 @@ impl ProverNode {
                     .timeout(Duration::from_secs(TASK_TIMEOUT))
                     .concurrency_limit(256);
                 if let Some(config) = tls_config {
-                    let tls_config = ClientTlsConfig::new()
-                        .ca_certificate(config.ca_cert)
-                        .identity(config.identity);
+                    let mut tls_config = ClientTlsConfig::new();
+                    if let Some(ca_cert) = config.ca_cert {
+                        tls_config = tls_config.ca_certificate(ca_cert);
+                    }
+                    if let Some(identity) = config.identity {
+                        tls_config = tls_config.identity(identity);
+                    }
                     endpoint = endpoint.tls_config(tls_config).unwrap();
                 }
                 let client_init = endpoint.connect().await;

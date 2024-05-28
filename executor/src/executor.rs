@@ -22,7 +22,7 @@ impl Executor {
         let block_no = ctx.block_no.to_string();
         let seg_path = ctx.seg_path.clone();
         let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
-        let args = "".to_string();
+        let args = ctx.args.split_whitespace().collect();
 
         log::info!("split {} load elf file", elf_path);
         let data = file::new(&elf_path).read();
@@ -39,7 +39,7 @@ impl Executor {
                 core::result::Result::Ok(file) => {
                     let (mut state, _) = State::load_elf(&file);
                     state.patch_go(&file);
-                    state.patch_stack(&args);
+                    state.patch_stack(args);
 
                     let block_no = block_no.parse::<_>().unwrap_or(0);
                     if block_no > 0 {

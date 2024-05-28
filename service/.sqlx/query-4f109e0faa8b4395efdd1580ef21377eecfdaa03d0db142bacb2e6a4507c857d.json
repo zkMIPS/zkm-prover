@@ -1,0 +1,25 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT address from user where address = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "address",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL | PRIMARY_KEY | NO_DEFAULT_VALUE",
+          "char_set": 224,
+          "max_size": 256
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4f109e0faa8b4395efdd1580ef21377eecfdaa03d0db142bacb2e6a4507c857d"
+}
