@@ -30,7 +30,6 @@ secp256k1 = "0.29"
 hex = "0.4.3"
 digest = "0.10"  
 sha3 = { version = "0.10"}
-ethers = "2.0.14"
-
+ethers = { version = "2.0.14",  features = ["abigen", "rustls", "ws", "ethers-solc"]}
 [build-dependencies]
 tonic-build = "0.8.0"
