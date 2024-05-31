@@ -75,6 +75,7 @@ impl Prover<AggContext> for AggProver {
         let agg_public_values = PublicValues {
             roots_before: root_pub_value.roots_before,
             roots_after: next_pub_value.roots_after,
+            userdata: next_pub_value.userdata,
         };
         // We can duplicate the proofs here because the state hasn't mutated.
         let (agg_proof, updated_agg_public_values) = all_circuits.prove_aggregation(

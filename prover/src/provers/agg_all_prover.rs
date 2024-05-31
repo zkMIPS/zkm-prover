@@ -87,6 +87,7 @@ impl Prover<AggAllContext> for AggAllProver {
             let agg_public_values = PublicValues {
                 roots_before: updated_agg_public_values.roots_before,
                 roots_after: public_values.roots_after,
+                userdata: public_values.userdata,
             };
             // We can duplicate the proofs here because the state hasn't mutated.
             (agg_proof, updated_agg_public_values) = all_circuits.prove_aggregation(
@@ -116,6 +117,7 @@ impl Prover<AggAllContext> for AggAllProver {
                 let new_agg_public_values = PublicValues {
                     roots_before: first_public_values.roots_before,
                     roots_after: public_values.roots_after,
+                    userdata: public_values.userdata,
                 };
                 // We can duplicate the proofs here because the state hasn't mutated.
                 let (new_agg_proof, new_updated_agg_public_values) = all_circuits
@@ -131,6 +133,7 @@ impl Prover<AggAllContext> for AggAllProver {
                 let agg_public_values = PublicValues {
                     roots_before: updated_agg_public_values.roots_before,
                     roots_after: new_updated_agg_public_values.roots_after,
+                    userdata: new_updated_agg_public_values.userdata,
                 };
 
                 // We can duplicate the proofs here because the state hasn't mutated.
