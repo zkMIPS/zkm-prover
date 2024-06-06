@@ -13,6 +13,9 @@ use std::time::Instant;
 use tonic::{Request, Response, Status};
 
 use self::prover_service::ResultCode;
+
+use std::panic;
+
 #[allow(clippy::module_inception)]
 pub mod prover_service {
     tonic::include_proto!("prover.v1");
@@ -25,11 +28,19 @@ async fn run_back_task<F: FnOnce() -> std::result::Result<bool, String> + Send +
     let (tx, rx) = tokio::sync::oneshot::channel();
     let _ = rt
         .spawn_blocking(move || {
-            let result = callable();
+            let result = panic::catch_unwind(panic::AssertUnwindSafe(callable));
+            // tx.send(result).unwrap();
+            // let result = callable();
             let _ = tx.send(result);
         })
         .await;
-    rx.await.unwrap()
+    match rx.await.unwrap() {
+        Ok(result) => result,
+        Err(e) => {
+            log::error!("{:#?}", e);
+            Err("panic".to_string())
+        }
+    }
 }
 
 #[derive(Debug, Default)]
