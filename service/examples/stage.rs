@@ -35,8 +35,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let block_path = env::var("BLOCK_PATH").unwrap_or("".to_string());
     let block_no = env::var("BLOCK_NO").unwrap_or("0".to_string());
     let block_no = block_no.parse::<_>().unwrap_or(0);
-    let seg_size = env::var("SEG_SIZE").unwrap_or("262144".to_string());
-    let seg_size = seg_size.parse::<_>().unwrap_or(262144);
+    let seg_size = env::var("SEG_SIZE").unwrap_or("131072".to_string());
+    let seg_size = seg_size.parse::<_>().unwrap_or(131072);
     let args = env::var("ARGS").unwrap_or("".to_string());
     let endpoint = env::var("ENDPOINT").unwrap_or("http://127.0.0.1:50000".to_string());
     let ca_cert_path = env::var("CA_CERT_PATH").unwrap_or("".to_string());

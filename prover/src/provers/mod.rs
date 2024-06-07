@@ -20,20 +20,14 @@ use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 use once_cell::sync::OnceCell;
 use std::sync::Mutex;
 
+const MAX_SEG_SIZE: usize = 262144;
 /// Prover trait
 pub trait Prover<T> {
     fn prove(&self, ctx: &T) -> Result<()>;
 }
 
-const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 7] = [
-    [10..21, 10..15, 10..18, 8..15, 10..21, 15..23],
-    [10..21, 12..22, 13..21, 8..21, 10..21, 13..23],
-    [10..21, 12..22, 13..21, 8..21, 10..21, 13..23],
-    [10..21, 12..22, 13..21, 8..21, 10..21, 13..23],
-    [10..21, 12..22, 13..21, 8..21, 10..21, 13..23],
-    [10..21, 12..22, 13..21, 8..21, 10..21, 13..25],
-    [10..21, 12..22, 13..21, 8..21, 10..21, 13..25],
-];
+const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 1] =
+    [[10..21, 12..22, 12..21, 8..21, 10..21, 13..23]];
 // const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 5] = [
 //     [16..17, 12..13, 10..16, 9..12, 15..17, 17..19],
 //     [16..17, 15..17, 12..19, 9..14, 15..17, 19..20],
@@ -45,13 +39,7 @@ const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 7] = [
 lazy_static! {
     static ref SEG_SIZE_TO_BITS: HashMap<usize, usize> = {
         let mut map = HashMap::new();
-        // map.insert(1024, 0);
-        map.insert(16384, 1);
-        map.insert(32768, 2);
-        map.insert(65536, 3);
-        map.insert(262144, 4);
-        // map.insert(524288, 5);
-        // map.insert(1048576, 6);
+        map.insert(262144, 0);
         map
     };
 }
@@ -67,7 +55,7 @@ fn select_degree_bits(seg_size: usize) -> [std::ops::Range<usize>; 6] {
 }
 
 pub fn valid_seg_size(seg_size: usize) -> bool {
-    if SEG_SIZE_TO_BITS.contains_key(&seg_size) {
+    if seg_size <= MAX_SEG_SIZE {
         return true;
     }
     false
@@ -86,7 +74,7 @@ pub fn instance() -> &'static Mutex<AllRecursiveCircuits<F, C, D>> {
         // Preprocess all circuits.
         Mutex::new(AllRecursiveCircuits::<F, C, D>::new(
             &all_stark,
-            &select_degree_bits(262144),
+            &select_degree_bits(MAX_SEG_SIZE),
             &config,
         ))
     })

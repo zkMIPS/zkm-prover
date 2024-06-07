@@ -30,7 +30,7 @@ $ docker-compose up -d
 - `ENDPOINT`: The access address of stage service
 - `RUST_LOG`: Log level
 - `OUTPUT_DIR`: Store results folder path
-- `SEG_SIZE`: SEG_SIZE default 262144
+- `SEG_SIZE`: SEG_SIZE default 131072
 
 The smaller the SEG_SIZE, the longer the cost will be
 ```
