@@ -20,6 +20,7 @@ use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 use once_cell::sync::OnceCell;
 use std::sync::Mutex;
 
+const MAX_SEG_SIZE: usize = 262144;
 /// Prover trait
 pub trait Prover<T> {
     fn prove(&self, ctx: &T) -> Result<()>;
@@ -69,7 +70,7 @@ fn select_degree_bits(seg_size: usize) -> [std::ops::Range<usize>; 6] {
 }
 
 pub fn valid_seg_size(seg_size: usize) -> bool {
-    if SEG_SIZE_TO_BITS.contains_key(&seg_size) {
+    if seg_size <= MAX_SEG_SIZE {
         return true;
     }
     false
@@ -88,7 +89,7 @@ pub fn instance() -> &'static Mutex<AllRecursiveCircuits<F, C, D>> {
         // Preprocess all circuits.
         Mutex::new(AllRecursiveCircuits::<F, C, D>::new(
             &all_stark,
-            &select_degree_bits(262144),
+            &select_degree_bits(MAX_SEG_SIZE),
             &config,
         ))
     })

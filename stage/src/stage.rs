@@ -210,6 +210,14 @@ impl Stage {
         }
         self.prove_tasks.sort_by_key(|p| p.file_no);
         log::info!("gen_prove_task {:#?}", self.prove_tasks);
+
+        if self.prove_tasks.len() < 2 {
+            self.is_error = true;
+            self.errmsg = format!(
+                "Segment count is {}, please reduce SEG_SIZE !",
+                self.prove_tasks.len()
+            );
+        }
     }
 
     pub fn get_prove_task(&mut self) -> Option<ProveTask> {
