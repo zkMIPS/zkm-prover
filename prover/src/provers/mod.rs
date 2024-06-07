@@ -26,16 +26,8 @@ pub trait Prover<T> {
     fn prove(&self, ctx: &T) -> Result<()>;
 }
 
-const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 8] = [
-    [10..21, 10..15, 10..18, 8..15, 10..21, 15..23],
-    [10..21, 12..22, 12..21, 8..21, 10..21, 13..23],
-    [10..21, 12..22, 12..21, 8..21, 10..21, 13..23],
-    [10..21, 12..22, 12..21, 8..21, 10..21, 13..23],
-    [10..21, 12..22, 12..21, 8..21, 10..21, 13..23],
-    [10..21, 12..22, 12..21, 8..21, 10..21, 13..23],
-    [10..21, 12..22, 12..21, 8..21, 10..21, 13..25],
-    [10..21, 12..22, 12..21, 8..21, 10..21, 13..25],
-];
+const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 1] =
+    [[10..21, 12..22, 12..21, 8..21, 10..21, 13..23]];
 // const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 5] = [
 //     [16..17, 12..13, 10..16, 9..12, 15..17, 17..19],
 //     [16..17, 15..17, 12..19, 9..14, 15..17, 19..20],
@@ -47,14 +39,7 @@ const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 8] = [
 lazy_static! {
     static ref SEG_SIZE_TO_BITS: HashMap<usize, usize> = {
         let mut map = HashMap::new();
-        // map.insert(1024, 0);
-        map.insert(16384, 1);
-        map.insert(32768, 2);
-        map.insert(65536, 3);
-        map.insert(131072, 3);
-        map.insert(262144, 4);
-        // map.insert(524288, 5);
-        // map.insert(1048576, 6);
+        map.insert(262144, 0);
         map
     };
 }
