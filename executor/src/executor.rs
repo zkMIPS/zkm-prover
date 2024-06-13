@@ -38,7 +38,7 @@ impl Executor {
             match file_result {
                 core::result::Result::Ok(file) => {
                     let (mut state, _) = State::load_elf(&file);
-                    state.patch_go(&file);
+                    state.patch_elf(&file);
                     state.patch_stack(args);
 
                     let block_no = block_no.parse::<_>().unwrap_or(0);
