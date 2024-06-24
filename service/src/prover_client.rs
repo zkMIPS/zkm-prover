@@ -100,6 +100,13 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
                 log::info!("split response {:#?}", response);
                 split_task.state = result_code_to_state(response_result.code);
                 split_task.node_info = addrs;
+                log::info!(
+                    "split result proof_id:{:?} computed_request_id:{:?} code:{:?} message:{:?}",
+                    response.get_ref().proof_id,
+                    response.get_ref().computed_request_id,
+                    response_result.code,
+                    response_result.message,
+                );
                 return Some(split_task);
             }
         }
@@ -133,6 +140,13 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
                 log::info!("prove response {:#?}", response);
                 prove_task.state = result_code_to_state(response_result.code);
                 prove_task.node_info = addrs;
+                log::info!(
+                    "prove result proof_id:{:?} computed_request_id:{:?} code:{:?} message:{:?}",
+                    response.get_ref().proof_id,
+                    response.get_ref().computed_request_id,
+                    response_result.code,
+                    response_result.message,
+                );
                 return Some(prove_task);
             }
         }
@@ -178,6 +192,13 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
                 log::info!("aggregate response {:#?}", response);
                 agg_task.state = result_code_to_state(response_result.code);
                 agg_task.node_info = addrs;
+                log::info!(
+                    "aggregate result proof_id:{:?} computed_request_id:{:?} code:{:?} message:{:?}",
+                    response.get_ref().proof_id,
+                    response.get_ref().computed_request_id,
+                    response_result.code,
+                    response_result.message,
+                );
                 return Some(agg_task);
             }
         }
@@ -216,6 +237,13 @@ pub async fn aggregate_all(
                 log::info!("aggregate_all response {:#?}", response);
                 agg_all_task.state = result_code_to_state(response_result.code);
                 agg_all_task.node_info = addrs;
+                log::info!(
+                    "aggregate_all result proof_id:{:?} computed_request_id:{:?} code:{:?} message:{:?}",
+                    response.get_ref().proof_id,
+                    response.get_ref().computed_request_id,
+                    response_result.code,
+                    response_result.message,
+                );
                 return Some(agg_all_task);
             }
         }

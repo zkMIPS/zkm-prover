@@ -31,6 +31,8 @@ hex = "0.4.3"
 digest = "0.10"  
 sha3 = { version = "0.10"}
 ethers = "2.0.14"
+prometheus = "0.13"
+hyper = { version = "^0.14", features = ["server", "http1", "tcp"] }
 
 [build-dependencies]
 tonic-build = "0.8.0"

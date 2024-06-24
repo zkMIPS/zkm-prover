@@ -73,12 +73,14 @@ impl Database {
     pub async fn insert_stage_task(
         &self,
         proof_id: &str,
+        address: &str,
         status: i32,
         context: &str,
     ) -> anyhow::Result<bool> {
         sqlx::query!(
-            "INSERT INTO stage_task (id, status, context) values (?,?,?)",
+            "INSERT INTO stage_task (id, address, status, context) values (?,?,?,?)",
             proof_id,
+            address,
             status,
             context
         )

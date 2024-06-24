@@ -7,8 +7,13 @@ use stage_service::stage_service::stage_service_server::StageServiceServer;
 use tonic::transport::Server;
 use tonic::transport::ServerTlsConfig;
 
+use hyper::service::{make_service_fn, service_fn};
+use hyper::{Body, Request, Response};
+use prometheus::{Encoder, TextEncoder};
+
 mod config;
 mod database;
+mod metrics;
 mod prover_client;
 mod prover_node;
 mod prover_service;
@@ -60,18 +65,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         server = server.tls_config(server_tls_config)?;
     }
-    if args.stage {
+    let grpc_server = if args.stage {
         let stage = stage_service::StageServiceSVC::new(runtime_config.clone()).await?;
         server
             .add_service(StageServiceServer::new(stage))
             .serve(addr)
-            .await?;
     } else {
         let prover = prover_service::ProverServiceSVC::default();
         server
             .add_service(ProverServiceServer::new(prover))
             .serve(addr)
-            .await?;
+    };
+
+    let metrics_addr = runtime_config.metrics_addr.as_str().parse()?;
+    let make_svc = make_service_fn(move |_| {
+        let registry = metrics::REGISTRY_INSTANCE.clone();
+        async move {
+            Ok::<_, hyper::Error>(service_fn(move |_: Request<Body>| {
+                let registry = registry.clone();
+                async move {
+                    let encoder = TextEncoder::new();
+                    let metric_families = registry.gather();
+                    let mut buffer = Vec::new();
+                    encoder.encode(&metric_families, &mut buffer).unwrap();
+                    Ok::<_, hyper::Error>(Response::new(Body::from(buffer)))
+                }
+            }))
+        }
+    });
+    metrics::init_registry();
+    let metrics_server = hyper::Server::bind(&metrics_addr).serve(make_svc);
+
+    tokio::pin!(grpc_server);
+    tokio::pin!(metrics_server);
+
+    tokio::select! {
+        res = grpc_server => res?,
+        res = metrics_server => res?,
     }
     Ok(())
 }

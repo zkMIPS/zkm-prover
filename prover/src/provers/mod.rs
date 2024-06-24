@@ -20,6 +20,7 @@ use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
 use once_cell::sync::OnceCell;
 use std::sync::Mutex;
 
+const MIN_SEG_SIZE: usize = 65536;
 const MAX_SEG_SIZE: usize = 262144;
 /// Prover trait
 pub trait Prover<T> {
@@ -27,7 +28,7 @@ pub trait Prover<T> {
 }
 
 const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 1] =
-    [[10..21, 12..22, 12..21, 8..21, 10..21, 13..23]];
+    [[10..21, 12..22, 12..21, 8..21, 8..21, 13..23]];
 // const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 5] = [
 //     [16..17, 12..13, 10..16, 9..12, 15..17, 17..19],
 //     [16..17, 15..17, 12..19, 9..14, 15..17, 19..20],
@@ -55,7 +56,7 @@ fn select_degree_bits(seg_size: usize) -> [std::ops::Range<usize>; 6] {
 }
 
 pub fn valid_seg_size(seg_size: usize) -> bool {
-    if seg_size <= MAX_SEG_SIZE {
+    if (MIN_SEG_SIZE..=MAX_SEG_SIZE).contains(&seg_size) {
         return true;
     }
     false

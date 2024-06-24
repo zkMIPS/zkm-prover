@@ -1,4 +1,5 @@
 addr = "0.0.0.0:50000"
+metrics_addr = "0.0.0.0:50010"
 database_url = "mysql://stage:123456@zkm-mysql:3306/zkm"
 prover_addrs = ["zkm-prover:50000"]
 snark_addrs = ["zkm-snark:50051"]
