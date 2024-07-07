@@ -7,7 +7,7 @@ edition = "2021"
 plonky2 = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev" }
 plonky2_util = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev" }
 plonky2_maybe_rayon = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev" }
-zkm = { git = "https://github.com/zkMIPS/zkm.git", branch = "main" }
+zkm-prover = { git = "https://github.com/zkMIPS/zkm.git", branch = "main" }
 
 itertools = "0.11.0"
 log = { version = "0.4.14", default-features = false }

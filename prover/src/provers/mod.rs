@@ -13,9 +13,9 @@ use std::collections::HashMap;
 
 use plonky2::field::goldilocks_field::GoldilocksField;
 use plonky2::plonk::config::PoseidonGoldilocksConfig;
-use zkm::all_stark::AllStark;
-use zkm::config::StarkConfig;
-use zkm::fixed_recursive_verifier::AllRecursiveCircuits;
+use zkm_prover::all_stark::AllStark;
+use zkm_prover::config::StarkConfig;
+use zkm_prover::fixed_recursive_verifier::AllRecursiveCircuits;
 
 use once_cell::sync::OnceCell;
 use std::sync::Mutex;
