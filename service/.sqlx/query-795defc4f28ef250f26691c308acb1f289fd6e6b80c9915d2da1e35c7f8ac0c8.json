@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO stage_task (id, address, status, context) values (?,?,?,?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "795defc4f28ef250f26691c308acb1f289fd6e6b80c9915d2da1e35c7f8ac0c8"
+}

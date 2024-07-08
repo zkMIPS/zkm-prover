@@ -2,8 +2,8 @@ use crate::split_context::SplitContext;
 use common::file;
 use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;
-use zkm::mips_emulator::state::{InstrumentedState, State};
-use zkm::mips_emulator::utils::get_block_path;
+use zkm_prover::mips_emulator::state::{InstrumentedState, State};
+use zkm_prover::mips_emulator::utils::get_block_path;
 
 #[derive(Default)]
 pub struct Executor {}

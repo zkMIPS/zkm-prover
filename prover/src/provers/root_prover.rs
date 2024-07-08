@@ -6,9 +6,9 @@ use plonky2::field::goldilocks_field::GoldilocksField;
 use plonky2::util::timing::TimingTree;
 
 use std::io::BufReader;
-use zkm::all_stark::AllStark;
-use zkm::config::StarkConfig;
-use zkm::cpu::kernel::assembler::segment_kernel;
+use zkm_prover::all_stark::AllStark;
+use zkm_prover::config::StarkConfig;
+use zkm_prover::cpu::kernel::assembler::segment_kernel;
 
 use common::file;
 

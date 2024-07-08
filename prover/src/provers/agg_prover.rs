@@ -17,7 +17,7 @@ use plonky2x::prelude::DefaultParameters;
 use plonky2::plonk::circuit_data::CircuitData;
 use plonky2::util::serialization::{DefaultGateSerializer, DefaultGeneratorSerializer};
 
-use zkm::proof::PublicValues;
+use zkm_prover::proof::PublicValues;
 
 use common::file;
 

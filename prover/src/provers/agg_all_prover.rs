@@ -18,7 +18,7 @@ use plonky2::util::serialization::{DefaultGateSerializer, DefaultGeneratorSerial
 use std::marker::PhantomData;
 
 use plonky2x::prelude::DefaultParameters;
-use zkm::proof::PublicValues;
+use zkm_prover::proof::PublicValues;
 
 use common::file;
 
