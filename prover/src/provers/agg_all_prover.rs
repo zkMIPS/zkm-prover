@@ -184,7 +184,13 @@ impl Prover<AggAllContext> for AggAllProver {
         let builder = WrapperBuilder::<DefaultParameters, 2>::new();
         let mut circuit = builder.build();
         circuit.set_data(circuit_data);
-        let wrapped_circuit = WrappedCircuit::<InnerParameters, OuterParameters, D>::build(circuit);
+        let mut bit_size = vec![32usize; 16];
+        bit_size.extend(vec![8; 32]);
+        bit_size.extend(vec![64; 68]);
+        let wrapped_circuit = WrappedCircuit::<InnerParameters, OuterParameters, D>::build(
+            circuit,
+            Some((vec![], bit_size)),
+        );
 
         timing = TimingTree::new("agg_all wrapped_circuit.prove", log::Level::Info);
         let wrapped_proof = wrapped_circuit.prove(&block_proof).unwrap();

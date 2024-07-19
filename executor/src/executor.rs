@@ -2,8 +2,8 @@ use crate::split_context::SplitContext;
 use common::file;
 use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;
-use zkm_prover::mips_emulator::state::{InstrumentedState, State};
-use zkm_prover::mips_emulator::utils::get_block_path;
+use zkm_emulator::state::{InstrumentedState, State};
+use zkm_emulator::utils::get_block_path;
 
 #[derive(Default)]
 pub struct Executor {}
@@ -37,7 +37,7 @@ impl Executor {
             let file_result = ElfBytes::<AnyEndian>::minimal_parse(data.as_slice());
             match file_result {
                 core::result::Result::Ok(file) => {
-                    let (mut state, _) = State::load_elf(&file);
+                    let mut state = State::load_elf(&file);
                     state.patch_elf(&file);
                     state.patch_stack(args);
 

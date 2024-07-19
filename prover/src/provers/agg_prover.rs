@@ -128,8 +128,13 @@ impl Prover<AggContext> for AggProver {
             let builder = WrapperBuilder::<DefaultParameters, 2>::new();
             let mut circuit = builder.build();
             circuit.set_data(circuit_data);
-            let wrapped_circuit =
-                WrappedCircuit::<InnerParameters, OuterParameters, D>::build(circuit);
+            let mut bit_size = vec![32usize; 16];
+            bit_size.extend(vec![8; 32]);
+            bit_size.extend(vec![64; 68]);
+            let wrapped_circuit = WrappedCircuit::<InnerParameters, OuterParameters, D>::build(
+                circuit,
+                Some((vec![], bit_size)),
+            );
             timing.filter(Duration::from_millis(100)).print();
 
             timing = TimingTree::new("agg wrapped_circuit.prove", log::Level::Info);
