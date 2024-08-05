@@ -91,19 +91,19 @@ impl StageService for StageServiceSVC {
                     response.proof_with_public_inputs = result.into_bytes();
                 }
                 if let Some(fileserver_url) = &self.fileserver_url {
-                    response.download_url = format!(
+                    response.proof_url = format!(
                         "{}/{}/final/proof_with_public_inputs.json",
                         fileserver_url,
                         request.get_ref().proof_id
                     );
-                    response.stark_download_url = format!(
+                    response.stark_proof_url = format!(
                         "{}/{}/aggregate/proof_with_public_inputs.json",
                         fileserver_url,
                         request.get_ref().proof_id
                     );
                 }
                 if let Some(verifier_url) = &self.verifier_url {
-                    response.verifier_download_url.clone_from(verifier_url);
+                    response.verifier_proof_url.clone_from(verifier_url);
                 }
             }
             Ok(Response::new(response))
@@ -239,7 +239,7 @@ impl StageService for StageServiceSVC {
                     &serde_json::to_string(&generate_context).unwrap(),
                 )
                 .await;
-            let download_url = match &self.fileserver_url {
+            let proof_url = match &self.fileserver_url {
                 Some(fileserver_url) => format!(
                     "{}/{}/final/proof_with_public_inputs.json",
                     fileserver_url,
@@ -247,7 +247,7 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
-            let stark_download_url = match &self.fileserver_url {
+            let stark_proof_url = match &self.fileserver_url {
                 Some(fileserver_url) => format!(
                     "{}/{}/aggregate/proof_with_public_inputs.json",
                     fileserver_url,
@@ -255,16 +255,16 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
-            let verifier_download_url = match &self.verifier_url {
+            let verifier_proof_url = match &self.verifier_url {
                 Some(verifier_url) => verifier_url.clone(),
                 None => "".to_string(),
             };
             let response = stage_service::GenerateProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 status: stage_service::Status::Computing as u32,
-                download_url,
-                stark_download_url,
-                verifier_download_url,
+                proof_url,
+                stark_proof_url,
+                verifier_proof_url,
                 ..Default::default()
             };
             Ok(Response::new(response))
