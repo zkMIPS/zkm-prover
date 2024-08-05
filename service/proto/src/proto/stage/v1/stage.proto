@@ -42,6 +42,8 @@ message GenerateProofResponse {
     string error_message = 2;
     string proof_id = 3;
     string download_url = 4;
+    string stark_download_url = 5;
+    string verifier_download_url = 6;
 }
 
 message GetStatusRequest {
@@ -53,4 +55,6 @@ message GetStatusResponse {
     uint32 status = 2;
     bytes proof_with_public_inputs = 3;
     string download_url = 4;
+    string stark_download_url = 5;
+    string verifier_download_url = 6;
 }

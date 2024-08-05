@@ -19,6 +19,7 @@ pub struct RuntimeConfig {
     pub snark_addrs: Vec<String>,
     pub base_dir: String,
     pub fileserver_url: Option<String>,
+    pub verifier_url: Option<String>,
     pub ca_cert_path: Option<String>,
     pub cert_path: Option<String>,
     pub key_path: Option<String>,
@@ -34,6 +35,7 @@ impl RuntimeConfig {
             snark_addrs: ["0.0.0.0:50000".to_string()].to_vec(),
             base_dir: "/tmp".to_string(),
             fileserver_url: None,
+            verifier_url: None,
             ca_cert_path: None,
             cert_path: None,
             key_path: None,
@@ -93,6 +95,11 @@ impl RuntimeConfig {
             .unwrap()
             .fileserver_url
             .clone_from(&config.fileserver_url);
+        instance()
+            .lock()
+            .unwrap()
+            .verifier_url
+            .clone_from(&config.verifier_url);
         instance()
             .lock()
             .unwrap()

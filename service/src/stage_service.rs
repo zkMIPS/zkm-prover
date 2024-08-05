@@ -34,6 +34,7 @@ lazy_static! {
 pub struct StageServiceSVC {
     db: database::Database,
     fileserver_url: Option<String>,
+    verifier_url: Option<String>,
 }
 
 impl StageServiceSVC {
@@ -57,6 +58,7 @@ impl StageServiceSVC {
         Ok(StageServiceSVC {
             db,
             fileserver_url: config.fileserver_url.clone(),
+            verifier_url: config.verifier_url.clone(),
         })
     }
 
@@ -94,6 +96,14 @@ impl StageService for StageServiceSVC {
                         fileserver_url,
                         request.get_ref().proof_id
                     );
+                    response.stark_download_url = format!(
+                        "{}/{}/aggregate/proof_with_public_inputs.json",
+                        fileserver_url,
+                        request.get_ref().proof_id
+                    );
+                }
+                if let Some(verifier_url) = &self.verifier_url {
+                    response.verifier_download_url.clone_from(verifier_url);
                 }
             }
             Ok(Response::new(response))
@@ -237,10 +247,24 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
+            let stark_download_url = match &self.fileserver_url {
+                Some(fileserver_url) => format!(
+                    "{}/{}/aggregate/proof_with_public_inputs.json",
+                    fileserver_url,
+                    request.get_ref().proof_id
+                ),
+                None => "".to_string(),
+            };
+            let verifier_download_url = match &self.verifier_url {
+                Some(verifier_url) => verifier_url.clone(),
+                None => "".to_string(),
+            };
             let response = stage_service::GenerateProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 status: stage_service::Status::Computing as u32,
                 download_url,
+                stark_download_url,
+                verifier_download_url,
                 ..Default::default()
             };
             Ok(Response::new(response))
