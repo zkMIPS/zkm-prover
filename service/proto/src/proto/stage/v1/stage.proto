@@ -43,7 +43,7 @@ message GenerateProofResponse {
     string proof_id = 3;
     string proof_url = 4;
     string stark_proof_url = 5;
-    string verifier_proof_url = 6;
+    string solidity_verifier_url = 6;
 }
 
 message GetStatusRequest {
@@ -56,5 +56,5 @@ message GetStatusResponse {
     bytes proof_with_public_inputs = 3;
     string proof_url = 4;
     string stark_proof_url = 5;
-    string verifier_proof_url = 6;
+    string solidity_verifier_url = 6;
 }

@@ -103,7 +103,7 @@ impl StageService for StageServiceSVC {
                     );
                 }
                 if let Some(verifier_url) = &self.verifier_url {
-                    response.verifier_proof_url.clone_from(verifier_url);
+                    response.solidity_verifier_url.clone_from(verifier_url);
                 }
             }
             Ok(Response::new(response))
@@ -255,7 +255,7 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
-            let verifier_proof_url = match &self.verifier_url {
+            let solidity_verifier_url = match &self.verifier_url {
                 Some(verifier_url) => verifier_url.clone(),
                 None => "".to_string(),
             };
@@ -264,7 +264,7 @@ impl StageService for StageServiceSVC {
                 status: stage_service::Status::Computing as u32,
                 proof_url,
                 stark_proof_url,
-                verifier_proof_url,
+                solidity_verifier_url,
                 ..Default::default()
             };
             Ok(Response::new(response))
