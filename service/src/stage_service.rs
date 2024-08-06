@@ -34,6 +34,7 @@ lazy_static! {
 pub struct StageServiceSVC {
     db: database::Database,
     fileserver_url: Option<String>,
+    verifier_url: Option<String>,
 }
 
 impl StageServiceSVC {
@@ -57,6 +58,7 @@ impl StageServiceSVC {
         Ok(StageServiceSVC {
             db,
             fileserver_url: config.fileserver_url.clone(),
+            verifier_url: config.verifier_url.clone(),
         })
     }
 
@@ -89,11 +91,19 @@ impl StageService for StageServiceSVC {
                     response.proof_with_public_inputs = result.into_bytes();
                 }
                 if let Some(fileserver_url) = &self.fileserver_url {
-                    response.download_url = format!(
+                    response.proof_url = format!(
                         "{}/{}/final/proof_with_public_inputs.json",
                         fileserver_url,
                         request.get_ref().proof_id
                     );
+                    response.stark_proof_url = format!(
+                        "{}/{}/aggregate/proof_with_public_inputs.json",
+                        fileserver_url,
+                        request.get_ref().proof_id
+                    );
+                }
+                if let Some(verifier_url) = &self.verifier_url {
+                    response.solidity_verifier_url.clone_from(verifier_url);
                 }
             }
             Ok(Response::new(response))
@@ -229,7 +239,7 @@ impl StageService for StageServiceSVC {
                     &serde_json::to_string(&generate_context).unwrap(),
                 )
                 .await;
-            let download_url = match &self.fileserver_url {
+            let proof_url = match &self.fileserver_url {
                 Some(fileserver_url) => format!(
                     "{}/{}/final/proof_with_public_inputs.json",
                     fileserver_url,
@@ -237,10 +247,24 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
+            let stark_proof_url = match &self.fileserver_url {
+                Some(fileserver_url) => format!(
+                    "{}/{}/aggregate/proof_with_public_inputs.json",
+                    fileserver_url,
+                    request.get_ref().proof_id
+                ),
+                None => "".to_string(),
+            };
+            let solidity_verifier_url = match &self.verifier_url {
+                Some(verifier_url) => verifier_url.clone(),
+                None => "".to_string(),
+            };
             let response = stage_service::GenerateProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 status: stage_service::Status::Computing as u32,
-                download_url,
+                proof_url,
+                stark_proof_url,
+                solidity_verifier_url,
                 ..Default::default()
             };
             Ok(Response::new(response))
