@@ -35,6 +35,8 @@ message GenerateProofRequest {
     uint32 seg_size = 7;
     string args = 8;
     string signature = 9; 
+    bytes public_input_stream = 10;
+    bytes private_input_stream = 11;
 }
 
 message GenerateProofResponse {

@@ -186,6 +186,30 @@ impl StageService for StageServiceSVC {
                     .map_err(|e| Status::internal(e.to_string()))?;
             }
 
+            let input_stream_dir = format!("{}/input_stream", dir_path);
+            file::new(&input_stream_dir)
+                .create_dir_all()
+                .map_err(|e| Status::internal(e.to_string()))?;
+            let public_input_stream_path = if request.get_ref().public_input_stream.is_empty() {
+                "".to_string()
+            } else {
+                let public_input_stream_path = format!("{}/{}", input_stream_dir, "public_input");
+                file::new(&public_input_stream_path)
+                    .write(&request.get_ref().public_input_stream)
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                public_input_stream_path
+            };
+
+            let private_input_stream_path = if request.get_ref().private_input_stream.is_empty() {
+                "".to_string()
+            } else {
+                let private_input_stream_path = format!("{}/{}", input_stream_dir, "private_input");
+                file::new(&private_input_stream_path)
+                    .write(&request.get_ref().private_input_stream)
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                private_input_stream_path
+            };
+
             let seg_path = format!("{}/segment", dir_path);
             file::new(&seg_path)
                 .create_dir_all()
@@ -225,6 +249,8 @@ impl StageService for StageServiceSVC {
                 &prove_path,
                 &agg_path,
                 &final_path,
+                &public_input_stream_path,
+                &private_input_stream_path,
                 &request.get_ref().args,
                 request.get_ref().block_no,
                 request.get_ref().seg_size,

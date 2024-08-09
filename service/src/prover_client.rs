@@ -87,6 +87,8 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             base_dir: split_task.base_dir.clone(),
             elf_path: split_task.elf_path.clone(),
             seg_path: split_task.seg_path.clone(),
+            public_input_path: split_task.public_input_path.clone(),
+            private_input_path: split_task.private_input_path.clone(),
             args: split_task.args.clone(),
             block_no: split_task.block_no,
             seg_size: split_task.seg_size,

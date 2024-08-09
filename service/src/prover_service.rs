@@ -120,6 +120,8 @@ impl ProverService for ProverServiceSVC {
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
                 &request.get_ref().seg_path,
+                &request.get_ref().public_input_path,
+                &request.get_ref().private_input_path,
                 &request.get_ref().args,
             );
             let split_func = move || {
