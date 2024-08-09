@@ -38,6 +38,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let seg_size = env::var("SEG_SIZE").unwrap_or("131072".to_string());
     let seg_size = seg_size.parse::<_>().unwrap_or(131072);
     let args = env::var("ARGS").unwrap_or("".to_string());
+    let public_input_path = env::var("PUBLIC_INPUT_PATH").unwrap_or("".to_string());
+    let private_input_path = env::var("PRIVATE_INPUT_PATH").unwrap_or("".to_string());
     let endpoint = env::var("ENDPOINT").unwrap_or("http://127.0.0.1:50000".to_string());
     let ca_cert_path = env::var("CA_CERT_PATH").unwrap_or("".to_string());
     let cert_path = env::var("CERT_PATH").unwrap_or("".to_string());
@@ -65,6 +67,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    let public_input_stream = if public_input_path.is_empty() {
+        vec![]
+    } else {
+        file::new(&public_input_path).read().unwrap()
+    };
+
+    let private_input_stream = if private_input_path.is_empty() {
+        vec![]
+    } else {
+        file::new(&private_input_path).read().unwrap()
+    };
+
     let proof_id = uuid::Uuid::new_v4().to_string();
     let mut request = GenerateProofRequest {
         proof_id: proof_id.clone(),
@@ -73,6 +87,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         block_no,
         seg_size,
         args,
+        public_input_stream,
+        private_input_stream,
         ..Default::default()
     };
     sign_ecdsa(&mut request, &private_key).await;

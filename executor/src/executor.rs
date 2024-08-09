@@ -39,7 +39,27 @@ impl Executor {
                 core::result::Result::Ok(file) => {
                     let mut state = State::load_elf(&file);
                     state.patch_elf(&file);
-                    state.patch_stack(args);
+
+                    // public_input_stream
+                    if !ctx.public_input_path.is_empty() {
+                        state.patch_stack(vec![]);
+                        let data = file::new(&ctx.public_input_path)
+                            .read()
+                            .expect("read public_input_stream failed");
+                        state.add_input_stream(&data);
+                        log::info!("split set public_input data {}", data.len());
+
+                        // private_input_stream
+                        if !ctx.private_input_path.is_empty() {
+                            let data = file::new(&ctx.private_input_path)
+                                .read()
+                                .expect("read private_input_stream failed");
+                            state.add_input_stream(&data);
+                            log::info!("split set private_input data {}", data.len());
+                        }
+                    } else {
+                        state.patch_stack(args);
+                    }
 
                     let block_no = block_no.parse::<_>().unwrap_or(0);
                     if block_no > 0 {

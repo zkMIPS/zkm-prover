@@ -163,6 +163,12 @@ impl Stage {
         self.split_task
             .seg_path
             .clone_from(&self.generate_context.seg_path);
+        self.split_task
+            .public_input_path
+            .clone_from(&self.generate_context.public_input_path);
+        self.split_task
+            .private_input_path
+            .clone_from(&self.generate_context.private_input_path);
         self.split_task.args.clone_from(&self.generate_context.args);
         self.split_task.block_no = self.generate_context.block_no;
         self.split_task.seg_size = self.generate_context.seg_size;
