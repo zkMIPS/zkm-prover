@@ -64,12 +64,6 @@ Name | Type | Mandatory | Description
 proof_id | STRING | YES | Proof id to be queried.
 
 ### GetStatusResponse
-string proof_id = 1;
-    uint32 status = 2;
-    bytes proof_with_public_inputs = 3;
-    string proof_url = 4;
-    string stark_proof_url = 5;
-    string solidity_verifier_url = 6;
 
 Name | Type | Mandatory | Description
 ------------ | ------------ | ------------ | ------------
