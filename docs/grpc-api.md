@@ -68,7 +68,6 @@ proof_id | STRING | YES | Proof id to be queried.
 Name | Type | Mandatory | Description
 ------------ | ------------ | ------------ | ------------
 proof_id | STRING | YES | Request.proof_id.
-
 status | UINT32 | YES | Status Codes.
 proof_with_public_inputs | BYTES | NO | Proof of binary data.
 proof_url | STRING | YES | After the task is completed, you can download the snark proof from this URL.
