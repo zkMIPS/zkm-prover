@@ -9,6 +9,7 @@ pub struct SplitContext {
     pub seg_path: String,
     pub public_input_path: String,
     pub private_input_path: String,
+    pub output_path: String,
     pub args: String,
 }
 
@@ -22,6 +23,7 @@ impl SplitContext {
         seg_path: &str,
         public_input_path: &str,
         private_input_path: &str,
+        output_path: &str,
         args: &str,
     ) -> Self {
         SplitContext {
@@ -32,6 +34,7 @@ impl SplitContext {
             seg_path: seg_path.to_string(),
             public_input_path: public_input_path.to_string(),
             private_input_path: private_input_path.to_string(),
+            output_path: output_path.to_string(),
             args: args.to_string(),
         }
     }

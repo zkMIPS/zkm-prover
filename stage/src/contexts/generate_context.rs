@@ -11,9 +11,11 @@ pub struct GenerateContext {
     pub final_path: String,
     pub public_input_path: String,
     pub private_input_path: String,
+    pub output_stream_path: String,
     pub args: String,
     pub block_no: u64,
     pub seg_size: u32,
+    pub execute_only: bool,
 }
 
 impl GenerateContext {
@@ -28,9 +30,11 @@ impl GenerateContext {
         final_path: &str,
         public_input_path: &str,
         private_input_path: &str,
+        output_stream_path: &str,
         args: &str,
         block_no: u64,
         seg_size: u32,
+        execute_only: bool,
     ) -> Self {
         GenerateContext {
             proof_id: proof_id.to_string(),
@@ -42,9 +46,11 @@ impl GenerateContext {
             final_path: final_path.to_string(),
             public_input_path: public_input_path.to_string(),
             private_input_path: private_input_path.to_string(),
+            output_stream_path: output_stream_path.to_string(),
             args: args.to_string(),
             block_no,
             seg_size,
+            execute_only,
         }
     }
 }
