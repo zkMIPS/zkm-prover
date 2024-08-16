@@ -90,7 +90,9 @@ impl StageService for StageServiceSVC {
                 let execute_only = if let Some(context) = task.context {
                     match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
                         Ok(context) => {
-                            if !context.output_stream_path.is_empty() {
+                            if task.status == stage_service::Status::Success as i32
+                                && !context.output_stream_path.is_empty()
+                            {
                                 let output_data =
                                     file::new(&context.output_stream_path).read().unwrap();
                                 response.output_stream.clone_from(&output_data);
