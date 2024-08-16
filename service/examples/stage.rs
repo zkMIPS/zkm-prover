@@ -46,6 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let key_path = env::var("KEY_PATH").unwrap_or("".to_string());
     let domain_name = env::var("DOMAIN_NAME").unwrap_or("stage".to_string());
     let private_key = env::var("PRIVATE_KEY").unwrap_or("".to_string());
+    let execute_only = env::var("EXECUTE_ONLY").unwrap_or("false".to_string());
+    let execute_only = execute_only.parse::<bool>().unwrap_or(false);
     let ssl_config = if ca_cert_path.is_empty() {
         None
     } else {
@@ -89,6 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         args,
         public_input_stream,
         private_input_stream,
+        execute_only,
         ..Default::default()
     };
     sign_ecdsa(&mut request, &private_key).await;
