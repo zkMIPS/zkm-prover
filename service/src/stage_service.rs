@@ -87,23 +87,42 @@ impl StageService for StageServiceSVC {
             };
             if let Ok(task) = task {
                 response.status = task.status as u32;
-                if let Some(result) = task.result {
-                    response.proof_with_public_inputs = result.into_bytes();
-                }
-                if let Some(fileserver_url) = &self.fileserver_url {
-                    response.proof_url = format!(
-                        "{}/{}/final/proof_with_public_inputs.json",
-                        fileserver_url,
-                        request.get_ref().proof_id
-                    );
-                    response.stark_proof_url = format!(
-                        "{}/{}/aggregate/proof_with_public_inputs.json",
-                        fileserver_url,
-                        request.get_ref().proof_id
-                    );
-                }
-                if let Some(verifier_url) = &self.verifier_url {
-                    response.solidity_verifier_url.clone_from(verifier_url);
+                let execute_only = if let Some(context) = task.context {
+                    match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
+                        Ok(context) => {
+                            if task.status == stage_service::Status::Success as i32
+                                && !context.output_stream_path.is_empty()
+                            {
+                                let output_data =
+                                    file::new(&context.output_stream_path).read().unwrap();
+                                response.output_stream.clone_from(&output_data);
+                            }
+                            context.execute_only
+                        }
+                        Err(_) => false,
+                    }
+                } else {
+                    false
+                };
+                if !execute_only {
+                    if let Some(result) = task.result {
+                        response.proof_with_public_inputs = result.into_bytes();
+                    }
+                    if let Some(fileserver_url) = &self.fileserver_url {
+                        response.proof_url = format!(
+                            "{}/{}/final/proof_with_public_inputs.json",
+                            fileserver_url,
+                            request.get_ref().proof_id
+                        );
+                        response.stark_proof_url = format!(
+                            "{}/{}/aggregate/proof_with_public_inputs.json",
+                            fileserver_url,
+                            request.get_ref().proof_id
+                        );
+                    }
+                    if let Some(verifier_url) = &self.verifier_url {
+                        response.solidity_verifier_url.clone_from(verifier_url);
+                    }
                 }
             }
             Ok(Response::new(response))
@@ -186,6 +205,37 @@ impl StageService for StageServiceSVC {
                     .map_err(|e| Status::internal(e.to_string()))?;
             }
 
+            let input_stream_dir = format!("{}/input_stream", dir_path);
+            file::new(&input_stream_dir)
+                .create_dir_all()
+                .map_err(|e| Status::internal(e.to_string()))?;
+            let public_input_stream_path = if request.get_ref().public_input_stream.is_empty() {
+                "".to_string()
+            } else {
+                let public_input_stream_path = format!("{}/{}", input_stream_dir, "public_input");
+                file::new(&public_input_stream_path)
+                    .write(&request.get_ref().public_input_stream)
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                public_input_stream_path
+            };
+
+            let private_input_stream_path = if request.get_ref().private_input_stream.is_empty() {
+                "".to_string()
+            } else {
+                let private_input_stream_path = format!("{}/{}", input_stream_dir, "private_input");
+                file::new(&private_input_stream_path)
+                    .write(&request.get_ref().private_input_stream)
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                private_input_stream_path
+            };
+
+            let output_stream_dir = format!("{}/output_stream", dir_path);
+            file::new(&output_stream_dir)
+                .create_dir_all()
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            let output_stream_path = format!("{}/{}", output_stream_dir, "output_stream");
+
             let seg_path = format!("{}/segment", dir_path);
             file::new(&seg_path)
                 .create_dir_all()
@@ -225,9 +275,13 @@ impl StageService for StageServiceSVC {
                 &prove_path,
                 &agg_path,
                 &final_path,
+                &public_input_stream_path,
+                &private_input_stream_path,
+                &output_stream_path,
                 &request.get_ref().args,
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
+                request.get_ref().execute_only,
             );
 
             let _ = self
@@ -239,7 +293,7 @@ impl StageService for StageServiceSVC {
                     &serde_json::to_string(&generate_context).unwrap(),
                 )
                 .await;
-            let proof_url = match &self.fileserver_url {
+            let mut proof_url = match &self.fileserver_url {
                 Some(fileserver_url) => format!(
                     "{}/{}/final/proof_with_public_inputs.json",
                     fileserver_url,
@@ -247,7 +301,7 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
-            let stark_proof_url = match &self.fileserver_url {
+            let mut stark_proof_url = match &self.fileserver_url {
                 Some(fileserver_url) => format!(
                     "{}/{}/aggregate/proof_with_public_inputs.json",
                     fileserver_url,
@@ -255,10 +309,15 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
-            let solidity_verifier_url = match &self.verifier_url {
+            let mut solidity_verifier_url = match &self.verifier_url {
                 Some(verifier_url) => verifier_url.clone(),
                 None => "".to_string(),
             };
+            if request.get_ref().execute_only {
+                proof_url = "".to_string();
+                stark_proof_url = "".to_string();
+                solidity_verifier_url = "".to_string();
+            }
             let response = stage_service::GenerateProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 status: stage_service::Status::Computing as u32,

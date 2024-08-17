@@ -14,8 +14,7 @@ pub fn get_timestamp() -> u64 {
     let duration_since_epoch = now.duration_since(UNIX_EPOCH).unwrap();
     duration_since_epoch.as_secs()
 }
-
-#[derive(Default)]
+#[derive(Default, PartialEq)]
 pub enum Step {
     #[default]
     Init,
@@ -94,8 +93,12 @@ impl Stage {
             }
             Step::InSplit => {
                 if self.split_task.state == TASK_STATE_SUCCESS {
-                    self.gen_prove_task();
-                    self.step = Step::InProve;
+                    if self.generate_context.execute_only {
+                        self.step = Step::End;
+                    } else {
+                        self.gen_prove_task();
+                        self.step = Step::InProve;
+                    }
                 }
             }
             Step::InProve => {
@@ -139,7 +142,7 @@ impl Stage {
     }
 
     pub fn is_success(&mut self) -> bool {
-        if self.final_task.state == TASK_STATE_SUCCESS {
+        if self.step == Step::End || self.final_task.state == TASK_STATE_SUCCESS {
             return true;
         }
         false
@@ -163,6 +166,15 @@ impl Stage {
         self.split_task
             .seg_path
             .clone_from(&self.generate_context.seg_path);
+        self.split_task
+            .public_input_path
+            .clone_from(&self.generate_context.public_input_path);
+        self.split_task
+            .private_input_path
+            .clone_from(&self.generate_context.private_input_path);
+        self.split_task
+            .output_path
+            .clone_from(&self.generate_context.output_stream_path);
         self.split_task.args.clone_from(&self.generate_context.args);
         self.split_task.block_no = self.generate_context.block_no;
         self.split_task.seg_size = self.generate_context.seg_size;

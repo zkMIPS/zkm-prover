@@ -188,7 +188,11 @@ async fn run_stage_task(
                     let status = get_status();
                     let _ = db.update_stage_task(&task.id, status.into(), "").await;
                 } else {
-                    let result = file::new(&generate_context.final_path).read().unwrap();
+                    let result = if generate_context.execute_only {
+                        vec![]
+                    } else {
+                        file::new(&generate_context.final_path).read().unwrap()
+                    };
                     let _ = db
                         .update_stage_task(
                             &task.id,
