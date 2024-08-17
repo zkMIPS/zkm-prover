@@ -83,9 +83,17 @@ $ cargo build --release  --target=mips-unknown-linux-musl
 ```
 
 * Adjust parameter request stage service
+
+Name | Description
+------------ | ------------
+ENDPOINT | zkm-prover service endpoint
+CA_CERT_PATH | zkm-prover service CA CERT 
+PRIVATE_KEY | wallet private key, used for message signing
+ELF_PATH | the file compiled in the previous step
+PUBLIC_INPUT_PATH | Output file for the Generate Suite_json step
 ```
 $ export RUST_LOG=info
-$ ENDPOINT=... CA_CERT_PATH=... PRIVATE_KEY=... ELF_PATH=...revm SEG_SIZE=262144 PUBLIC_INPUT_PATH=...suite3.json cargo run --release --example stage
+$ ENDPOINT=... CA_CERT_PATH=... PRIVATE_KEY=... ELF_PATH=...revm SEG_SIZE=262144 PUBLIC_INPUT_PATH=... cargo run --release --example stage
 ```
 
 # Deployment 
