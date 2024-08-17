@@ -38,12 +38,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let seg_size = env::var("SEG_SIZE").unwrap_or("131072".to_string());
     let seg_size = seg_size.parse::<_>().unwrap_or(131072);
     let args = env::var("ARGS").unwrap_or("".to_string());
+    let public_input_path = env::var("PUBLIC_INPUT_PATH").unwrap_or("".to_string());
+    let private_input_path = env::var("PRIVATE_INPUT_PATH").unwrap_or("".to_string());
     let endpoint = env::var("ENDPOINT").unwrap_or("http://127.0.0.1:50000".to_string());
     let ca_cert_path = env::var("CA_CERT_PATH").unwrap_or("".to_string());
     let cert_path = env::var("CERT_PATH").unwrap_or("".to_string());
     let key_path = env::var("KEY_PATH").unwrap_or("".to_string());
     let domain_name = env::var("DOMAIN_NAME").unwrap_or("stage".to_string());
     let private_key = env::var("PRIVATE_KEY").unwrap_or("".to_string());
+    let execute_only = env::var("EXECUTE_ONLY").unwrap_or("false".to_string());
+    let execute_only = execute_only.parse::<bool>().unwrap_or(false);
     let ssl_config = if ca_cert_path.is_empty() {
         None
     } else {
@@ -65,6 +69,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    let public_input_stream = if public_input_path.is_empty() {
+        vec![]
+    } else {
+        file::new(&public_input_path).read().unwrap()
+    };
+
+    let private_input_stream = if private_input_path.is_empty() {
+        vec![]
+    } else {
+        file::new(&private_input_path).read().unwrap()
+    };
+
     let proof_id = uuid::Uuid::new_v4().to_string();
     let mut request = GenerateProofRequest {
         proof_id: proof_id.clone(),
@@ -73,6 +89,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         block_no,
         seg_size,
         args,
+        public_input_stream,
+        private_input_stream,
+        execute_only,
         ..Default::default()
     };
     sign_ecdsa(&mut request, &private_key).await;
@@ -110,8 +129,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     match status {
                         crate::stage_service::Status::Success => {
                             log::info!(
-                                "generate_proof success public_inputs_size: {}",
+                                "generate_proof success public_inputs_size: {}, output_size: {}",
                                 get_status_response.proof_with_public_inputs.len(),
+                                get_status_response.output_stream.len(),
                             );
                             let output_dir = Path::new(&output_dir);
                             let public_inputs_path = output_dir.join("proof_with_public_inputs");

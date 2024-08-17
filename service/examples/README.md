@@ -66,6 +66,35 @@ $ export RUST_LOG=info
 $ ELF_PATH=/tmp/zkm/test/minigeth BLOCK_NO=13284491 BLOCK_PATH=/tmp/zkm/test/0_13284491 SEG_SIZE=262144 cargo run --release --example stage
 ```
 
+## [Revme](https://github.com/zkMIPS/zkm/tree/main/prover/examples/revme)
+
+* Generate suite_json
+
+```
+$ git clone https://github.com/zkMIPS/revme
+$ RPC_URL=http://localhost:8545 CHAIN_ID=1337 BLOCK_NO=3 RUST_LOG=debug SUITE_JSON_PATH=./test-vectors/suite3.json cargo run --example process
+```
+
+* Compile the remve_mips
+```
+$ git clone https://github.com/zkMIPS/zkm
+$ cd zkm/prover/examples/revme
+$ cargo build --release  --target=mips-unknown-linux-musl
+```
+
+* Adjust parameter request stage service
+
+Name | Description
+------------ | ------------
+ENDPOINT | zkm-prover service endpoint
+CA_CERT_PATH | zkm-prover service CA CERT 
+PRIVATE_KEY | wallet private key, used for message signing
+ELF_PATH | the file compiled in the previous step
+PUBLIC_INPUT_PATH | Output file for the Generate Suite_json step
+```
+$ export RUST_LOG=info
+$ ENDPOINT=... CA_CERT_PATH=... PRIVATE_KEY=... ELF_PATH=...revm SEG_SIZE=262144 PUBLIC_INPUT_PATH=... cargo run --release --example stage
+```
 
 # Deployment 
 
