@@ -4,7 +4,7 @@
 
 * Compile the Go code to MIPS
 
-Write your own hello.go, and compile with(Recommended use golang1.20)
+Write your own hello.go, and compile
 
 ```
 $ GOOS=linux GOARCH=mips GOMIPS=softfloat go build hello.go -o /tmp/zkm/test/hello_world
@@ -13,13 +13,7 @@ $ GOOS=linux GOARCH=mips GOMIPS=softfloat go build hello.go -o /tmp/zkm/test/hel
 If you build your own server, you can use Docker Compose (The image is built based on AMD64)
 
 Minimum Requirements
-| SEG_SIZE | RAM |
-| ------- | ------- |
-| 1024 | 16G |
-| 16384 | 28.2G |
-| 32768 | 95.2G |
-| 65536 | 96.3G |
-| 262144 | 130.1G |
+At least 64GB of memory is required
 
 ```
 $ docker-compose up -d
@@ -84,13 +78,11 @@ $ cargo build --release  --target=mips-unknown-linux-musl
 
 * Adjust parameter request stage service
 
-Name | Description
------------- | ------------
-ENDPOINT | zkm-prover service endpoint
-CA_CERT_PATH | zkm-prover service CA CERT 
-PRIVATE_KEY | wallet private key, used for message signing
-ELF_PATH | the file compiled in the previous step
-PUBLIC_INPUT_PATH | Output file for the Generate Suite_json step
+- `ENDPOINT`: zkm-prover service endpoint
+- `CA_CERT_PATH`: zkm-prover service CA CERT 
+- `PRIVATE_KEY`: wallet private key, used for message signing
+- `ELF_PATH`: the file compiled in the previous step
+- `PUBLIC_INPUT_PATH`: Output file for the Generate Suite_json step
 ```
 $ export RUST_LOG=info
 $ ENDPOINT=... CA_CERT_PATH=... PRIVATE_KEY=... ELF_PATH=...revm SEG_SIZE=262144 PUBLIC_INPUT_PATH=... cargo run --release --example stage
