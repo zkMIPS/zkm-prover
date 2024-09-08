@@ -18,10 +18,17 @@ pub mod stage_service {
 async fn sign_ecdsa(request: &mut GenerateProofRequest, private_key: &str) {
     if !private_key.is_empty() {
         let wallet = private_key.parse::<LocalWallet>().unwrap();
-        let sign_data = format!(
-            "{}&{}&{}&{}",
-            request.proof_id, request.block_no, request.seg_size, request.args
-        );
+        let sign_data = match request.block_no {
+            Some(block_no) => {
+                format!(
+                    "{}&{}&{}&{}",
+                    request.proof_id, block_no, request.seg_size, request.args
+                )
+            }
+            None => {
+                format!("{}&{}&{}", request.proof_id, request.seg_size, request.args)
+            }
+        };
         let signature = wallet.sign_message(sign_data).await.unwrap();
         request.signature = signature.to_string();
     }
@@ -86,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         proof_id: proof_id.clone(),
         elf_data,
         block_data,
-        block_no,
+        block_no: Some(block_no),
         seg_size,
         args,
         public_input_stream,

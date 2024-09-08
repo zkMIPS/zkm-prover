@@ -80,8 +80,6 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
     let client = get_idle_client(tls_config).await;
     if let Some((addrs, mut client)) = client {
         let request = SplitElfRequest {
-            chain_id: 0,
-            timestamp: 0,
             proof_id: split_task.proof_id.clone(),
             computed_request_id: split_task.task_id.clone(),
             base_dir: split_task.base_dir.clone(),
@@ -123,8 +121,6 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
     let client = get_idle_client(tls_config).await;
     if let Some((addrs, mut client)) = client {
         let request = ProveRequest {
-            chain_id: 0,
-            timestamp: 0,
             proof_id: prove_task.proof_id.clone(),
             computed_request_id: prove_task.task_id.clone(),
             base_dir: prove_task.base_dir.clone(),
@@ -163,8 +159,6 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
     let client = get_idle_client(tls_config).await;
     if let Some((addrs, mut client)) = client {
         let request = AggregateRequest {
-            chain_id: 0,
-            timestamp: 0,
             proof_id: agg_task.proof_id.clone(),
             computed_request_id: agg_task.task_id.clone(),
             base_dir: agg_task.base_dir.clone(),
@@ -218,8 +212,6 @@ pub async fn aggregate_all(
     let client = get_idle_client(tls_config).await;
     if let Some((addrs, mut client)) = client {
         let request = AggregateAllRequest {
-            chain_id: 0,
-            timestamp: 0,
             proof_id: agg_all_task.proof_id.clone(),
             computed_request_id: agg_all_task.task_id.clone(),
             base_dir: agg_all_task.base_dir.clone(),
@@ -283,8 +275,6 @@ pub async fn final_proof(
             file::new(&verifier_only_circuit_data_file).read().unwrap();
         let proof_with_public_inputs = file::new(&proof_with_public_inputs_file).read().unwrap();
         let request = FinalProofRequest {
-            chain_id: 0,
-            timestamp: 0,
             proof_id: final_task.proof_id.clone(),
             computed_request_id: final_task.task_id.clone(),
             common_circuit_data,

@@ -12,9 +12,6 @@ $ GOOS=linux GOARCH=mips GOMIPS=softfloat go build hello.go -o /tmp/zkm/test/hel
 
 If you build your own server, you can use Docker Compose (The image is built based on AMD64)
 
-Minimum Requirements
-At least 64GB of memory is required
-
 ```
 $ docker-compose up -d
 ```
