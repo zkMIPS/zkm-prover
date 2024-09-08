@@ -63,10 +63,17 @@ impl StageServiceSVC {
     }
 
     pub fn valid_signature(&self, request: &GenerateProofRequest) -> Result<String, Error> {
-        let sign_data = format!(
-            "{}&{}&{}&{}",
-            request.proof_id, request.block_no, request.seg_size, request.args
-        );
+        let sign_data = match request.block_no {
+            Some(block_no) => {
+                format!(
+                    "{}&{}&{}&{}",
+                    request.proof_id, block_no, request.seg_size, request.args
+                )
+            }
+            None => {
+                format!("{}&{}&{}", request.proof_id, request.seg_size, request.args)
+            }
+        };
         let signature = Signature::from_str(&request.signature)?;
         let recovered = signature.recover(sign_data)?;
         Ok(hex::encode(recovered))
@@ -193,7 +200,8 @@ impl StageService for StageServiceSVC {
                 .write(&request.get_ref().elf_data)
                 .map_err(|e| Status::internal(e.to_string()))?;
 
-            let block_dir = format!("{}/0_{}", dir_path, request.get_ref().block_no);
+            let block_no = request.get_ref().block_no.unwrap_or(0u64);
+            let block_dir = format!("{}/0_{}", dir_path, block_no);
             file::new(&block_dir)
                 .create_dir_all()
                 .map_err(|e| Status::internal(e.to_string()))?;
@@ -279,7 +287,7 @@ impl StageService for StageServiceSVC {
                 &private_input_stream_path,
                 &output_stream_path,
                 &request.get_ref().args,
-                request.get_ref().block_no,
+                block_no,
                 request.get_ref().seg_size,
                 request.get_ref().execute_only,
             );

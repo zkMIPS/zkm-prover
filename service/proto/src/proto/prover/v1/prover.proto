@@ -62,20 +62,17 @@ message GetTaskResultResponse {
 }
 
 message SplitElfRequest {
-    uint64 chain_id = 1;
-    uint64 timestamp = 2;
-    string proof_id = 3;
-    string computed_request_id = 4;
-
-    string base_dir = 5;
-    string elf_path = 6;
-    string seg_path = 7;
-    uint64 block_no = 8;
-    uint32 seg_size = 9;
-    string args = 10;
-    string public_input_path = 11;
-    string private_input_path = 12;
-    string output_path = 13;
+    string proof_id = 1;
+    string computed_request_id = 2;
+    string base_dir = 3;
+    string elf_path = 4;
+    string seg_path = 5;
+    uint64 block_no = 6;
+    uint32 seg_size = 7;
+    string args = 8;
+    string public_input_path = 9;
+    string private_input_path = 10;
+    string output_path = 11;
 }
 
 message SplitElfResponse {
@@ -85,17 +82,15 @@ message SplitElfResponse {
 }
 
 message ProveRequest {
-    uint64 chain_id = 1;
-    uint64 timestamp = 2;
-    string proof_id = 3;
-    string computed_request_id = 4;
+    string proof_id = 1;
+    string computed_request_id = 2;
 
-    string base_dir = 5;
-    string seg_path = 6;
-    uint64 block_no = 7;
-    uint32 seg_size = 8;
-    string proof_path = 9;
-    string pub_value_path = 10;
+    string base_dir = 3;
+    string seg_path = 4;
+    uint64 block_no = 5;
+    uint32 seg_size = 6;
+    string proof_path = 7;
+    string pub_value_path = 8;
 }
 
 message ProveResponse {
@@ -111,21 +106,18 @@ message AggregateInput {
 };
 
 message AggregateRequest {
-    uint64 chain_id = 1;
-    uint64 timestamp = 2;
-    string proof_id = 3;
-    string computed_request_id = 4;
-
-    string base_dir = 5;
-    string seg_path = 6;
-    uint64 block_no = 7;
-    uint32 seg_size = 8;
-    AggregateInput input1 = 9;
-    AggregateInput input2 = 10;
-    string agg_proof_path = 11;
-    string agg_pub_value_path = 12;
-    bool is_final = 13;
-    string output_dir = 14;
+    string proof_id = 1;
+    string computed_request_id = 2;
+    string base_dir = 3;
+    string seg_path = 4;
+    uint64 block_no = 5;
+    uint32 seg_size = 6;
+    AggregateInput input1 = 7;
+    AggregateInput input2 = 8;
+    string agg_proof_path = 9;
+    string agg_pub_value_path = 10;
+    bool is_final = 11;
+    string output_dir = 12;
 }
 
 message AggregateResponse {
@@ -135,19 +127,16 @@ message AggregateResponse {
 }
 
 message AggregateAllRequest {
-    uint64 chain_id = 1;
-    uint64 timestamp = 2;
-    string proof_id = 3;
-    string computed_request_id = 4;
-
-    string base_dir = 5;
-    string seg_path = 6;
-    uint64 block_no = 7;
-    uint32 seg_size = 8;
-    uint32 proof_num = 9;
-    string proof_dir = 10;
-    string pub_value_dir = 11;
-    string output_dir = 12;
+    string proof_id = 1;
+    string computed_request_id = 2;
+    string base_dir = 3;
+    string seg_path = 4;
+    uint64 block_no = 5;
+    uint32 seg_size = 6;
+    uint32 proof_num = 7;
+    string proof_dir = 8;
+    string pub_value_dir = 9;
+    string output_dir = 10;
 }
 
 message AggregateAllResponse {
@@ -157,13 +146,11 @@ message AggregateAllResponse {
 }
 
 message FinalProofRequest {
-    uint64 chain_id = 1;
-    uint64 timestamp = 2;
-    string proof_id = 3;
-    string computed_request_id = 4;
-    bytes common_circuit_data = 5;
-    bytes verifier_only_circuit_data = 6;
-    bytes proof_with_public_inputs = 7;
+    string proof_id = 1;
+    string computed_request_id = 2;
+    bytes common_circuit_data = 3;
+    bytes verifier_only_circuit_data = 4;
+    bytes proof_with_public_inputs = 5;
 }
 
 message FinalProofResponse {
