@@ -6,6 +6,7 @@ pub struct StageTask {
     pub context: Option<String>,
     pub result: Option<String>,
     pub check_at: i64,
+    pub step: i32,
 }
 
 #[warn(unused_macros)]
@@ -47,7 +48,7 @@ impl Database {
     ) -> anyhow::Result<Vec<StageTask>> {
         let rows = sqlx::query_as!(
             StageTask,
-            "SELECT id, status, context, result, check_at from stage_task where status = ? and check_at < ? limit ?",
+            "SELECT id, status, context, result, check_at, step from stage_task where status = ? and check_at < ? limit ?",
             status,
             check_at,
             limit,
@@ -61,7 +62,7 @@ impl Database {
     pub async fn get_stage_task(&self, proof_id: &str) -> anyhow::Result<StageTask> {
         let row = sqlx::query_as!(
             StageTask,
-            "SELECT id, status, context, result, check_at from stage_task where id = ?",
+            "SELECT id, status, context, result, check_at, step from stage_task where id = ?",
             proof_id,
         )
         .fetch_one(&self.db_pool)
@@ -113,10 +114,12 @@ impl Database {
         proof_id: &str,
         old_check_at: u64,
         check_at: u64,
+        step: i32,
     ) -> anyhow::Result<u64> {
         let rows_affected = sqlx::query!(
-            "UPDATE stage_task set check_at = ? where id = ? and check_at = ?",
+            "UPDATE stage_task set check_at = ?, step = ? where id = ? and check_at = ?",
             check_at,
+            step,
             proof_id,
             old_check_at
         )

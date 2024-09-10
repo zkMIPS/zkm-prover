@@ -94,6 +94,7 @@ impl StageService for StageServiceSVC {
             };
             if let Ok(task) = task {
                 response.status = task.status as u32;
+                response.step = task.step;
                 let execute_only = if let Some(context) = task.context {
                     match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
                         Ok(context) => {
