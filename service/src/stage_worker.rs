@@ -55,6 +55,7 @@ async fn run_stage_task(
                 let (tx, mut rx) = tokio::sync::mpsc::channel(128);
                 stage.dispatch();
                 loop {
+                    let current_step = stage.step.clone();
                     match stage.step {
                         Step::InSplit => {
                             let split_task = stage.get_split_task();
@@ -164,10 +165,15 @@ async fn run_stage_task(
                     }
                     stage.dispatch();
                     let ts_now = now_timestamp();
-                    if check_at + 10 < ts_now {
+                    if check_at + 10 < ts_now || current_step != stage.step {
                         check_at = ts_now;
                         let rows_affected = db
-                            .update_stage_task_check_at(&task.id, task.check_at as u64, check_at)
+                            .update_stage_task_check_at(
+                                &task.id,
+                                task.check_at as u64,
+                                check_at,
+                                stage.step.clone().into(),
+                            )
                             .await;
                         if let Ok(rows_affected) = rows_affected {
                             if rows_affected == 1 {
@@ -239,6 +245,7 @@ async fn load_stage_task(tls_config: Option<TlsConfig>, db: database::Database) 
                                     &task.id,
                                     task.check_at as u64,
                                     check_at,
+                                    task.step,
                                 )
                                 .await;
                             if let Ok(rows_affected) = rows_affected {

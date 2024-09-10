@@ -14,7 +14,7 @@ pub fn get_timestamp() -> u64 {
     let duration_since_epoch = now.duration_since(UNIX_EPOCH).unwrap();
     duration_since_epoch.as_secs()
 }
-#[derive(Default, PartialEq)]
+#[derive(Default, PartialEq, Clone)]
 pub enum Step {
     #[default]
     Init,
@@ -24,6 +24,20 @@ pub enum Step {
     InAggAll,
     InFinal,
     End,
+}
+
+impl From<Step> for i32 {
+    fn from(item: Step) -> i32 {
+        match item {
+            Step::Init => 0,
+            Step::InSplit => 1,
+            Step::InProve => 2,
+            Step::InAgg => 3,
+            Step::InAggAll => 4,
+            Step::InFinal => 5,
+            Step::End => 6,
+        }
+    }
 }
 
 #[derive(Default)]

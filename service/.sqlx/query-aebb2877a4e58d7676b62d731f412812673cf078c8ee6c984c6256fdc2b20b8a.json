@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT id, status, context, result, check_at from stage_task where status = ? and check_at < ? limit ?",
+  "query": "SELECT id, status, context, result, check_at, step from stage_task where status = ? and check_at < ? limit ?",
   "describe": {
     "columns": [
       {
@@ -9,7 +9,6 @@
         "type_info": {
           "type": "VarString",
           "flags": "NOT_NULL | PRIMARY_KEY | NO_DEFAULT_VALUE",
-          "char_set": 224,
           "max_size": 1020
         }
       },
@@ -19,7 +18,6 @@
         "type_info": {
           "type": "Long",
           "flags": "NOT_NULL",
-          "char_set": 63,
           "max_size": 11
         }
       },
@@ -29,7 +27,6 @@
         "type_info": {
           "type": "Blob",
           "flags": "BLOB",
-          "char_set": 224,
           "max_size": 262140
         }
       },
@@ -39,7 +36,6 @@
         "type_info": {
           "type": "Blob",
           "flags": "BLOB",
-          "char_set": 224,
           "max_size": 262140
         }
       },
@@ -49,8 +45,16 @@
         "type_info": {
           "type": "LongLong",
           "flags": "NOT_NULL",
-          "char_set": 63,
           "max_size": 20
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "step",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "max_size": 11
         }
       }
     ],
@@ -62,8 +66,9 @@
       false,
       true,
       true,
+      false,
       false
     ]
   },
-  "hash": "15acc9e35a09d7d61d74d2aad4b19962598d5c2d9568aef6d559170ffff8ef74"
+  "hash": "aebb2877a4e58d7676b62d731f412812673cf078c8ee6c984c6256fdc2b20b8a"
 }
