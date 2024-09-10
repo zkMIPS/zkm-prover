@@ -168,7 +168,12 @@ async fn run_stage_task(
                     if check_at + 10 < ts_now || current_step != stage.step {
                         check_at = ts_now;
                         let rows_affected = db
-                            .update_stage_task_check_at(&task.id, task.check_at as u64, check_at, stage.step.clone().into())
+                            .update_stage_task_check_at(
+                                &task.id,
+                                task.check_at as u64,
+                                check_at,
+                                stage.step.clone().into(),
+                            )
                             .await;
                         if let Ok(rows_affected) = rows_affected {
                             if rows_affected == 1 {
