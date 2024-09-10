@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT id, status, context, result, check_at from stage_task where id = ?",
+  "query": "SELECT id, status, context, result, check_at, step from stage_task where id = ?",
   "describe": {
     "columns": [
       {
@@ -47,6 +47,15 @@
           "flags": "NOT_NULL",
           "max_size": 20
         }
+      },
+      {
+        "ordinal": 5,
+        "name": "step",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL",
+          "max_size": 11
+        }
       }
     ],
     "parameters": {
@@ -57,8 +66,9 @@
       false,
       true,
       true,
+      false,
       false
     ]
   },
-  "hash": "f122855dd9a5b3cd6f09651c7ca3a802d1f195e5443075dae91c63b060510a85"
+  "hash": "17d5a4d511ecd38bd04426da89778b7c750eebe2149c355059e1ccd8e3cb2fd1"
 }
