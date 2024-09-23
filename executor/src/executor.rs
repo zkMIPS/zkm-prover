@@ -46,7 +46,7 @@ impl Executor {
                         let data = file::new(&ctx.public_input_path)
                             .read()
                             .expect("read public_input_stream failed");
-                        state.add_input_stream(&data);
+                        state.input_stream.push(data.clone());
                         log::info!("split set public_input data {}", data.len());
 
                         // private_input_stream
@@ -54,7 +54,7 @@ impl Executor {
                             let data = file::new(&ctx.private_input_path)
                                 .read()
                                 .expect("read private_input_stream failed");
-                            state.add_input_stream(&data);
+                            state.input_stream.push(data.clone());
                             log::info!("split set private_input data {}", data.len());
                         }
                     } else {
