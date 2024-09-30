@@ -78,7 +78,6 @@ impl Executor {
                     file::new(&seg_path_clone).create_dir_all().unwrap();
                     let new_write = |_: &str| -> Option<std::fs::File> { None };
                     instrumented_state.split_segment(false, &seg_path_clone, new_write);
-                    let mut segment_step: usize = seg_size;
 
                     let new_write =
                         |name: &str| -> Option<Box<dyn std::io::Write>> { Some(file::new(name)) };
@@ -86,14 +85,18 @@ impl Executor {
                         if instrumented_state.state.exited {
                             break;
                         }
-                        instrumented_state.step();
-                        segment_step -= 1;
-                        if segment_step == 0 {
-                            segment_step = seg_size;
+                        let cycles = instrumented_state.step();
+                        if cycles >= seg_size as u64 {
                             instrumented_state.split_segment(true, &seg_path_clone, new_write);
                         }
                     }
                     instrumented_state.split_segment(true, &seg_path_clone, new_write);
+                    log::info!(
+                        "Split done {} : {}",
+                        instrumented_state.state.total_step,
+                        instrumented_state.state.total_cycle
+                    );
+                    instrumented_state.dump_memory();
                     // write public_values_stream
                     let _ = file::new(&ctx.output_path)
                         .write(&instrumented_state.state.public_values_stream)
