@@ -99,7 +99,7 @@ impl Prover<AggContext> for AggProver {
         if ctx.is_final {
             timing = TimingTree::new("agg prove_block", log::Level::Info);
             let (block_proof, _block_public_values) =
-                all_circuits.prove_block(None, &agg_proof, updated_agg_public_values)?;
+                all_circuits.prove_block(None, &agg_proof, updated_agg_public_values.clone())?;
 
             log::info!(
                 "proof size: {:?}",
@@ -164,6 +164,13 @@ impl Prover<AggContext> for AggProver {
                 format!("{}/proof_with_public_inputs.json", path)
             };
             let _ = file::new(&proof_file).write(&serde_json::to_vec(&wrapped_proof.proof)?)?;
+            let public_values_file = if path.ends_with('/') {
+                format!("{}public_values.json", path)
+            } else {
+                format!("{}/public_values.json", path)
+            };
+            let _ = file::new(&public_values_file)
+                .write(&serde_json::to_vec(&updated_agg_public_values)?)?;
             timing.filter(Duration::from_millis(100)).print();
         }
 

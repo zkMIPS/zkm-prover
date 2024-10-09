@@ -127,6 +127,11 @@ impl StageService for StageServiceSVC {
                             fileserver_url,
                             request.get_ref().proof_id
                         );
+                        response.public_values_url = format!(
+                            "{}/{}/aggregate/public_values.json",
+                            fileserver_url,
+                            request.get_ref().proof_id
+                        );
                     }
                     if let Some(verifier_url) = &self.verifier_url {
                         response.solidity_verifier_url.clone_from(verifier_url);
@@ -318,6 +323,14 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
+            let mut public_values_url = match &self.fileserver_url {
+                Some(fileserver_url) => format!(
+                    "{}/{}/aggregate/public_values.json",
+                    fileserver_url,
+                    request.get_ref().proof_id
+                ),
+                None => "".to_string(),
+            };
             let mut solidity_verifier_url = match &self.verifier_url {
                 Some(verifier_url) => verifier_url.clone(),
                 None => "".to_string(),
@@ -326,6 +339,7 @@ impl StageService for StageServiceSVC {
                 proof_url = "".to_string();
                 stark_proof_url = "".to_string();
                 solidity_verifier_url = "".to_string();
+                public_values_url = "".to_string();
             }
             let response = stage_service::GenerateProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
@@ -333,6 +347,7 @@ impl StageService for StageServiceSVC {
                 proof_url,
                 stark_proof_url,
                 solidity_verifier_url,
+                public_values_url,
                 ..Default::default()
             };
             Ok(Response::new(response))

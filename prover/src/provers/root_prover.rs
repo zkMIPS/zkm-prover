@@ -30,7 +30,7 @@ impl Prover<ProveContext> for RootProver {
         let basedir = ctx.basedir.clone();
         let block_no = ctx.block_no.to_string();
         let seg_path = ctx.seg_path.clone();
-        let seg_size = ctx.seg_size as usize;
+        let _seg_size = ctx.seg_size as usize;
         let proof_path = ctx.proof_path.clone();
         let pub_value_path = ctx.pub_value_path.clone();
         let file = String::from("");
@@ -48,7 +48,7 @@ impl Prover<ProveContext> for RootProver {
 
         let seg_data = file::new(&seg_path).read()?;
         let seg_reader = BufReader::new(seg_data.as_slice());
-        let input = segment_kernel(&basedir, &block_no, &file, seg_reader, seg_size);
+        let input = segment_kernel(&basedir, &block_no, &file, seg_reader);
         timing.filter(Duration::from_millis(100)).print();
 
         timing = TimingTree::new("root_prove root", log::Level::Info);
