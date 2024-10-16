@@ -257,29 +257,34 @@ pub async fn final_proof(
             common_circuit_data_file,
             verifier_only_circuit_data_file,
             proof_with_public_inputs_file,
+            block_public_inputs_file,
         ) = if final_task.input_dir.ends_with('/') {
             (
                 format!("{}common_circuit_data.json", final_task.input_dir),
                 format!("{}verifier_only_circuit_data.json", final_task.input_dir),
                 format!("{}proof_with_public_inputs.json", final_task.input_dir),
+                format!("{}block_public_inputs.json", final_task.input_dir),
             )
         } else {
             (
                 format!("{}/common_circuit_data.json", final_task.input_dir),
                 format!("{}/verifier_only_circuit_data.json", final_task.input_dir),
                 format!("{}/proof_with_public_inputs.json", final_task.input_dir),
+                format!("{}/block_public_inputs.json", final_task.input_dir),
             )
         };
         let common_circuit_data = file::new(&common_circuit_data_file).read().unwrap();
         let verifier_only_circuit_data =
             file::new(&verifier_only_circuit_data_file).read().unwrap();
         let proof_with_public_inputs = file::new(&proof_with_public_inputs_file).read().unwrap();
+        let block_public_inputs = file::new(&block_public_inputs_file).read().unwrap();
         let request = FinalProofRequest {
             proof_id: final_task.proof_id.clone(),
             computed_request_id: final_task.task_id.clone(),
             common_circuit_data,
             proof_with_public_inputs,
             verifier_only_circuit_data,
+            block_public_inputs,
         };
         log::info!(
             "final_proof request proof_id:{} computed_request_id:{} ",

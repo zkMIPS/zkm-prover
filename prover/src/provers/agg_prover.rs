@@ -171,6 +171,17 @@ impl Prover<AggContext> for AggProver {
             };
             let _ = file::new(&public_values_file)
                 .write(&serde_json::to_vec(&updated_agg_public_values)?)?;
+            let block_public_inputs = serde_json::json!({
+                "public_inputs": block_proof.public_inputs,
+            });
+            let block_public_inputs_file = if path.ends_with('/') {
+                format!("{}block_public_inputs.json", path)
+            } else {
+                format!("{}/block_public_inputs.json", path)
+            };
+            let _ = file::new(&block_public_inputs_file)
+                .write(&serde_json::to_vec(&block_public_inputs)?)?;
+
             timing.filter(Duration::from_millis(100)).print();
         }
 

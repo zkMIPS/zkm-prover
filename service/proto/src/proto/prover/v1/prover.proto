@@ -151,6 +151,7 @@ message FinalProofRequest {
     bytes common_circuit_data = 3;
     bytes verifier_only_circuit_data = 4;
     bytes proof_with_public_inputs = 5;
+    bytes block_public_inputs = 6;
 }
 
 message FinalProofResponse {
