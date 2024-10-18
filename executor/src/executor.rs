@@ -22,7 +22,10 @@ impl Executor {
         let block_no = ctx.block_no.to_string();
         let seg_path = ctx.seg_path.clone();
         let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
-        let args = ctx.args.split_whitespace().collect();
+        let mut args: Vec<&str> = ctx.args.split_whitespace().collect();
+        if args.len() > 2 {
+            args.truncate(2);
+        }
 
         log::info!("split {} load elf file", elf_path);
         let data = file::new(&elf_path).read();
@@ -39,10 +42,9 @@ impl Executor {
                 core::result::Result::Ok(file) => {
                     let mut state = State::load_elf(&file);
                     state.patch_elf(&file);
-
+                    state.patch_stack(args);
                     // public_input_stream
                     if !ctx.public_input_path.is_empty() {
-                        state.patch_stack(vec![]);
                         let data = file::new(&ctx.public_input_path)
                             .read()
                             .expect("read public_input_stream failed");
@@ -57,8 +59,6 @@ impl Executor {
                             state.input_stream.push(data.clone());
                             log::info!("split set private_input data {}", data.len());
                         }
-                    } else {
-                        state.patch_stack(args);
                     }
 
                     let block_no = block_no.parse::<_>().unwrap_or(0);
