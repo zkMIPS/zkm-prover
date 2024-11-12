@@ -42,7 +42,8 @@ impl Executor {
                 core::result::Result::Ok(file) => {
                     let mut state = State::load_elf(&file);
                     state.patch_elf(&file);
-                    state.patch_stack(args);
+                    // state.patch_stack(args);
+                    state.patch_stack(vec![]);
                     // public_input_stream
                     if !ctx.public_input_path.is_empty() {
                         let data = file::new(&ctx.public_input_path)
