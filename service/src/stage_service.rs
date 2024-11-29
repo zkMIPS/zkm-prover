@@ -65,13 +65,10 @@ impl StageServiceSVC {
     pub fn valid_signature(&self, request: &GenerateProofRequest) -> Result<String, Error> {
         let sign_data = match request.block_no {
             Some(block_no) => {
-                format!(
-                    "{}&{}&{}&{}",
-                    request.proof_id, block_no, request.seg_size, request.args
-                )
+                format!("{}&{}&{}", request.proof_id, block_no, request.seg_size)
             }
             None => {
-                format!("{}&{}&{}", request.proof_id, request.seg_size, request.args)
+                format!("{}&{}", request.proof_id, request.seg_size)
             }
         };
         let signature = Signature::from_str(&request.signature)?;
@@ -292,7 +289,6 @@ impl StageService for StageServiceSVC {
                 &public_input_stream_path,
                 &private_input_stream_path,
                 &output_stream_path,
-                &request.get_ref().args,
                 block_no,
                 request.get_ref().seg_size,
                 request.get_ref().execute_only,

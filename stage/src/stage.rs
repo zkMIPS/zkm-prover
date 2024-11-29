@@ -189,7 +189,6 @@ impl Stage {
         self.split_task
             .output_path
             .clone_from(&self.generate_context.output_stream_path);
-        self.split_task.args.clone_from(&self.generate_context.args);
         self.split_task.block_no = self.generate_context.block_no;
         self.split_task.seg_size = self.generate_context.seg_size;
         self.split_task.task_id = uuid::Uuid::new_v4().to_string();
