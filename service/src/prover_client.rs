@@ -136,9 +136,10 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             pub_value_path: prove_task.pub_value_path.clone(),
         };
         log::info!(
-            "[prove] rpc {}:{} start",
+            "[prove] rpc {}:{} {} start",
             request.proof_id,
-            request.computed_request_id
+            request.computed_request_id,
+            request.seg_path,
         );
         log::debug!("prove request {:#?}", request);
         let mut grpc_request = Request::new(request);
@@ -191,9 +192,11 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             is_final: agg_task.is_final,
         };
         log::info!(
-            "[aggregate] rpc {}:{} start",
+            "[aggregate] rpc {}:{} {}+{} start",
             request.proof_id,
-            request.computed_request_id
+            request.computed_request_id,
+            request.input1.clone().expect("need input1").proof_path,
+            request.input2.clone().expect("need input2").proof_path,
         );
         log::debug!("aggregate request {:#?}", request);
         let mut grpc_request = Request::new(request);
