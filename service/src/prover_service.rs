@@ -161,9 +161,10 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<ProveResponse>, Status> {
         metrics::record_metrics("prover::prove", || async {
             log::info!(
-                "[prove] {}:{} start",
+                "[prove] {}:{} {} start",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
+                request.get_ref().seg_path,
             );
             log::debug!("{:#?}", request);
             let start = Instant::now();
@@ -208,9 +209,21 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<AggregateResponse>, Status> {
         metrics::record_metrics("prover::aggregate", || async {
             log::info!(
-                "[aggregate] {}:{} start",
+                "[aggregate] {}:{} {}+{} start",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
+                request
+                    .get_ref()
+                    .input1
+                    .clone()
+                    .expect("need input1")
+                    .proof_path,
+                request
+                    .get_ref()
+                    .input2
+                    .clone()
+                    .expect("need input2")
+                    .proof_path,
             );
             log::debug!("{:#?}", request);
             let start = Instant::now();
