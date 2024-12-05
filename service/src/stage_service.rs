@@ -145,7 +145,7 @@ impl StageService for StageServiceSVC {
         request: Request<GenerateProofRequest>,
     ) -> tonic::Result<Response<GenerateProofResponse>, Status> {
         metrics::record_metrics("stage::generate_proof", || async {
-            log::info!("{:?}", request.get_ref().proof_id);
+            log::info!("[generate_proof] {} start", request.get_ref().proof_id);
 
             // check seg_size
             if !provers::valid_seg_size(request.get_ref().seg_size as usize) {
@@ -155,6 +155,11 @@ impl StageService for StageServiceSVC {
                     error_message: "invalid seg_size support [65536-262144]".to_string(),
                     ..Default::default()
                 };
+                log::warn!(
+                    "[generate_proof] {} invalid seg_size support [65536-262144] {}",
+                    request.get_ref().proof_id,
+                    request.get_ref().seg_size,
+                );
                 return Ok(Response::new(response));
             }
             // check signature
@@ -164,10 +169,10 @@ impl StageService for StageServiceSVC {
                     // check white list
                     let users = self.db.get_user(&address).await.unwrap();
                     log::info!(
-                        "proof_id:{:?} address:{:?} exists:{:?}",
+                        "[generate_proof] proof_id:{} address:{:?} exists:{:?}",
                         request.get_ref().proof_id,
                         address,
-                        users.is_empty(),
+                        !users.is_empty(),
                     );
                     if users.is_empty() {
                         let response = stage_service::GenerateProofResponse {
@@ -176,6 +181,10 @@ impl StageService for StageServiceSVC {
                             error_message: "permission denied".to_string(),
                             ..Default::default()
                         };
+                        log::warn!(
+                            "[generate_proof] {} permission denied",
+                            request.get_ref().proof_id,
+                        );
                         return Ok(Response::new(response));
                     }
                     user_address = users[0].address.clone();
@@ -187,7 +196,11 @@ impl StageService for StageServiceSVC {
                         error_message: "invalid signature".to_string(),
                         ..Default::default()
                     };
-                    log::warn!("{:?} invalid signature {:?}", request.get_ref().proof_id, e);
+                    log::warn!(
+                        "[generate_proof] {} invalid signature {:?}",
+                        request.get_ref().proof_id,
+                        e,
+                    );
                     return Ok(Response::new(response));
                 }
             }
@@ -346,6 +359,7 @@ impl StageService for StageServiceSVC {
                 public_values_url,
                 ..Default::default()
             };
+            log::info!("[generate_proof] {} end", request.get_ref().proof_id);
             Ok(Response::new(response))
         })
         .await

@@ -111,7 +111,12 @@ impl ProverService for ProverServiceSVC {
         request: Request<SplitElfRequest>,
     ) -> tonic::Result<Response<SplitElfResponse>, Status> {
         metrics::record_metrics("prover::split_elf", || async {
-            log::info!("{:#?}", request);
+            log::info!(
+                "[split_elf] {}:{} start",
+                request.get_ref().proof_id,
+                request.get_ref().computed_request_id,
+            );
+            log::debug!("{:#?}", request);
             let start = Instant::now();
 
             let split_context = SplitContext::new(
@@ -139,8 +144,10 @@ impl ProverService for ProverServiceSVC {
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             log::info!(
-                "split {} elapsed time: {:?} secs",
+                "[split_elf] {}:{} code:{} elapsed:{} end",
+                request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
+                response.result.as_ref().unwrap().code,
                 elapsed.as_secs()
             );
             Ok(Response::new(response))
@@ -153,7 +160,12 @@ impl ProverService for ProverServiceSVC {
         request: Request<ProveRequest>,
     ) -> tonic::Result<Response<ProveResponse>, Status> {
         metrics::record_metrics("prover::prove", || async {
-            log::info!("{:#?}", request);
+            log::info!(
+                "[prove] {}:{} start",
+                request.get_ref().proof_id,
+                request.get_ref().computed_request_id,
+            );
+            log::debug!("{:#?}", request);
             let start = Instant::now();
 
             let prove_context = ProveContext::new(
@@ -179,8 +191,10 @@ impl ProverService for ProverServiceSVC {
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             log::info!(
-                "prove {} elapsed time: {:?} secs",
+                "[prove] {}:{} code:{} elapsed:{} end",
+                request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
+                response.result.as_ref().unwrap().code,
                 elapsed.as_secs()
             );
             Ok(Response::new(response))
@@ -193,7 +207,12 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateRequest>,
     ) -> tonic::Result<Response<AggregateResponse>, Status> {
         metrics::record_metrics("prover::aggregate", || async {
-            log::info!("{:#?}", request);
+            log::info!(
+                "[aggregate] {}:{} start",
+                request.get_ref().proof_id,
+                request.get_ref().computed_request_id,
+            );
+            log::debug!("{:#?}", request);
             let start = Instant::now();
             let input1 = request.get_ref().input1.clone().expect("need input1");
             let input2 = request.get_ref().input2.clone().expect("need input2");
@@ -227,8 +246,10 @@ impl ProverService for ProverServiceSVC {
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             log::info!(
-                "aggregate {} elapsed time: {:?} secs",
+                "[aggregate] {}:{} code:{} elapsed:{} end",
+                request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
+                response.result.as_ref().unwrap().code,
                 elapsed.as_secs()
             );
             Ok(Response::new(response))
@@ -241,7 +262,12 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateAllRequest>,
     ) -> tonic::Result<Response<AggregateAllResponse>, Status> {
         metrics::record_metrics("prover::aggregate", || async {
-            log::info!("{:#?}", request);
+            log::info!(
+                "[aggregate_all] {}:{} start",
+                request.get_ref().proof_id,
+                request.get_ref().computed_request_id,
+            );
+            log::debug!("{:#?}", request);
             let start = Instant::now();
             let final_context = AggAllContext::new(
                 &request.get_ref().base_dir,
@@ -267,8 +293,10 @@ impl ProverService for ProverServiceSVC {
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             log::info!(
-                "aggregate_all {} elapsed time: {:?} secs",
+                "[aggregate_all] {}:{} code:{} elapsed:{} end",
+                request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
+                response.result.as_ref().unwrap().code,
                 elapsed.as_secs()
             );
             Ok(Response::new(response))

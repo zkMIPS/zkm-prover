@@ -92,17 +92,22 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             block_no: split_task.block_no,
             seg_size: split_task.seg_size,
         };
-        log::info!("split request {:#?}", request);
+        log::info!(
+            "[split] rpc {}:{} start",
+            request.proof_id,
+            request.computed_request_id
+        );
+        log::debug!("split request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.split_elf(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::info!("split response {:#?}", response);
+                log::debug!("split response {:#?}", response);
                 split_task.state = result_code_to_state(response_result.code);
                 split_task.node_info = addrs;
                 log::info!(
-                    "split result proof_id:{:?} computed_request_id:{:?} code:{:?} message:{:?}",
+                    "[split] rpc {}:{} code:{:?} message:{:?} end",
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
@@ -130,17 +135,22 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             proof_path: prove_task.prove_path.clone(),
             pub_value_path: prove_task.pub_value_path.clone(),
         };
-        log::info!("prove request {:#?}", request);
+        log::info!(
+            "[prove] rpc {}:{} start",
+            request.proof_id,
+            request.computed_request_id
+        );
+        log::debug!("prove request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.prove(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::info!("prove response {:#?}", response);
+                log::debug!("prove response {:#?}", response);
                 prove_task.state = result_code_to_state(response_result.code);
                 prove_task.node_info = addrs;
                 log::info!(
-                    "prove result proof_id:{:?} computed_request_id:{:?} code:{:?} message:{:?}",
+                    "[prove] rpc {}:{} code:{:?} message:{:?} end",
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
@@ -180,17 +190,22 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             output_dir: agg_task.output_dir.clone(),
             is_final: agg_task.is_final,
         };
-        log::info!("aggregate request {:#?}", request);
+        log::info!(
+            "[aggregate] rpc {}:{} start",
+            request.proof_id,
+            request.computed_request_id
+        );
+        log::debug!("aggregate request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.aggregate(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::info!("aggregate response {:#?}", response);
+                log::debug!("aggregate response {:#?}", response);
                 agg_task.state = result_code_to_state(response_result.code);
                 agg_task.node_info = addrs;
                 log::info!(
-                    "aggregate result proof_id:{:?} computed_request_id:{:?} code:{:?} message:{:?}",
+                    "[aggregate] rpc {}:{} code:{:?} message:{:?} end",
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
@@ -223,17 +238,22 @@ pub async fn aggregate_all(
             pub_value_dir: agg_all_task.pub_value_dir.clone(),
             output_dir: agg_all_task.output_dir.clone(),
         };
-        log::info!("aggregate_all request {:#?}", request);
+        log::info!(
+            "[aggregate_all] rpc {}:{} start",
+            request.proof_id,
+            request.computed_request_id
+        );
+        log::debug!("aggregate_all request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.aggregate_all(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::info!("aggregate_all response {:#?}", response);
+                log::debug!("aggregate_all response {:#?}", response);
                 agg_all_task.state = result_code_to_state(response_result.code);
                 agg_all_task.node_info = addrs;
                 log::info!(
-                    "aggregate_all result proof_id:{:?} computed_request_id:{:?} code:{:?} message:{:?}",
+                    "[aggregate_all] rpc {}:{}  code:{:?} message:{:?}",
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
@@ -287,7 +307,7 @@ pub async fn final_proof(
             block_public_inputs,
         };
         log::info!(
-            "final_proof request proof_id:{} computed_request_id:{} ",
+            "[final_proof] rpc {}:{} start",
             request.proof_id,
             request.computed_request_id,
         );
@@ -296,7 +316,7 @@ pub async fn final_proof(
         let response = client.final_proof(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::info!("final_proof response {:#?}", response);
+                log::debug!("final_proof response {:#?}", response);
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
                     let mut loop_count = 0;
                     loop {
@@ -307,7 +327,14 @@ pub async fn final_proof(
                             if let Some(result) = task_result.result {
                                 if let Some(code) = ResultCode::from_i32(result.code) {
                                     if code == ResultCode::Ok {
-                                        log::info!("final_proof result {:#?}", result);
+                                        log::info!(
+                                            "[final_proof] rpc {}:{}  code:{:?} message:{:?}",
+                                            response.get_ref().proof_id,
+                                            response.get_ref().computed_request_id,
+                                            response_result.code,
+                                            response_result.message,
+                                        );
+                                        log::debug!("[final_proof] rpc {:#?} end", result);
                                         let _ = file::new(&final_task.output_path)
                                             .write(result.message.as_bytes())
                                             .unwrap();
