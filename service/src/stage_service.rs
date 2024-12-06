@@ -152,13 +152,19 @@ impl StageService for StageServiceSVC {
                 let response = stage_service::GenerateProofResponse {
                     proof_id: request.get_ref().proof_id.clone(),
                     status: stage_service::Status::InvalidParameter as u32,
-                    error_message: "invalid seg_size support [65536-262144]".to_string(),
+                    error_message: format!(
+                        "invalid seg_size support [{}-{}]",
+                        provers::MIN_SEG_SIZE,
+                        provers::MAX_SEG_SIZE
+                    ),
                     ..Default::default()
                 };
                 log::warn!(
-                    "[generate_proof] {} invalid seg_size support [65536-262144] {}",
+                    "[generate_proof] {} invalid seg_size support [{}-{}] {}",
                     request.get_ref().proof_id,
                     request.get_ref().seg_size,
+                    provers::MIN_SEG_SIZE,
+                    provers::MAX_SEG_SIZE
                 );
                 return Ok(Response::new(response));
             }
