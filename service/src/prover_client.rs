@@ -106,6 +106,7 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
                 log::debug!("split response {:#?}", response);
                 split_task.state = result_code_to_state(response_result.code);
                 split_task.node_info = addrs;
+                split_task.total_steps = response.get_ref().total_steps;
                 log::info!(
                     "[split] rpc {}:{} code:{:?} message:{:?} end",
                     response.get_ref().proof_id,

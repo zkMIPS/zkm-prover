@@ -22,9 +22,12 @@ pub mod prover_service {
     tonic::include_proto!("prover.v1");
 }
 
-async fn run_back_task<F: FnOnce() -> std::result::Result<bool, String> + Send + 'static>(
+async fn run_back_task<
+    T: Send + 'static,
+    F: FnOnce() -> std::result::Result<T, String> + Send + 'static,
+>(
     callable: F,
-) -> std::result::Result<bool, String> {
+) -> std::result::Result<T, String> {
     let rt = tokio::runtime::Handle::current();
     let (tx, rx) = tokio::sync::oneshot::channel();
     let _ = rt
@@ -138,7 +141,12 @@ impl ProverService for ProverServiceSVC {
             let mut response = prover_service::SplitElfResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
+                total_steps: result.clone().unwrap_or_default(),
                 ..Default::default()
+            };
+            let result = match result {
+                Ok(cycle) => Ok(cycle > 0),
+                Err(e) => Err(e),
             };
             on_done!(result, response);
             let end = Instant::now();

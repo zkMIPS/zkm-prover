@@ -203,6 +203,7 @@ impl Stage {
 
     pub fn on_split_task(&mut self, split_task: &mut SplitTask) {
         let dst = &mut self.split_task;
+        dst.total_steps = split_task.total_steps;
         on_task!(split_task, dst, self);
     }
 

@@ -160,6 +160,32 @@ impl Database {
     }
 
     #[allow(dead_code)]
+    pub async fn get_prove_task_infos<Info>(
+        &self,
+        proof_id: &str,
+        itype: i32,
+    ) -> anyhow::Result<Vec<Info>>
+    where
+        Info: serde::de::DeserializeOwned,
+    {
+        let rows = sqlx::query_as!(
+            ProveTask,
+            "SELECT id, itype, proof_id, status, time_cost, node_info, content, check_at from prove_task where proof_id = ? and itype = ?",
+            proof_id,
+            itype,
+        )
+        .fetch_all(&self.db_pool)
+        .await?;
+        let mut task_infos: Vec<Info> = vec![];
+        for row in rows {
+            let task_info = serde_json::from_str(row.content.as_ref().unwrap())
+                .map_err(|e| anyhow::anyhow!(e))?;
+            task_infos.push(task_info);
+        }
+        Ok(task_infos)
+    }
+
+    #[allow(dead_code)]
     pub async fn get_user(&self, address: &str) -> anyhow::Result<Vec<User>> {
         let rows = sqlx::query_as!(User, "SELECT address from user where address = ?", address)
             .fetch_all(&self.db_pool)

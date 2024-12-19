@@ -15,7 +15,7 @@ impl Executor {
 }
 
 impl Executor {
-    pub fn split(&self, ctx: &SplitContext) -> std::result::Result<bool, String> {
+    pub fn split(&self, ctx: &SplitContext) -> std::result::Result<u64, String> {
         // 1. split ELF into segs
         let basedir = ctx.basedir.clone();
         let elf_path = ctx.elf_path.clone();
@@ -102,7 +102,7 @@ impl Executor {
                     let _ = file::new(&ctx.output_path)
                         .write(&instrumented_state.state.public_values_stream)
                         .unwrap();
-                    return Ok(true);
+                    return Ok(instrumented_state.state.total_step);
                 }
                 Err(e) => {
                     log::error!("split minimal_parse error {}", e.to_string());
@@ -110,6 +110,6 @@ impl Executor {
                 }
             }
         }
-        Ok(false)
+        Ok(0)
     }
 }

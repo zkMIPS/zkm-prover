@@ -92,6 +92,18 @@ impl StageService for StageServiceSVC {
             if let Ok(task) = task {
                 response.status = task.status as u32;
                 response.step = task.step;
+                let execute_info: Vec<stage::tasks::SplitTask> = self
+                    .db
+                    .get_prove_task_infos(
+                        &request.get_ref().proof_id,
+                        stage::tasks::TASK_ITYPE_SPLIT,
+                    )
+                    .await
+                    .unwrap_or_default();
+                if !execute_info.is_empty() {
+                    response.total_steps = execute_info[0].total_steps;
+                }
+
                 let execute_only = if let Some(context) = task.context {
                     match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
                         Ok(context) => {
