@@ -288,13 +288,8 @@ impl StageService for StageServiceSVC {
                 .create_dir_all()
                 .map_err(|e| Status::internal(e.to_string()))?;
 
-            let prove_proof_path = format!("{}/proof", prove_path);
-            file::new(&prove_proof_path)
-                .create_dir_all()
-                .map_err(|e| Status::internal(e.to_string()))?;
-
-            let prove_pub_value_path = format!("{}/pub_value", prove_path);
-            file::new(&prove_pub_value_path)
+            let prove_receipt_path = format!("{}/receipt", prove_path);
+            file::new(&prove_receipt_path)
                 .create_dir_all()
                 .map_err(|e| Status::internal(e.to_string()))?;
 
