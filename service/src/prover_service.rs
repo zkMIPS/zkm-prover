@@ -182,8 +182,7 @@ impl ProverService for ProverServiceSVC {
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
                 &request.get_ref().seg_path,
-                &request.get_ref().proof_path,
-                &request.get_ref().pub_value_path,
+                &request.get_ref().receipt_path,
             );
 
             let prove_func = move || {
@@ -225,13 +224,13 @@ impl ProverService for ProverServiceSVC {
                     .input1
                     .clone()
                     .expect("need input1")
-                    .proof_path,
+                    .receipt_path,
                 request
                     .get_ref()
                     .input2
                     .clone()
                     .expect("need input2")
-                    .proof_path,
+                    .receipt_path,
             );
             log::debug!("{:#?}", request);
             let start = Instant::now();
@@ -241,15 +240,12 @@ impl ProverService for ProverServiceSVC {
                 &request.get_ref().base_dir,
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
-                &input1.proof_path,
-                &input2.proof_path,
-                &input1.pub_value_path,
-                &input2.pub_value_path,
+                &input1.receipt_path,
+                &input2.receipt_path,
                 input1.is_agg,
                 input2.is_agg,
                 request.get_ref().is_final,
-                &request.get_ref().agg_proof_path,
-                &request.get_ref().agg_pub_value_path,
+                &request.get_ref().agg_receipt_path,
                 &request.get_ref().output_dir,
             );
 
@@ -295,8 +291,7 @@ impl ProverService for ProverServiceSVC {
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
                 request.get_ref().proof_num,
-                &request.get_ref().proof_dir,
-                &request.get_ref().pub_value_dir,
+                &request.get_ref().receipt_dir,
                 &request.get_ref().output_dir,
             );
 

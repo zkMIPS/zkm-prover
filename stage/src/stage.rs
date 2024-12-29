@@ -224,8 +224,7 @@ impl Stage {
                     state: TASK_STATE_UNPROCESSED,
                     seg_size: self.generate_context.seg_size,
                     proof_id: self.generate_context.proof_id.clone(),
-                    prove_path: format!("{}/proof/{}", prove_dir.clone(), file_no),
-                    pub_value_path: format!("{}/pub_value/{}", prove_dir.clone(), file_no),
+                    receipt_path: format!("{}/receipt/{}", prove_dir.clone(), file_no),
                     seg_path: format!("{}/{}", self.generate_context.seg_path, file_name),
                     start_ts: 0,
                     finish_ts: 0,
@@ -359,8 +358,7 @@ impl Stage {
             .proof_id
             .clone_from(&self.generate_context.proof_id.clone());
         self.agg_all_task.proof_num = self.prove_tasks.len() as u32;
-        self.agg_all_task.proof_dir = format!("{}/proof", self.generate_context.prove_path);
-        self.agg_all_task.pub_value_dir = format!("{}/pub_value", self.generate_context.prove_path);
+        self.agg_all_task.receipt_dir = format!("{}/receipt", self.generate_context.prove_path);
         self.agg_all_task
             .output_dir
             .clone_from(&self.generate_context.agg_path);

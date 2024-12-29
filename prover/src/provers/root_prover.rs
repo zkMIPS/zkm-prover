@@ -31,8 +31,7 @@ impl Prover<ProveContext> for RootProver {
         let block_no = ctx.block_no.to_string();
         let seg_path = ctx.seg_path.clone();
         let _seg_size = ctx.seg_size as usize;
-        let proof_path = ctx.proof_path.clone();
-        let pub_value_path = ctx.pub_value_path.clone();
+        let receipt_path = ctx.receipt_path.clone();
         let file = String::from("");
         let _args = "".to_string();
 
@@ -52,20 +51,15 @@ impl Prover<ProveContext> for RootProver {
         timing.filter(Duration::from_millis(100)).print();
 
         timing = TimingTree::new("root_prove root", log::Level::Info);
-        let (agg_proof, updated_agg_public_values) =
-            all_circuits.prove_root(&all_stark, &input, &config, &mut timing)?;
-
-        all_circuits.verify_root(agg_proof.clone())?;
+        let receipt = all_circuits.prove_root(&all_stark, &input, &config, &mut timing)?;
+        all_circuits.verify_root(receipt.clone())?;
         timing.filter(Duration::from_millis(100)).print();
 
         timing = TimingTree::new("root_prove write result", log::Level::Info);
-        // write agg_proof write file
-        let json_string = serde_json::to_string(&agg_proof)?;
-        let _ = file::new(&proof_path).write(json_string.as_bytes())?;
 
-        // updated_agg_public_values file
-        let json_string = serde_json::to_string(&updated_agg_public_values)?;
-        let _ = file::new(&pub_value_path).write(json_string.as_bytes())?;
+        // write receipt write file
+        let json_string = serde_json::to_string(&receipt)?;
+        let _ = file::new(&receipt_path).write(json_string.as_bytes())?;
         timing.filter(Duration::from_millis(100)).print();
 
         Ok(())

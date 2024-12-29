@@ -133,8 +133,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             seg_path: prove_task.seg_path.clone(),
             block_no: prove_task.block_no,
             seg_size: prove_task.seg_size,
-            proof_path: prove_task.prove_path.clone(),
-            pub_value_path: prove_task.pub_value_path.clone(),
+            receipt_path: prove_task.receipt_path.clone(),
         };
         log::info!(
             "[prove] rpc {}:{} {} start",
@@ -178,17 +177,14 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             block_no: agg_task.block_no,
             seg_size: agg_task.seg_size,
             input1: Some(AggregateInput {
-                proof_path: agg_task.input1.proof_path.clone(),
-                pub_value_path: agg_task.input1.pub_value_path.clone(),
+                receipt_path: agg_task.input1.receipt_path.clone(),
                 is_agg: agg_task.input1.is_agg,
             }),
             input2: Some(AggregateInput {
-                proof_path: agg_task.input2.proof_path.clone(),
-                pub_value_path: agg_task.input2.pub_value_path.clone(),
+                receipt_path: agg_task.input2.receipt_path.clone(),
                 is_agg: agg_task.input2.is_agg,
             }),
-            agg_proof_path: agg_task.output_proof_path.clone(),
-            agg_pub_value_path: agg_task.output_pub_value_path.clone(),
+            agg_receipt_path: agg_task.output_receipt_path.clone(),
             output_dir: agg_task.output_dir.clone(),
             is_final: agg_task.is_final,
         };
@@ -196,8 +192,8 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             "[aggregate] rpc {}:{} {}+{} start",
             request.proof_id,
             request.computed_request_id,
-            request.input1.clone().expect("need input1").proof_path,
-            request.input2.clone().expect("need input2").proof_path,
+            request.input1.clone().expect("need input1").receipt_path,
+            request.input2.clone().expect("need input2").receipt_path,
         );
         log::debug!("aggregate request {:#?}", request);
         let mut grpc_request = Request::new(request);
@@ -238,8 +234,7 @@ pub async fn aggregate_all(
             block_no: agg_all_task.block_no,
             seg_size: agg_all_task.seg_size,
             proof_num: agg_all_task.proof_num,
-            proof_dir: agg_all_task.proof_dir.clone(),
-            pub_value_dir: agg_all_task.pub_value_dir.clone(),
+            receipt_dir: agg_all_task.receipt_dir.clone(),
             output_dir: agg_all_task.output_dir.clone(),
         };
         log::info!(

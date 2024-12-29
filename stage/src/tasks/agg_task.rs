@@ -12,8 +12,7 @@ pub struct AggAllTask {
     pub seg_size: u32,
     pub proof_num: u32,
     pub proof_id: String,
-    pub proof_dir: String,
-    pub pub_value_dir: String,
+    pub receipt_dir: String,
     pub output_dir: String,
     pub start_ts: u64,
     pub finish_ts: u64,
@@ -30,8 +29,7 @@ impl Clone for AggAllTask {
             seg_size: self.seg_size,
             proof_id: self.proof_id.clone(),
             proof_num: self.proof_num,
-            proof_dir: self.proof_dir.clone(),
-            pub_value_dir: self.pub_value_dir.clone(),
+            receipt_dir: self.receipt_dir.clone(),
             output_dir: self.output_dir.clone(),
             start_ts: self.start_ts,
             finish_ts: self.finish_ts,
@@ -42,16 +40,14 @@ impl Clone for AggAllTask {
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
 pub struct AggInput {
-    pub proof_path: String,
-    pub pub_value_path: String,
+    pub receipt_path: String,
     pub is_agg: bool,
 }
 
 impl AggInput {
     pub fn from_prove_task(prove_task: &ProveTask) -> AggInput {
         AggInput {
-            proof_path: prove_task.prove_path.clone(),
-            pub_value_path: prove_task.pub_value_path.clone(),
+            receipt_path: prove_task.receipt_path.clone(),
             is_agg: false,
         }
     }
@@ -70,8 +66,7 @@ pub struct AggTask {
     pub input2: AggInput,
     pub is_final: bool,
     pub from_prove: bool,
-    pub output_proof_path: String,
-    pub output_pub_value_path: String,
+    pub output_receipt_path: String,
     pub output_dir: String,
     pub start_ts: u64,
     pub finish_ts: u64,
@@ -96,8 +91,7 @@ impl Clone for AggTask {
             input2: self.input2.clone(),
             is_final: self.is_final,
             from_prove: self.from_prove,
-            output_proof_path: self.output_proof_path.clone(),
-            output_pub_value_path: self.output_pub_value_path.clone(),
+            output_receipt_path: self.output_receipt_path.clone(),
             output_dir: self.output_dir.clone(),
             start_ts: self.start_ts,
             finish_ts: self.finish_ts,
@@ -128,14 +122,12 @@ impl AggTask {
     }
 
     pub fn set_out_path(&mut self, prove_dir: &str) {
-        self.output_proof_path = format!("{}/proof/{}", prove_dir, self.file_key);
-        self.output_pub_value_path = format!("{}/pub_value/{}", prove_dir, self.file_key);
+        self.output_receipt_path = format!("{}/receipt/{}", prove_dir, self.file_key);
     }
 
     pub fn to_agg_input(&self) -> AggInput {
         AggInput {
-            proof_path: self.output_proof_path.clone(),
-            pub_value_path: self.output_pub_value_path.clone(),
+            receipt_path: self.output_receipt_path.clone(),
             is_agg: !self.from_prove,
         }
     }
