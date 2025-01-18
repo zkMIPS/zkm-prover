@@ -132,6 +132,7 @@ impl ProverService for ProverServiceSVC {
                 &request.get_ref().private_input_path,
                 &request.get_ref().output_path,
                 &request.get_ref().args,
+                &request.get_ref().receipt_inputs_path,
             );
             let split_func = move || {
                 let s_ctx: SplitContext = split_context;
@@ -183,6 +184,7 @@ impl ProverService for ProverServiceSVC {
                 request.get_ref().seg_size,
                 &request.get_ref().seg_path,
                 &request.get_ref().receipt_path,
+                &request.get_ref().receipts_path,
             );
 
             let prove_func = move || {

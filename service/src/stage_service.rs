@@ -104,7 +104,7 @@ impl StageService for StageServiceSVC {
                     response.total_steps = execute_info[0].total_steps;
                 }
 
-                let execute_only = if let Some(context) = task.context {
+                let (execute_only, precompile) = if let Some(context) = task.context {
                     match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
                         Ok(context) => {
                             if task.status == stage_service::Status::Success as i32
@@ -113,15 +113,20 @@ impl StageService for StageServiceSVC {
                                 let output_data =
                                     file::new(&context.output_stream_path).read().unwrap();
                                 response.output_stream.clone_from(&output_data);
+                                if context.precompile {
+                                    let receipts_path = format!("{}/receipt/0", context.prove_path);
+                                    let receipts_data = file::new(&receipts_path).read().unwrap();
+                                    response.receipt = receipts_data;
+                                }
                             }
-                            context.execute_only
+                            (context.execute_only, context.precompile)
                         }
-                        Err(_) => false,
+                        Err(_) => (false, false),
                     }
                 } else {
-                    false
+                    (false, false)
                 };
-                if !execute_only {
+                if !execute_only && !precompile {
                     if let Some(result) = task.result {
                         response.proof_with_public_inputs = result.into_bytes();
                     }
@@ -160,7 +165,9 @@ impl StageService for StageServiceSVC {
             log::info!("[generate_proof] {} start", request.get_ref().proof_id);
 
             // check seg_size
-            if !provers::valid_seg_size(request.get_ref().seg_size as usize) {
+            if !request.get_ref().precompile
+                && !provers::valid_seg_size(request.get_ref().seg_size as usize)
+            {
                 let response = stage_service::GenerateProofResponse {
                     proof_id: request.get_ref().proof_id.clone(),
                     status: stage_service::Status::InvalidParameter as u32,
@@ -271,6 +278,32 @@ impl StageService for StageServiceSVC {
                 private_input_stream_path
             };
 
+            let receipt_inputs_path = if request.get_ref().receipt_input.is_empty() {
+                "".to_string()
+            } else {
+                let receipt_inputs_path = format!("{}/{}", input_stream_dir, "receipt_inputs");
+                let mut buf = Vec::new();
+                bincode::serialize_into(&mut buf, &request.get_ref().receipt_input)
+                    .expect("serialization failed");
+                file::new(&receipt_inputs_path)
+                    .write(&buf)
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                receipt_inputs_path
+            };
+
+            let receipts_path = if request.get_ref().receipt.is_empty() {
+                "".to_string()
+            } else {
+                let receipts_path = format!("{}/{}", input_stream_dir, "receipts");
+                let mut buf = Vec::new();
+                bincode::serialize_into(&mut buf, &request.get_ref().receipt)
+                    .expect("serialization failed");
+                file::new(&receipts_path)
+                    .write(&buf)
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                receipts_path
+            };
+
             let output_stream_dir = format!("{}/output_stream", dir_path);
             file::new(&output_stream_dir)
                 .create_dir_all()
@@ -318,6 +351,9 @@ impl StageService for StageServiceSVC {
                 block_no,
                 request.get_ref().seg_size,
                 request.get_ref().execute_only,
+                request.get_ref().precompile,
+                &receipt_inputs_path,
+                &receipts_path,
             );
 
             let _ = self

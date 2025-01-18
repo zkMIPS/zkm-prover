@@ -7,6 +7,7 @@ pub struct ProveContext {
     pub seg_size: u32,
     pub seg_path: String,
     pub receipt_path: String,
+    pub receipts_path: String,
 }
 
 impl ProveContext {
@@ -16,6 +17,7 @@ impl ProveContext {
         seg_size: u32,
         seg_path: &String,
         receipt_path: &String,
+        receipts_path: &String,
     ) -> Self {
         ProveContext {
             basedir: basedir.to_string(),
@@ -23,6 +25,7 @@ impl ProveContext {
             seg_size,
             seg_path: seg_path.to_string(),
             receipt_path: receipt_path.to_string(),
+            receipts_path: receipts_path.to_string(),
         }
     }
 }

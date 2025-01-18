@@ -73,6 +73,7 @@ message SplitElfRequest {
     string public_input_path = 9;
     string private_input_path = 10;
     string output_path = 11;
+    string receipt_inputs_path = 12;
 }
 
 message SplitElfResponse {
@@ -91,6 +92,7 @@ message ProveRequest {
     uint64 block_no = 5;
     uint32 seg_size = 6;
     string receipt_path = 7;
+    string receipts_path = 8;
 }
 
 message ProveResponse {

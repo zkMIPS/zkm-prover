@@ -62,6 +62,18 @@ impl Executor {
                         }
                     }
 
+                    if !ctx.receipt_inputs_path.is_empty() {
+                        let data = file::new(&ctx.receipt_inputs_path)
+                            .read()
+                            .expect("read receipt_inputs_stream failed");
+                        let receipt_inputs = bincode::deserialize::<Vec<Vec<u8>>>(&data)
+                            .expect("deserialize receipt_inputs_stream failed");
+                        for receipt_input in receipt_inputs.iter() {
+                            state.input_stream.push(receipt_input.clone());
+                            log::info!("split set receipt_inputs data {}", data.len());
+                        }
+                    }
+
                     let block_no = block_no.parse::<_>().unwrap_or(0);
                     if block_no > 0 {
                         log::info!("split set input data {}", input_path);
@@ -82,13 +94,20 @@ impl Executor {
 
                     let new_write =
                         |name: &str| -> Option<Box<dyn std::io::Write>> { Some(file::new(name)) };
+                    let mut loop_index = 0;
                     loop {
                         if instrumented_state.state.exited {
                             break;
                         }
                         let cycles = instrumented_state.step();
-                        if cycles >= seg_size as u64 {
+                        let split_seg_size = if loop_index < 8 {
+                            seg_size as u64 >> 2
+                        } else {
+                            seg_size as u64
+                        };
+                        if cycles >= split_seg_size {
                             instrumented_state.split_segment(true, &seg_path_clone, new_write);
+                            loop_index += 1;
                         }
                     }
                     instrumented_state.split_segment(true, &seg_path_clone, new_write);

@@ -15,6 +15,9 @@ pub struct GenerateContext {
     pub block_no: u64,
     pub seg_size: u32,
     pub execute_only: bool,
+    pub precompile: bool,
+    pub receipt_inputs_path: String,
+    pub receipts_path: String,
 }
 
 impl GenerateContext {
@@ -33,6 +36,9 @@ impl GenerateContext {
         block_no: u64,
         seg_size: u32,
         execute_only: bool,
+        precompile: bool,
+        receipt_inputs_path: &str,
+        receipts_path: &str,
     ) -> Self {
         GenerateContext {
             proof_id: proof_id.to_string(),
@@ -48,6 +54,9 @@ impl GenerateContext {
             block_no,
             seg_size,
             execute_only,
+            precompile,
+            receipt_inputs_path: receipt_inputs_path.to_string(),
+            receipts_path: receipts_path.to_string(),
         }
     }
 }

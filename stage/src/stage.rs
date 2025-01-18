@@ -121,7 +121,9 @@ impl Stage {
                     .iter()
                     .all(|task| task.state == TASK_STATE_SUCCESS)
                 {
-                    if self.prove_tasks.len() > 3 {
+                    if self.generate_context.precompile {
+                        self.step = Step::End;
+                    } else if self.prove_tasks.len() > 3 {
                         self.gen_agg_tasks();
                         self.step = Step::InAgg;
                     } else {
@@ -193,6 +195,9 @@ impl Stage {
         self.split_task.seg_size = self.generate_context.seg_size;
         self.split_task.task_id = uuid::Uuid::new_v4().to_string();
         self.split_task.state = TASK_STATE_UNPROCESSED;
+        self.split_task
+            .recepit_inputs_path
+            .clone_from(&self.generate_context.receipt_inputs_path);
         log::debug!("gen_split_task {:#?}", self.split_task);
     }
 
@@ -229,6 +234,7 @@ impl Stage {
                     start_ts: 0,
                     finish_ts: 0,
                     node_info: "".to_string(),
+                    receipts_path: self.generate_context.receipts_path.clone(),
                 };
                 self.prove_tasks.push(prove_task);
             }

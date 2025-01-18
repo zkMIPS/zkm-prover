@@ -91,6 +91,7 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             args: split_task.args.clone(),
             block_no: split_task.block_no,
             seg_size: split_task.seg_size,
+            receipt_inputs_path: split_task.recepit_inputs_path.clone(),
         };
         log::info!(
             "[split] rpc {}:{} start",
@@ -134,6 +135,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             block_no: prove_task.block_no,
             seg_size: prove_task.seg_size,
             receipt_path: prove_task.receipt_path.clone(),
+            receipts_path: prove_task.receipts_path.clone(),
         };
         log::info!(
             "[prove] rpc {}:{} {} start",

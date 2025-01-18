@@ -11,6 +11,7 @@ pub struct SplitContext {
     pub private_input_path: String,
     pub output_path: String,
     pub args: String,
+    pub receipt_inputs_path: String,
 }
 
 impl SplitContext {
@@ -25,6 +26,7 @@ impl SplitContext {
         private_input_path: &str,
         output_path: &str,
         args: &str,
+        receipt_inputs_path: &str,
     ) -> Self {
         SplitContext {
             basedir: basedir.to_string(),
@@ -36,6 +38,7 @@ impl SplitContext {
             private_input_path: private_input_path.to_string(),
             output_path: output_path.to_string(),
             args: args.to_string(),
+            receipt_inputs_path: receipt_inputs_path.to_string(),
         }
     }
 }
