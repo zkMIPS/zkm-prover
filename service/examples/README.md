@@ -66,7 +66,7 @@ $ git clone https://github.com/zkMIPS/revme
 $ RPC_URL=http://localhost:8545 CHAIN_ID=1337 BLOCK_NO=3 RUST_LOG=debug SUITE_JSON_PATH=./test-vectors/suite3.json cargo run --example process
 ```
 
-* Compile the remve_mips
+* Compile the remove_mips
 ```
 $ git clone https://github.com/zkMIPS/zkm
 $ cd zkm/prover/examples/revme
