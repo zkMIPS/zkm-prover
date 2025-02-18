@@ -6,8 +6,7 @@ pub struct AggAllContext {
     pub block_no: u64,
     pub seg_size: u32,
     pub proof_num: u32,
-    pub proof_dir: String,
-    pub pub_value_dir: String,
+    pub receipt_dir: String,
     pub output_dir: String,
 }
 
@@ -17,8 +16,7 @@ impl AggAllContext {
         block_no: u64,
         seg_size: u32,
         proof_num: u32,
-        proof_dir: &String,
-        pub_value_dir: &String,
+        receipt_dir: &String,
         output_dir: &String,
     ) -> Self {
         AggAllContext {
@@ -26,8 +24,7 @@ impl AggAllContext {
             block_no,
             seg_size,
             proof_num,
-            proof_dir: proof_dir.to_string(),
-            pub_value_dir: pub_value_dir.to_string(),
+            receipt_dir: receipt_dir.to_string(),
             output_dir: output_dir.to_string(),
         }
     }

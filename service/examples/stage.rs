@@ -20,13 +20,10 @@ async fn sign_ecdsa(request: &mut GenerateProofRequest, private_key: &str) {
         let wallet = private_key.parse::<LocalWallet>().unwrap();
         let sign_data = match request.block_no {
             Some(block_no) => {
-                format!(
-                    "{}&{}&{}&{}",
-                    request.proof_id, block_no, request.seg_size, request.args
-                )
+                format!("{}&{}&{}", request.proof_id, block_no, request.seg_size)
             }
             None => {
-                format!("{}&{}&{}", request.proof_id, request.seg_size, request.args)
+                format!("{}&{}", request.proof_id, request.seg_size)
             }
         };
         let signature = wallet.sign_message(sign_data).await.unwrap();
@@ -44,7 +41,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let block_no = block_no.parse::<_>().unwrap_or(0);
     let seg_size = env::var("SEG_SIZE").unwrap_or("131072".to_string());
     let seg_size = seg_size.parse::<_>().unwrap_or(131072);
-    let args = env::var("ARGS").unwrap_or("".to_string());
     let public_input_path = env::var("PUBLIC_INPUT_PATH").unwrap_or("".to_string());
     let private_input_path = env::var("PRIVATE_INPUT_PATH").unwrap_or("".to_string());
     let endpoint = env::var("ENDPOINT").unwrap_or("http://127.0.0.1:50000".to_string());
@@ -95,7 +91,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         block_data,
         block_no: Some(block_no),
         seg_size,
-        args,
         public_input_stream,
         private_input_stream,
         execute_only,

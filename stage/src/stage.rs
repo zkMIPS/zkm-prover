@@ -62,7 +62,7 @@ macro_rules! on_task {
         {
             $dst.state = $src.state;
             if TASK_STATE_UNPROCESSED != $src.state {
-                log::info!("on_task {:#?}", $dst);
+                log::debug!("on_task {:#?}", $dst);
                 $dst.finish_ts = get_timestamp();
                 $src.finish_ts = $dst.finish_ts;
             }
@@ -121,7 +121,9 @@ impl Stage {
                     .iter()
                     .all(|task| task.state == TASK_STATE_SUCCESS)
                 {
-                    if self.prove_tasks.len() > 3 {
+                    if self.generate_context.precompile {
+                        self.step = Step::End;
+                    } else if self.prove_tasks.len() > 3 {
                         self.gen_agg_tasks();
                         self.step = Step::InAgg;
                     } else {
@@ -189,12 +191,14 @@ impl Stage {
         self.split_task
             .output_path
             .clone_from(&self.generate_context.output_stream_path);
-        self.split_task.args.clone_from(&self.generate_context.args);
         self.split_task.block_no = self.generate_context.block_no;
         self.split_task.seg_size = self.generate_context.seg_size;
         self.split_task.task_id = uuid::Uuid::new_v4().to_string();
         self.split_task.state = TASK_STATE_UNPROCESSED;
-        log::info!("gen_split_task {:#?}", self.split_task);
+        self.split_task
+            .recepit_inputs_path
+            .clone_from(&self.generate_context.receipt_inputs_path);
+        log::debug!("gen_split_task {:#?}", self.split_task);
     }
 
     pub fn get_split_task(&mut self) -> Option<SplitTask> {
@@ -204,6 +208,7 @@ impl Stage {
 
     pub fn on_split_task(&mut self, split_task: &mut SplitTask) {
         let dst = &mut self.split_task;
+        dst.total_steps = split_task.total_steps;
         on_task!(split_task, dst, self);
     }
 
@@ -224,18 +229,18 @@ impl Stage {
                     state: TASK_STATE_UNPROCESSED,
                     seg_size: self.generate_context.seg_size,
                     proof_id: self.generate_context.proof_id.clone(),
-                    prove_path: format!("{}/proof/{}", prove_dir.clone(), file_no),
-                    pub_value_path: format!("{}/pub_value/{}", prove_dir.clone(), file_no),
+                    receipt_path: format!("{}/receipt/{}", prove_dir.clone(), file_no),
                     seg_path: format!("{}/{}", self.generate_context.seg_path, file_name),
                     start_ts: 0,
                     finish_ts: 0,
                     node_info: "".to_string(),
+                    receipts_path: self.generate_context.receipts_path.clone(),
                 };
                 self.prove_tasks.push(prove_task);
             }
         }
         self.prove_tasks.sort_by_key(|p| p.file_no);
-        log::info!("gen_prove_task {:#?}", self.prove_tasks);
+        log::debug!("gen_prove_task {:#?}", self.prove_tasks);
 
         if self.prove_tasks.len() < 2 {
             self.is_error = true;
@@ -313,7 +318,7 @@ impl Stage {
         self.agg_tasks[last_agg_tasks]
             .output_dir
             .clone_from(&self.generate_context.agg_path);
-        log::info!("gen_agg_task {:#?}", self.agg_tasks);
+        log::debug!("gen_agg_task {:#?}", self.agg_tasks);
     }
 
     pub fn get_agg_task(&mut self) -> Option<AggTask> {
@@ -359,12 +364,11 @@ impl Stage {
             .proof_id
             .clone_from(&self.generate_context.proof_id.clone());
         self.agg_all_task.proof_num = self.prove_tasks.len() as u32;
-        self.agg_all_task.proof_dir = format!("{}/proof", self.generate_context.prove_path);
-        self.agg_all_task.pub_value_dir = format!("{}/pub_value", self.generate_context.prove_path);
+        self.agg_all_task.receipt_dir = format!("{}/receipt", self.generate_context.prove_path);
         self.agg_all_task
             .output_dir
             .clone_from(&self.generate_context.agg_path);
-        log::info!("gen_agg_task {:#?}", self.agg_all_task);
+        log::debug!("gen_agg_task {:#?}", self.agg_all_task);
     }
 
     pub fn get_agg_all_task(&mut self) -> Option<AggAllTask> {
@@ -390,7 +394,7 @@ impl Stage {
             .clone_from(&self.generate_context.final_path);
         self.final_task.task_id = uuid::Uuid::new_v4().to_string();
         self.final_task.state = TASK_STATE_UNPROCESSED;
-        log::info!("gen_final_task {:#?}", self.final_task);
+        log::debug!("gen_final_task {:#?}", self.final_task);
     }
 
     pub fn get_final_task(&mut self) -> Option<FinalTask> {
@@ -420,7 +424,19 @@ impl Stage {
                 )
             })
             .collect::<Vec<String>>()
-            .join("\r\n");
+            .join(" \r\n");
+        let agg_cost = self
+            .agg_tasks
+            .iter()
+            .map(|task| {
+                format!(
+                    "agg_id: {} cost: {} sec",
+                    task.task_id,
+                    task.finish_ts - task.start_ts
+                )
+            })
+            .collect::<Vec<String>>()
+            .join(" \r\n");
         let agg_all_cost = format!(
             "agg_all_id: {} cost: {} sec",
             self.agg_all_task.task_id,
@@ -432,8 +448,13 @@ impl Stage {
             self.final_task.finish_ts - self.final_task.start_ts
         );
         format!(
-            "proof_id: {}\r\n{}\r\n{}\r\n{}\r\n{}\r\n",
-            self.generate_context.proof_id, split_cost, root_prove_cost, agg_all_cost, final_cost
+            "proof_id: {}\r\n {}\r\n {}\r\n {}\r\n {}\r\n {}\r\n",
+            self.generate_context.proof_id,
+            split_cost,
+            root_prove_cost,
+            agg_cost,
+            agg_all_cost,
+            final_cost
         )
     }
 }

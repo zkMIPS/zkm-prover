@@ -22,9 +22,12 @@ pub mod prover_service {
     tonic::include_proto!("prover.v1");
 }
 
-async fn run_back_task<F: FnOnce() -> std::result::Result<bool, String> + Send + 'static>(
+async fn run_back_task<
+    T: Send + 'static,
+    F: FnOnce() -> std::result::Result<T, String> + Send + 'static,
+>(
     callable: F,
-) -> std::result::Result<bool, String> {
+) -> std::result::Result<T, String> {
     let rt = tokio::runtime::Handle::current();
     let (tx, rx) = tokio::sync::oneshot::channel();
     let _ = rt
@@ -111,7 +114,12 @@ impl ProverService for ProverServiceSVC {
         request: Request<SplitElfRequest>,
     ) -> tonic::Result<Response<SplitElfResponse>, Status> {
         metrics::record_metrics("prover::split_elf", || async {
-            log::info!("{:#?}", request);
+            log::info!(
+                "[split_elf] {}:{} start",
+                request.get_ref().proof_id,
+                request.get_ref().computed_request_id,
+            );
+            log::debug!("{:#?}", request);
             let start = Instant::now();
 
             let split_context = SplitContext::new(
@@ -124,6 +132,7 @@ impl ProverService for ProverServiceSVC {
                 &request.get_ref().private_input_path,
                 &request.get_ref().output_path,
                 &request.get_ref().args,
+                &request.get_ref().receipt_inputs_path,
             );
             let split_func = move || {
                 let s_ctx: SplitContext = split_context;
@@ -133,14 +142,21 @@ impl ProverService for ProverServiceSVC {
             let mut response = prover_service::SplitElfResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
+                total_steps: result.clone().unwrap_or_default(),
                 ..Default::default()
+            };
+            let result = match result {
+                Ok(cycle) => Ok(cycle > 0),
+                Err(e) => Err(e),
             };
             on_done!(result, response);
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             log::info!(
-                "split {} elapsed time: {:?} secs",
+                "[split_elf] {}:{} code:{} elapsed:{} end",
+                request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
+                response.result.as_ref().unwrap().code,
                 elapsed.as_secs()
             );
             Ok(Response::new(response))
@@ -153,7 +169,13 @@ impl ProverService for ProverServiceSVC {
         request: Request<ProveRequest>,
     ) -> tonic::Result<Response<ProveResponse>, Status> {
         metrics::record_metrics("prover::prove", || async {
-            log::info!("{:#?}", request);
+            log::info!(
+                "[prove] {}:{} {} start",
+                request.get_ref().proof_id,
+                request.get_ref().computed_request_id,
+                request.get_ref().seg_path,
+            );
+            log::debug!("{:#?}", request);
             let start = Instant::now();
 
             let prove_context = ProveContext::new(
@@ -161,8 +183,8 @@ impl ProverService for ProverServiceSVC {
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
                 &request.get_ref().seg_path,
-                &request.get_ref().proof_path,
-                &request.get_ref().pub_value_path,
+                &request.get_ref().receipt_path,
+                &request.get_ref().receipts_path,
             );
 
             let prove_func = move || {
@@ -179,8 +201,10 @@ impl ProverService for ProverServiceSVC {
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             log::info!(
-                "prove {} elapsed time: {:?} secs",
+                "[prove] {}:{} code:{} elapsed:{} end",
+                request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
+                response.result.as_ref().unwrap().code,
                 elapsed.as_secs()
             );
             Ok(Response::new(response))
@@ -193,7 +217,24 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateRequest>,
     ) -> tonic::Result<Response<AggregateResponse>, Status> {
         metrics::record_metrics("prover::aggregate", || async {
-            log::info!("{:#?}", request);
+            log::info!(
+                "[aggregate] {}:{} {}+{} start",
+                request.get_ref().proof_id,
+                request.get_ref().computed_request_id,
+                request
+                    .get_ref()
+                    .input1
+                    .clone()
+                    .expect("need input1")
+                    .receipt_path,
+                request
+                    .get_ref()
+                    .input2
+                    .clone()
+                    .expect("need input2")
+                    .receipt_path,
+            );
+            log::debug!("{:#?}", request);
             let start = Instant::now();
             let input1 = request.get_ref().input1.clone().expect("need input1");
             let input2 = request.get_ref().input2.clone().expect("need input2");
@@ -201,15 +242,12 @@ impl ProverService for ProverServiceSVC {
                 &request.get_ref().base_dir,
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
-                &input1.proof_path,
-                &input2.proof_path,
-                &input1.pub_value_path,
-                &input2.pub_value_path,
+                &input1.receipt_path,
+                &input2.receipt_path,
                 input1.is_agg,
                 input2.is_agg,
                 request.get_ref().is_final,
-                &request.get_ref().agg_proof_path,
-                &request.get_ref().agg_pub_value_path,
+                &request.get_ref().agg_receipt_path,
                 &request.get_ref().output_dir,
             );
 
@@ -227,8 +265,10 @@ impl ProverService for ProverServiceSVC {
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             log::info!(
-                "aggregate {} elapsed time: {:?} secs",
+                "[aggregate] {}:{} code:{} elapsed:{} end",
+                request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
+                response.result.as_ref().unwrap().code,
                 elapsed.as_secs()
             );
             Ok(Response::new(response))
@@ -241,15 +281,19 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateAllRequest>,
     ) -> tonic::Result<Response<AggregateAllResponse>, Status> {
         metrics::record_metrics("prover::aggregate", || async {
-            log::info!("{:#?}", request);
+            log::info!(
+                "[aggregate_all] {}:{} start",
+                request.get_ref().proof_id,
+                request.get_ref().computed_request_id,
+            );
+            log::debug!("{:#?}", request);
             let start = Instant::now();
             let final_context = AggAllContext::new(
                 &request.get_ref().base_dir,
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
                 request.get_ref().proof_num,
-                &request.get_ref().proof_dir,
-                &request.get_ref().pub_value_dir,
+                &request.get_ref().receipt_dir,
                 &request.get_ref().output_dir,
             );
 
@@ -267,8 +311,10 @@ impl ProverService for ProverServiceSVC {
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             log::info!(
-                "aggregate_all {} elapsed time: {:?} secs",
+                "[aggregate_all] {}:{} code:{} elapsed:{} end",
+                request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
+                response.result.as_ref().unwrap().code,
                 elapsed.as_secs()
             );
             Ok(Response::new(response))

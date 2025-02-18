@@ -3,12 +3,14 @@ use crate::contexts::ProveContext;
 use std::time::Duration;
 
 use plonky2::field::goldilocks_field::GoldilocksField;
+use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::util::timing::TimingTree;
 
 use std::io::BufReader;
 use zkm_prover::all_stark::AllStark;
 use zkm_prover::config::StarkConfig;
 use zkm_prover::cpu::kernel::assembler::segment_kernel;
+use zkm_prover::generation::state::{AssumptionReceipts, Receipt};
 
 use common::file;
 
@@ -25,16 +27,30 @@ impl Prover<ProveContext> for RootProver {
     fn prove(&self, ctx: &ProveContext) -> anyhow::Result<()> {
         type F = GoldilocksField;
         const D: usize = 2;
-        // type C = PoseidonGoldilocksConfig;
+        type C = PoseidonGoldilocksConfig;
 
         let basedir = ctx.basedir.clone();
         let block_no = ctx.block_no.to_string();
         let seg_path = ctx.seg_path.clone();
-        let seg_size = ctx.seg_size as usize;
-        let proof_path = ctx.proof_path.clone();
-        let pub_value_path = ctx.pub_value_path.clone();
+        let _seg_size = ctx.seg_size as usize;
+        let receipt_path = ctx.receipt_path.clone();
         let file = String::from("");
         let _args = "".to_string();
+
+        let mut receipts: AssumptionReceipts<F, C, D> = vec![];
+        if !ctx.receipts_path.is_empty() {
+            let data = file::new(&ctx.receipts_path)
+                .read()
+                .expect("read receipts_path failed");
+            let receipt_datas =
+                bincode::deserialize::<Vec<Vec<u8>>>(&data).expect("deserialize receipts failed");
+            for receipt_data in receipt_datas.iter() {
+                let receipt: Receipt<F, C, D> =
+                    bincode::deserialize(receipt_data).map_err(|e| anyhow::anyhow!(e))?;
+                receipts.push(receipt.into());
+                log::info!("prove set receipts {:?}", receipt_data.len());
+            }
+        }
 
         let mut timing = TimingTree::new("root_prove init all_stark", log::Level::Info);
         let all_stark = AllStark::<F, D>::default();
@@ -48,24 +64,25 @@ impl Prover<ProveContext> for RootProver {
 
         let seg_data = file::new(&seg_path).read()?;
         let seg_reader = BufReader::new(seg_data.as_slice());
-        let input = segment_kernel(&basedir, &block_no, &file, seg_reader, seg_size);
+        let input = segment_kernel(&basedir, &block_no, &file, seg_reader);
         timing.filter(Duration::from_millis(100)).print();
 
         timing = TimingTree::new("root_prove root", log::Level::Info);
-        let (agg_proof, updated_agg_public_values) =
-            all_circuits.prove_root(&all_stark, &input, &config, &mut timing)?;
-
-        all_circuits.verify_root(agg_proof.clone())?;
+        let receipt = all_circuits.prove_root_with_assumption(
+            &all_stark,
+            &input,
+            &config,
+            &mut timing,
+            receipts,
+        )?;
+        all_circuits.verify_root(receipt.clone())?;
         timing.filter(Duration::from_millis(100)).print();
 
         timing = TimingTree::new("root_prove write result", log::Level::Info);
-        // write agg_proof write file
-        let json_string = serde_json::to_string(&agg_proof)?;
-        let _ = file::new(&proof_path).write(json_string.as_bytes())?;
 
-        // updated_agg_public_values file
-        let json_string = serde_json::to_string(&updated_agg_public_values)?;
-        let _ = file::new(&pub_value_path).write(json_string.as_bytes())?;
+        // write receipt write file
+        let json_string = serde_json::to_string(&receipt)?;
+        let _ = file::new(&receipt_path).write(json_string.as_bytes())?;
         timing.filter(Duration::from_millis(100)).print();
 
         Ok(())

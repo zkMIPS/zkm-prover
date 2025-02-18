@@ -65,13 +65,10 @@ impl StageServiceSVC {
     pub fn valid_signature(&self, request: &GenerateProofRequest) -> Result<String, Error> {
         let sign_data = match request.block_no {
             Some(block_no) => {
-                format!(
-                    "{}&{}&{}&{}",
-                    request.proof_id, block_no, request.seg_size, request.args
-                )
+                format!("{}&{}&{}", request.proof_id, block_no, request.seg_size)
             }
             None => {
-                format!("{}&{}&{}", request.proof_id, request.seg_size, request.args)
+                format!("{}&{}", request.proof_id, request.seg_size)
             }
         };
         let signature = Signature::from_str(&request.signature)?;
@@ -95,7 +92,19 @@ impl StageService for StageServiceSVC {
             if let Ok(task) = task {
                 response.status = task.status as u32;
                 response.step = task.step;
-                let execute_only = if let Some(context) = task.context {
+                let execute_info: Vec<stage::tasks::SplitTask> = self
+                    .db
+                    .get_prove_task_infos(
+                        &request.get_ref().proof_id,
+                        stage::tasks::TASK_ITYPE_SPLIT,
+                    )
+                    .await
+                    .unwrap_or_default();
+                if !execute_info.is_empty() {
+                    response.total_steps = execute_info[0].total_steps;
+                }
+
+                let (execute_only, precompile) = if let Some(context) = task.context {
                     match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
                         Ok(context) => {
                             if task.status == stage_service::Status::Success as i32
@@ -104,15 +113,20 @@ impl StageService for StageServiceSVC {
                                 let output_data =
                                     file::new(&context.output_stream_path).read().unwrap();
                                 response.output_stream.clone_from(&output_data);
+                                if context.precompile {
+                                    let receipts_path = format!("{}/receipt/0", context.prove_path);
+                                    let receipts_data = file::new(&receipts_path).read().unwrap();
+                                    response.receipt = receipts_data;
+                                }
                             }
-                            context.execute_only
+                            (context.execute_only, context.precompile)
                         }
-                        Err(_) => false,
+                        Err(_) => (false, false),
                     }
                 } else {
-                    false
+                    (false, false)
                 };
-                if !execute_only {
+                if !execute_only && !precompile {
                     if let Some(result) = task.result {
                         response.proof_with_public_inputs = result.into_bytes();
                     }
@@ -124,6 +138,11 @@ impl StageService for StageServiceSVC {
                         );
                         response.stark_proof_url = format!(
                             "{}/{}/aggregate/proof_with_public_inputs.json",
+                            fileserver_url,
+                            request.get_ref().proof_id
+                        );
+                        response.public_values_url = format!(
+                            "{}/{}/aggregate/public_values.json",
                             fileserver_url,
                             request.get_ref().proof_id
                         );
@@ -143,16 +162,29 @@ impl StageService for StageServiceSVC {
         request: Request<GenerateProofRequest>,
     ) -> tonic::Result<Response<GenerateProofResponse>, Status> {
         metrics::record_metrics("stage::generate_proof", || async {
-            log::info!("{:?}", request.get_ref().proof_id);
+            log::info!("[generate_proof] {} start", request.get_ref().proof_id);
 
             // check seg_size
-            if !provers::valid_seg_size(request.get_ref().seg_size as usize) {
+            if !request.get_ref().precompile
+                && !provers::valid_seg_size(request.get_ref().seg_size as usize)
+            {
                 let response = stage_service::GenerateProofResponse {
                     proof_id: request.get_ref().proof_id.clone(),
                     status: stage_service::Status::InvalidParameter as u32,
-                    error_message: "invalid seg_size support [65536-262144]".to_string(),
+                    error_message: format!(
+                        "invalid seg_size support [{}-{}]",
+                        provers::MIN_SEG_SIZE,
+                        provers::MAX_SEG_SIZE
+                    ),
                     ..Default::default()
                 };
+                log::warn!(
+                    "[generate_proof] {} invalid seg_size support [{}-{}] {}",
+                    request.get_ref().proof_id,
+                    request.get_ref().seg_size,
+                    provers::MIN_SEG_SIZE,
+                    provers::MAX_SEG_SIZE
+                );
                 return Ok(Response::new(response));
             }
             // check signature
@@ -162,10 +194,10 @@ impl StageService for StageServiceSVC {
                     // check white list
                     let users = self.db.get_user(&address).await.unwrap();
                     log::info!(
-                        "proof_id:{:?} address:{:?} exists:{:?}",
+                        "[generate_proof] proof_id:{} address:{:?} exists:{:?}",
                         request.get_ref().proof_id,
                         address,
-                        users.is_empty(),
+                        !users.is_empty(),
                     );
                     if users.is_empty() {
                         let response = stage_service::GenerateProofResponse {
@@ -174,6 +206,10 @@ impl StageService for StageServiceSVC {
                             error_message: "permission denied".to_string(),
                             ..Default::default()
                         };
+                        log::warn!(
+                            "[generate_proof] {} permission denied",
+                            request.get_ref().proof_id,
+                        );
                         return Ok(Response::new(response));
                     }
                     user_address = users[0].address.clone();
@@ -185,7 +221,11 @@ impl StageService for StageServiceSVC {
                         error_message: "invalid signature".to_string(),
                         ..Default::default()
                     };
-                    log::warn!("{:?} invalid signature {:?}", request.get_ref().proof_id, e);
+                    log::warn!(
+                        "[generate_proof] {} invalid signature {:?}",
+                        request.get_ref().proof_id,
+                        e,
+                    );
                     return Ok(Response::new(response));
                 }
             }
@@ -238,6 +278,32 @@ impl StageService for StageServiceSVC {
                 private_input_stream_path
             };
 
+            let receipt_inputs_path = if request.get_ref().receipt_input.is_empty() {
+                "".to_string()
+            } else {
+                let receipt_inputs_path = format!("{}/{}", input_stream_dir, "receipt_inputs");
+                let mut buf = Vec::new();
+                bincode::serialize_into(&mut buf, &request.get_ref().receipt_input)
+                    .expect("serialization failed");
+                file::new(&receipt_inputs_path)
+                    .write(&buf)
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                receipt_inputs_path
+            };
+
+            let receipts_path = if request.get_ref().receipt.is_empty() {
+                "".to_string()
+            } else {
+                let receipts_path = format!("{}/{}", input_stream_dir, "receipts");
+                let mut buf = Vec::new();
+                bincode::serialize_into(&mut buf, &request.get_ref().receipt)
+                    .expect("serialization failed");
+                file::new(&receipts_path)
+                    .write(&buf)
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                receipts_path
+            };
+
             let output_stream_dir = format!("{}/output_stream", dir_path);
             file::new(&output_stream_dir)
                 .create_dir_all()
@@ -255,13 +321,8 @@ impl StageService for StageServiceSVC {
                 .create_dir_all()
                 .map_err(|e| Status::internal(e.to_string()))?;
 
-            let prove_proof_path = format!("{}/proof", prove_path);
-            file::new(&prove_proof_path)
-                .create_dir_all()
-                .map_err(|e| Status::internal(e.to_string()))?;
-
-            let prove_pub_value_path = format!("{}/pub_value", prove_path);
-            file::new(&prove_pub_value_path)
+            let prove_receipt_path = format!("{}/receipt", prove_path);
+            file::new(&prove_receipt_path)
                 .create_dir_all()
                 .map_err(|e| Status::internal(e.to_string()))?;
 
@@ -287,10 +348,12 @@ impl StageService for StageServiceSVC {
                 &public_input_stream_path,
                 &private_input_stream_path,
                 &output_stream_path,
-                &request.get_ref().args,
                 block_no,
                 request.get_ref().seg_size,
                 request.get_ref().execute_only,
+                request.get_ref().precompile,
+                &receipt_inputs_path,
+                &receipts_path,
             );
 
             let _ = self
@@ -318,6 +381,14 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
+            let mut public_values_url = match &self.fileserver_url {
+                Some(fileserver_url) => format!(
+                    "{}/{}/aggregate/public_values.json",
+                    fileserver_url,
+                    request.get_ref().proof_id
+                ),
+                None => "".to_string(),
+            };
             let mut solidity_verifier_url = match &self.verifier_url {
                 Some(verifier_url) => verifier_url.clone(),
                 None => "".to_string(),
@@ -326,6 +397,7 @@ impl StageService for StageServiceSVC {
                 proof_url = "".to_string();
                 stark_proof_url = "".to_string();
                 solidity_verifier_url = "".to_string();
+                public_values_url = "".to_string();
             }
             let response = stage_service::GenerateProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
@@ -333,8 +405,10 @@ impl StageService for StageServiceSVC {
                 proof_url,
                 stark_proof_url,
                 solidity_verifier_url,
+                public_values_url,
                 ..Default::default()
             };
+            log::info!("[generate_proof] {} end", request.get_ref().proof_id);
             Ok(Response::new(response))
         })
         .await

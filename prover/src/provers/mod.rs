@@ -20,15 +20,15 @@ use zkm_prover::fixed_recursive_verifier::AllRecursiveCircuits;
 use once_cell::sync::OnceCell;
 use std::sync::Mutex;
 
-const MIN_SEG_SIZE: usize = 65536;
-const MAX_SEG_SIZE: usize = 262144;
+pub const MIN_SEG_SIZE: usize = 1 << 16;
+pub const MAX_SEG_SIZE: usize = 1 << 22;
 /// Prover trait
 pub trait Prover<T> {
     fn prove(&self, ctx: &T) -> Result<()>;
 }
 
-const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 1] =
-    [[10..21, 12..22, 12..21, 8..21, 6..21, 13..23]];
+const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 8]; 1] =
+    [[10..22, 12..23, 10..22, 8..22, 6..21, 6..21, 6..22, 13..26]];
 // const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 5] = [
 //     [16..17, 12..13, 10..16, 9..12, 15..17, 17..19],
 //     [16..17, 15..17, 12..19, 9..14, 15..17, 19..20],
@@ -40,12 +40,12 @@ const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 1] =
 lazy_static! {
     static ref SEG_SIZE_TO_BITS: HashMap<usize, usize> = {
         let mut map = HashMap::new();
-        map.insert(262144, 0);
+        map.insert(MAX_SEG_SIZE, 0);
         map
     };
 }
 
-fn select_degree_bits(seg_size: usize) -> [std::ops::Range<usize>; 6] {
+fn select_degree_bits(seg_size: usize) -> [std::ops::Range<usize>; 8] {
     match SEG_SIZE_TO_BITS.get(&seg_size) {
         Some(s) => DEGREE_BITS_RANGE[*s].clone(),
         None => panic!(

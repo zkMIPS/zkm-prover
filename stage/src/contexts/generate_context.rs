@@ -12,10 +12,12 @@ pub struct GenerateContext {
     pub public_input_path: String,
     pub private_input_path: String,
     pub output_stream_path: String,
-    pub args: String,
     pub block_no: u64,
     pub seg_size: u32,
     pub execute_only: bool,
+    pub precompile: bool,
+    pub receipt_inputs_path: String,
+    pub receipts_path: String,
 }
 
 impl GenerateContext {
@@ -31,10 +33,12 @@ impl GenerateContext {
         public_input_path: &str,
         private_input_path: &str,
         output_stream_path: &str,
-        args: &str,
         block_no: u64,
         seg_size: u32,
         execute_only: bool,
+        precompile: bool,
+        receipt_inputs_path: &str,
+        receipts_path: &str,
     ) -> Self {
         GenerateContext {
             proof_id: proof_id.to_string(),
@@ -47,10 +51,12 @@ impl GenerateContext {
             public_input_path: public_input_path.to_string(),
             private_input_path: private_input_path.to_string(),
             output_stream_path: output_stream_path.to_string(),
-            args: args.to_string(),
             block_no,
             seg_size,
             execute_only,
+            precompile,
+            receipt_inputs_path: receipt_inputs_path.to_string(),
+            receipts_path: receipts_path.to_string(),
         }
     }
 }

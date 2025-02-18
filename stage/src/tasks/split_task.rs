@@ -18,6 +18,8 @@ pub struct SplitTask {
     pub start_ts: u64,
     pub finish_ts: u64,
     pub node_info: String,
+    pub total_steps: u64,
+    pub recepit_inputs_path: String,
 }
 
 impl Clone for SplitTask {
@@ -38,6 +40,8 @@ impl Clone for SplitTask {
             start_ts: self.start_ts,
             finish_ts: self.finish_ts,
             node_info: self.node_info.clone(),
+            total_steps: self.total_steps,
+            recepit_inputs_path: self.recepit_inputs_path.clone(),
         }
     }
 }

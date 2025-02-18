@@ -73,12 +73,14 @@ message SplitElfRequest {
     string public_input_path = 9;
     string private_input_path = 10;
     string output_path = 11;
+    string receipt_inputs_path = 12;
 }
 
 message SplitElfResponse {
     string proof_id = 1;
     string computed_request_id = 2;
     Result result = 3;
+    uint64 total_steps = 4;
 }
 
 message ProveRequest {
@@ -89,8 +91,8 @@ message ProveRequest {
     string seg_path = 4;
     uint64 block_no = 5;
     uint32 seg_size = 6;
-    string proof_path = 7;
-    string pub_value_path = 8;
+    string receipt_path = 7;
+    string receipts_path = 8;
 }
 
 message ProveResponse {
@@ -100,8 +102,7 @@ message ProveResponse {
 }
 
 message AggregateInput {
-    string proof_path = 1;
-    string pub_value_path = 2;
+    string receipt_path = 1;
     bool is_agg = 3;
 };
 
@@ -114,8 +115,7 @@ message AggregateRequest {
     uint32 seg_size = 6;
     AggregateInput input1 = 7;
     AggregateInput input2 = 8;
-    string agg_proof_path = 9;
-    string agg_pub_value_path = 10;
+    string agg_receipt_path = 9;
     bool is_final = 11;
     string output_dir = 12;
 }
@@ -134,8 +134,7 @@ message AggregateAllRequest {
     uint64 block_no = 5;
     uint32 seg_size = 6;
     uint32 proof_num = 7;
-    string proof_dir = 8;
-    string pub_value_dir = 9;
+    string receipt_dir = 8;
     string output_dir = 10;
 }
 
@@ -151,6 +150,7 @@ message FinalProofRequest {
     bytes common_circuit_data = 3;
     bytes verifier_only_circuit_data = 4;
     bytes proof_with_public_inputs = 5;
+    bytes block_public_inputs = 6;
 }
 
 message FinalProofResponse {
