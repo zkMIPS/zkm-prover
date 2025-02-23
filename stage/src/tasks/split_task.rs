@@ -20,6 +20,7 @@ pub struct SplitTask {
     pub node_info: String,
     pub total_steps: u64,
     pub recepit_inputs_path: String,
+    pub receipts_path: String,
 }
 
 impl Clone for SplitTask {
@@ -42,6 +43,7 @@ impl Clone for SplitTask {
             node_info: self.node_info.clone(),
             total_steps: self.total_steps,
             recepit_inputs_path: self.recepit_inputs_path.clone(),
+            receipts_path: self.receipts_path.clone(),
         }
     }
 }

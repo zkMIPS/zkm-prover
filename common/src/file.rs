@@ -23,6 +23,7 @@ pub trait File: std::io::Write {
     fn read_to_string(&self) -> anyhow::Result<String>;
     fn read_dir(&self) -> anyhow::Result<Vec<String>>;
     fn create_dir_all(&self) -> anyhow::Result<()>;
+    fn remove(&self) -> anyhow::Result<()>;
 }
 
 pub struct LocalFile {
@@ -80,6 +81,11 @@ impl File for LocalFile {
 
     fn create_dir_all(&self) -> anyhow::Result<()> {
         fs::create_dir_all(&self.path)?;
+        Ok(())
+    }
+
+    fn remove(&self) -> anyhow::Result<()> {
+        fs::remove_file(&self.path)?;
         Ok(())
     }
 }
@@ -149,6 +155,16 @@ impl File for S3File {
         let handle = thread::spawn(move || {
             let rt = Runtime::new().unwrap();
             rt.block_on(async { s3_create_dir_all(&path).await })
+        });
+
+        handle.join().unwrap()
+    }
+
+    fn remove(&self) -> anyhow::Result<()> {
+        let path = self.path.clone();
+        let handle = thread::spawn(move || {
+            let rt = Runtime::new().unwrap();
+            rt.block_on(async { s3_remove(&path).await })
         });
 
         handle.join().unwrap()
@@ -241,6 +257,20 @@ async fn s3_exist(path: &str) -> anyhow::Result<bool> {
     let response = client.head_object().bucket(bucket).key(key).send().await;
 
     Ok(response.is_ok())
+}
+
+async fn s3_remove(path: &str) -> anyhow::Result<()> {
+    let (bucket, key) = parse_s3_path(path);
+    let client = get_s3_client().await;
+
+    client
+        .delete_object()
+        .bucket(bucket)
+        .key(key)
+        .send()
+        .await?;
+
+    Ok(())
 }
 
 // parse_s3_path read a s3 path and return bucket and object key

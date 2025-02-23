@@ -86,17 +86,19 @@ async fn run_stage_task(
                             }
                         }
                         Step::InAgg => {
-                            let agg_task = stage.get_agg_task();
-                            if let Some(agg_task) = agg_task {
-                                let tx = tx.clone();
-                                let tls_config = tls_config.clone();
-                                tokio::spawn(async move {
-                                    let response =
-                                        prover_client::aggregate(agg_task, tls_config).await;
-                                    if let Some(agg_task) = response {
-                                        let _ = tx.send(Task::Agg(agg_task)).await;
-                                    }
-                                });
+                            for _i in 0..4 {
+                                let agg_task = stage.get_agg_task();
+                                if let Some(agg_task) = agg_task {
+                                    let tx = tx.clone();
+                                    let tls_config = tls_config.clone();
+                                    tokio::spawn(async move {
+                                        let response =
+                                            prover_client::aggregate(agg_task, tls_config).await;
+                                        if let Some(agg_task) = response {
+                                            let _ = tx.send(Task::Agg(agg_task)).await;
+                                        }
+                                    });
+                                }
                             }
                         }
                         Step::InAggAll => {

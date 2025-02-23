@@ -18,6 +18,9 @@ use self::prover_service::ResultCode;
 use crate::prover_client::prover_service::AggregateInput;
 use crate::prover_node::ProverNode;
 use prover_service::GetTaskResultResponse;
+use rand::rngs::StdRng;
+use rand::seq::SliceRandom;
+use rand::SeedableRng;
 use std::time::Duration;
 use tonic::transport::Channel;
 
@@ -34,7 +37,9 @@ pub fn get_nodes() -> Vec<ProverNode> {
 pub async fn get_idle_client(
     tls_config: Option<TlsConfig>,
 ) -> Option<(String, ProverServiceClient<Channel>)> {
-    let nodes: Vec<ProverNode> = get_nodes();
+    let mut nodes: Vec<ProverNode> = get_nodes();
+    let mut rng = StdRng::from_entropy();
+    nodes.shuffle(&mut rng);
     for mut node in nodes {
         let client = node.is_active(tls_config.clone()).await;
         if let Some(client) = client {
@@ -92,6 +97,7 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             block_no: split_task.block_no,
             seg_size: split_task.seg_size,
             receipt_inputs_path: split_task.recepit_inputs_path.clone(),
+            receipts_path: split_task.receipts_path.clone(),
         };
         log::info!(
             "[split] rpc {}:{} start",

@@ -74,6 +74,7 @@ message SplitElfRequest {
     string private_input_path = 10;
     string output_path = 11;
     string receipt_inputs_path = 12;
+    string receipts_path = 13;
 }
 
 message SplitElfResponse {

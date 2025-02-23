@@ -198,6 +198,7 @@ impl Stage {
         self.split_task
             .recepit_inputs_path
             .clone_from(&self.generate_context.receipt_inputs_path);
+        self.split_task.receipts_path = self.generate_context.receipts_path.clone();
         log::debug!("gen_split_task {:#?}", self.split_task);
     }
 
