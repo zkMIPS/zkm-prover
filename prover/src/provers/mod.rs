@@ -21,7 +21,7 @@ use once_cell::sync::OnceCell;
 use std::sync::Mutex;
 
 pub const MIN_SEG_SIZE: usize = 1 << 16;
-pub const MAX_SEG_SIZE: usize = 1 << 22;
+pub const MAX_SEG_SIZE: usize = 1 << 26;
 /// Prover trait
 pub trait Prover<T> {
     fn prove(&self, ctx: &T) -> Result<()>;

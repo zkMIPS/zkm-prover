@@ -9,6 +9,8 @@ use zkm_emulator::state::{InstrumentedState, State};
 use zkm_emulator::utils::get_block_path;
 use zkm_prover::generation::state::{AssumptionReceipts, Receipt};
 
+const MIN_SEG_SIZE: usize = 1 << 16;
+
 #[derive(Default)]
 pub struct Executor {}
 
@@ -129,6 +131,7 @@ impl Executor {
                                 receipts.clone(),
                                 instrumented_state.pre_segment_id - 1,
                                 seg_size,
+                                seg_size,
                                 &block_path,
                             )?;
                             instrumented_state.pre_segment_id = pre_segment_id;
@@ -139,6 +142,7 @@ impl Executor {
                         ctx,
                         receipts.clone(),
                         instrumented_state.pre_segment_id - 1,
+                        seg_size,
                         seg_size,
                         &block_path,
                     )?;
@@ -171,6 +175,7 @@ impl Executor {
         receipts: AssumptionReceipts<F, C, D>,
         pre_segment_id: u32,
         seg_size: usize,
+        last_seg_size: usize,
         block_path: &str,
     ) -> std::result::Result<u32, String> {
         let seg_path = ctx.seg_path.clone();
@@ -178,57 +183,75 @@ impl Executor {
         let traces_info = TracesUtil::get_traces_len(ctx, receipts.clone(), &seg_file)
             .map_err(|e| e.to_string())?;
         let max_trace_len = traces_info.iter().max().unwrap();
+        log::info!(
+            "{} traces_info {:?} {}-{}",
+            seg_file,
+            traces_info,
+            *max_trace_len,
+            seg_size
+        );
         if *max_trace_len > seg_size {
-            let seg_size = seg_size / (*max_trace_len / seg_size + 1);
-            let (state, final_step) = Self::load_segment(&seg_file);
-            file::new(&seg_file).remove().unwrap();
-            let mut instrumented_state = InstrumentedState::new(state, block_path.to_string());
-            log::debug!("start pc: {:X} {}", instrumented_state.state.pc, final_step);
-            let new_writer = |_: &str| -> Option<std::fs::File> { None };
-            instrumented_state.split_segment(false, &seg_path, new_writer);
-            instrumented_state.pre_segment_id = pre_segment_id;
-            let new_writer =
-                |name: &str| -> Option<Box<dyn std::io::Write>> { Some(file::new(name)) };
-            loop {
-                let cycles = instrumented_state.step();
-                if instrumented_state.state.total_step + instrumented_state.state.step == final_step
-                {
-                    break;
-                }
-                if cycles > (seg_size as isize - 1) as u64 {
-                    instrumented_state.split_segment(true, &seg_path, new_writer);
-                    let pre_segment_id = Self::check_and_re_split(
-                        ctx,
-                        receipts.clone(),
-                        instrumented_state.pre_segment_id,
-                        seg_size,
-                        block_path,
-                    )?;
-                    instrumented_state.pre_segment_id = pre_segment_id;
-                    log::debug!(
-                        "Split at {} : {} into {}",
-                        instrumented_state.state.total_step,
-                        instrumented_state.state.total_cycle,
-                        instrumented_state.pre_segment_id
-                    );
-                }
+            let mut re_seg_size = seg_size / (*max_trace_len / seg_size + 1);
+            if re_seg_size >= last_seg_size / 2 {
+                re_seg_size = last_seg_size / 2;
             }
-            instrumented_state.split_segment(true, &seg_path, new_writer);
-            let pre_segment_id = Self::check_and_re_split(
-                ctx,
-                receipts.clone(),
-                instrumented_state.pre_segment_id,
-                seg_size,
-                block_path,
-            )?;
-            instrumented_state.pre_segment_id = pre_segment_id;
-            log::info!(
-                "Split done {} : {} into {}",
-                instrumented_state.state.total_step,
-                instrumented_state.state.total_cycle,
-                instrumented_state.pre_segment_id
-            );
-            Ok(instrumented_state.pre_segment_id)
+            log::info!("{} re split {}", seg_file, re_seg_size);
+            if re_seg_size > MIN_SEG_SIZE {
+                let (state, final_step) = Self::load_segment(&seg_file);
+                // file::new(&seg_file).remove().unwrap();
+                let mut instrumented_state = InstrumentedState::new(state, block_path.to_string());
+                log::info!("start pc: {:X} {}", instrumented_state.state.pc, final_step);
+                let new_writer = |_: &str| -> Option<std::fs::File> { None };
+                instrumented_state.split_segment(false, &seg_path, new_writer);
+                instrumented_state.pre_segment_id = pre_segment_id;
+                let new_writer =
+                    |name: &str| -> Option<Box<dyn std::io::Write>> { Some(file::new(name)) };
+                loop {
+                    let cycles = instrumented_state.step();
+                    if instrumented_state.state.total_step + instrumented_state.state.step
+                        == final_step
+                    {
+                        break;
+                    }
+                    if cycles > (re_seg_size as isize - 1) as u64 {
+                        instrumented_state.split_segment(true, &seg_path, new_writer);
+                        let pre_segment_id = Self::check_and_re_split(
+                            ctx,
+                            receipts.clone(),
+                            instrumented_state.pre_segment_id - 1,
+                            seg_size,
+                            re_seg_size,
+                            block_path,
+                        )?;
+                        instrumented_state.pre_segment_id = pre_segment_id;
+                        log::debug!(
+                            "Split at {} : {} into {}",
+                            instrumented_state.state.total_step,
+                            instrumented_state.state.total_cycle,
+                            instrumented_state.pre_segment_id
+                        );
+                    }
+                }
+                instrumented_state.split_segment(true, &seg_path, new_writer);
+                let pre_segment_id = Self::check_and_re_split(
+                    ctx,
+                    receipts.clone(),
+                    instrumented_state.pre_segment_id - 1,
+                    seg_size,
+                    re_seg_size,
+                    block_path,
+                )?;
+                instrumented_state.pre_segment_id = pre_segment_id;
+                log::info!(
+                    "Split done {} : {} into {}",
+                    instrumented_state.state.total_step,
+                    instrumented_state.state.total_cycle,
+                    instrumented_state.pre_segment_id
+                );
+                Ok(instrumented_state.pre_segment_id)
+            } else {
+                Ok(pre_segment_id + 1)
+            }
         } else {
             Ok(pre_segment_id + 1)
         }

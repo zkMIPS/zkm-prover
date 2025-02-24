@@ -181,9 +181,9 @@ impl StageService for StageServiceSVC {
                 log::warn!(
                     "[generate_proof] {} invalid seg_size support [{}-{}] {}",
                     request.get_ref().proof_id,
-                    request.get_ref().seg_size,
                     provers::MIN_SEG_SIZE,
-                    provers::MAX_SEG_SIZE
+                    provers::MAX_SEG_SIZE,
+                    request.get_ref().seg_size,
                 );
                 return Ok(Response::new(response));
             }

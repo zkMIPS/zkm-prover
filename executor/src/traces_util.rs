@@ -51,12 +51,13 @@ impl TracesUtil {
         timing.filter(Duration::from_millis(100)).print();
 
         timing = TimingTree::new("generate_traces", log::Level::Info);
+        // let trace_meta = generation::trace_check_point::<F, C, D>(&input, &mut timing, receipts)?;
         let mut trace_meta = Vec::new();
         if receipts.is_empty() {
             let (traces, _, _) =
                 generation::generate_traces::<F, C, D>(&all_stark, &input, &config, &mut timing)?;
             traces.iter().for_each(|trace| {
-                trace_meta.push(trace.len());
+                trace_meta.push(trace[0].len());
             });
         } else {
             let (traces, _, _, _) = generation::generate_traces_with_assumptions::<F, C, D>(
@@ -67,7 +68,7 @@ impl TracesUtil {
                 receipts,
             )?;
             traces.iter().for_each(|trace| {
-                trace_meta.push(trace.len());
+                trace_meta.push(trace[0].len());
             });
         }
         timing.filter(Duration::from_millis(100)).print();
