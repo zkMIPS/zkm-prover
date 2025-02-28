@@ -52,8 +52,8 @@ impl Prover<AggAllContext> for AggAllProver {
         let mut timing = TimingTree::new("agg_all load from file", log::Level::Info);
         let mut receipts: Vec<Receipt<F, C, D>> = Vec::new();
         for seg_no in 0..proof_num {
-            let recepit_path = format!("{}/{}", receipt_dir, seg_no);
-            let receipt_content = file::new(&recepit_path).read_to_string()?;
+            let receipt_path = format!("{}/{}", receipt_dir, seg_no);
+            let receipt_content = file::new(&receipt_path).read_to_string()?;
             let receipt: Receipt<F, C, D> = serde_json::from_str(&receipt_content)?;
             receipts.push(receipt);
         }
@@ -137,7 +137,7 @@ impl Prover<AggAllContext> for AggAllProver {
 
         let src_public_inputs = match &block_receipt {
             Receipt::Segments(receipt) => &receipt.proof.public_inputs,
-            Receipt::Composite(recepit) => &recepit.program_receipt.proof.public_inputs,
+            Receipt::Composite(receipt) => &receipt.program_receipt.proof.public_inputs,
         };
 
         let outdir_path = std::path::Path::new(&output_dir);
