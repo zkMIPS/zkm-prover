@@ -35,24 +35,33 @@ message BlockFileItem {
     bytes file_content = 2;
 }
 
-message GenerateProofRequest {
-    string proof_id = 1;
+enum ProverVersion {
+    ZKM = 0;
+    ZKM2 = 1;
+}
+
+message Program {
+    ProverVersion version = 1;
     bytes elf_data = 2;
     repeated BlockFileItem block_data = 3;
     optional uint64 block_no = 4;
     uint32 seg_size = 5;
-    // !!!del!!! string args = 6;
+    bytes public_input_stream = 6;
+    bytes private_input_stream = 7;
+    bool execute_only = 8;
+    bool composite_proof = 9;
+    repeated bytes receipt_input = 10;
+    repeated bytes receipt = 11;
+}
+
+message GenerateProofRequest {
+    string proof_id = 1;
     string signature = 7;
-    bytes public_input_stream = 8;
-    bytes private_input_stream = 9;
-    bool execute_only = 10;
-    bool composite_proof = 11;
-    repeated bytes receipt_input = 12;
-    repeated bytes receipt = 13;
+    Program program = 14;
 }
 
 message GenerateProofResponse {
-    uint32 status = 1;
+    Status status = 1;
     string error_message = 2;
     string proof_id = 3;
     string proof_url = 4;
@@ -68,13 +77,13 @@ message GetStatusRequest {
 
 message GetStatusResponse {
     string proof_id = 1;
-    uint32 status = 2;
+    Status status = 2;
     bytes proof_with_public_inputs = 3;
     string proof_url = 4;
     string stark_proof_url = 5;
     string solidity_verifier_url = 6;
     bytes output_stream = 7;
-    int32 step = 8; // Step
+    Step step = 8; // Step
     string public_values_url = 9;
     uint64 total_steps = 10;
     bytes receipt = 11;

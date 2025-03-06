@@ -10,6 +10,7 @@ use tonic::transport::ClientTlsConfig;
 use tonic::transport::Endpoint;
 
 use ethers::signers::{LocalWallet, Signer};
+use crate::stage_service::Program;
 
 pub mod stage_service {
     tonic::include_proto!("stage.v1");
@@ -18,12 +19,13 @@ pub mod stage_service {
 async fn sign_ecdsa(request: &mut GenerateProofRequest, private_key: &str) {
     if !private_key.is_empty() {
         let wallet = private_key.parse::<LocalWallet>().unwrap();
-        let sign_data = match request.block_no {
+        let program = request.program.as_ref().unwrap();
+        let sign_data = match program.block_no {
             Some(block_no) => {
-                format!("{}&{}&{}", request.proof_id, block_no, request.seg_size)
+                format!("{}&{}&{}", request.proof_id, block_no, program.seg_size)
             }
             None => {
-                format!("{}&{}", request.proof_id, request.seg_size)
+                format!("{}&{}", request.proof_id, program.seg_size)
             }
         };
         let signature = wallet.sign_message(sign_data).await.unwrap();
@@ -85,16 +87,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let proof_id = uuid::Uuid::new_v4().to_string();
-    let mut request = GenerateProofRequest {
-        proof_id: proof_id.clone(),
+    let program: Program = Program {
+        ProverVersion::ZKM,
         elf_data,
         block_data,
-        block_no: Some(block_no),
+        Some(block_no),
         seg_size,
         public_input_stream,
         private_input_stream,
         execute_only,
+        composite_proof,
         ..Default::default()
+    };
+    let mut request = GenerateProofRequest {
+        proof_id: proof_id.clone(),
+        program,
     };
     sign_ecdsa(&mut request, &private_key).await;
     log::info!("request: {:?}", proof_id);

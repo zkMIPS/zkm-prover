@@ -15,7 +15,7 @@ impl Executor {
 }
 
 impl Executor {
-    pub fn split(&self, ctx: &SplitContext) -> std::result::Result<u64, String> {
+    pub fn split(&self, ctx: &SplitContext) -> Result<u64, String> {
         // 1. split ELF into segs
         let basedir = ctx.basedir.clone();
         let elf_path = ctx.elf_path.clone();
@@ -36,10 +36,10 @@ impl Executor {
             format!("{}/input", block_path)
         };
 
-        if let core::result::Result::Ok(data) = data {
+        if let Result::Ok(data) = data {
             let file_result = ElfBytes::<AnyEndian>::minimal_parse(data.as_slice());
             match file_result {
-                core::result::Result::Ok(file) => {
+                Result::Ok(file) => {
                     let mut state = State::load_elf(&file);
                     state.patch_elf(&file);
                     // state.patch_stack(args);
