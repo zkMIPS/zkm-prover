@@ -121,7 +121,7 @@ impl Stage {
                     .iter()
                     .all(|task| task.state == TASK_STATE_SUCCESS)
                 {
-                    if self.generate_context.precompile {
+                    if self.generate_context.composite_proof {
                         self.step = Step::End;
                     } else if self.prove_tasks.len() > 3 {
                         self.gen_agg_tasks();

@@ -194,7 +194,7 @@ async fn run_stage_task(
                     let status = get_status();
                     let _ = db.update_stage_task(&task.id, status.into(), "").await;
                 } else {
-                    let result = if generate_context.execute_only || generate_context.precompile {
+                    let result = if generate_context.execute_only || generate_context.composite_proof {
                         vec![]
                     } else {
                         file::new(&generate_context.final_path).read().unwrap()

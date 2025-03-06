@@ -27,8 +27,9 @@ pub trait Prover<T> {
     fn prove(&self, ctx: &T) -> Result<()>;
 }
 
-const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 8]; 1] =
-    [[10..22, 12..23, 10..22, 8..22, 6..21, 6..21, 6..22, 13..26]];
+const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 12]; 1] =
+    [[10..21, 12..22, 11..21, 8..21, 6..10, 6..10, 6..16, 6..16, 6..16, 6..16, 6..21, 13..23]];
+
 // const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 5] = [
 //     [16..17, 12..13, 10..16, 9..12, 15..17, 17..19],
 //     [16..17, 15..17, 12..19, 9..14, 15..17, 19..20],
@@ -45,7 +46,7 @@ lazy_static! {
     };
 }
 
-fn select_degree_bits(seg_size: usize) -> [std::ops::Range<usize>; 8] {
+fn select_degree_bits(seg_size: usize) -> [std::ops::Range<usize>; 12] {
     match SEG_SIZE_TO_BITS.get(&seg_size) {
         Some(s) => DEGREE_BITS_RANGE[*s].clone(),
         None => panic!(

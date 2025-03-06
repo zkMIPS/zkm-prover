@@ -15,7 +15,7 @@ pub struct GenerateContext {
     pub block_no: u64,
     pub seg_size: u32,
     pub execute_only: bool,
-    pub precompile: bool,
+    pub composite_proof: bool,
     pub receipt_inputs_path: String,
     pub receipts_path: String,
 }
@@ -36,7 +36,7 @@ impl GenerateContext {
         block_no: u64,
         seg_size: u32,
         execute_only: bool,
-        precompile: bool,
+        composite_proof: bool,
         receipt_inputs_path: &str,
         receipts_path: &str,
     ) -> Self {
@@ -54,7 +54,7 @@ impl GenerateContext {
             block_no,
             seg_size,
             execute_only,
-            precompile,
+            composite_proof,
             receipt_inputs_path: receipt_inputs_path.to_string(),
             receipts_path: receipts_path.to_string(),
         }

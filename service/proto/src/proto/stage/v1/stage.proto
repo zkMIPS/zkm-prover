@@ -46,7 +46,7 @@ message GenerateProofRequest {
     bytes public_input_stream = 8;
     bytes private_input_stream = 9;
     bool execute_only = 10;
-    bool precompile = 11;
+    bool composite_proof = 11;
     repeated bytes receipt_input = 12;
     repeated bytes receipt = 13;
 }

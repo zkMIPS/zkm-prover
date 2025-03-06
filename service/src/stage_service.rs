@@ -104,7 +104,7 @@ impl StageService for StageServiceSVC {
                     response.total_steps = execute_info[0].total_steps;
                 }
 
-                let (execute_only, precompile) = if let Some(context) = task.context {
+                let (execute_only, composite_proof) = if let Some(context) = task.context {
                     match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
                         Ok(context) => {
                             if task.status == stage_service::Status::Success as i32
@@ -113,20 +113,20 @@ impl StageService for StageServiceSVC {
                                 let output_data =
                                     file::new(&context.output_stream_path).read().unwrap();
                                 response.output_stream.clone_from(&output_data);
-                                if context.precompile {
+                                if context.composite_proof {
                                     let receipts_path = format!("{}/receipt/0", context.prove_path);
                                     let receipts_data = file::new(&receipts_path).read().unwrap();
                                     response.receipt = receipts_data;
                                 }
                             }
-                            (context.execute_only, context.precompile)
+                            (context.execute_only, context.composite_proof)
                         }
                         Err(_) => (false, false),
                     }
                 } else {
                     (false, false)
                 };
-                if !execute_only && !precompile {
+                if !execute_only && !composite_proof {
                     if let Some(result) = task.result {
                         response.proof_with_public_inputs = result.into_bytes();
                     }
@@ -165,7 +165,7 @@ impl StageService for StageServiceSVC {
             log::info!("[generate_proof] {} start", request.get_ref().proof_id);
 
             // check seg_size
-            if !request.get_ref().precompile
+            if !request.get_ref().composite_proof
                 && !provers::valid_seg_size(request.get_ref().seg_size as usize)
             {
                 let response = stage_service::GenerateProofResponse {
@@ -351,7 +351,7 @@ impl StageService for StageServiceSVC {
                 block_no,
                 request.get_ref().seg_size,
                 request.get_ref().execute_only,
-                request.get_ref().precompile,
+                request.get_ref().composite_proof,
                 &receipt_inputs_path,
                 &receipts_path,
             );
