@@ -1,5 +1,5 @@
 syntax = "proto3";
-package program.v1;
+package includes.v1;
 
 enum ProverVersion {
     ZKM = 0;
@@ -31,3 +31,9 @@ message Program {
 
     bytes output_stream = 12;
 }
+
+message AggregateInput {
+    bytes receipt_input = 1;
+    string computed_request_id = 2;
+    bool is_agg = 3;
+};

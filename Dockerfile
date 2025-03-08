@@ -40,7 +40,7 @@ COPY --from=builder /usr/src/app/service/config/config.toml /usr/local/bin/confi
   
 WORKDIR /  
   
-RUN adduser --disabled-password --gecos '' --uid 1000 appuser && chown -R appuser:appuser /usr/local/bin/service  
+RUN adduser --disabled-password --gecos '' --uid 1000 appuser && chown -R appuser:appuser /usr/local/bin/proof-service
 USER appuser  
   
 EXPOSE 50000  

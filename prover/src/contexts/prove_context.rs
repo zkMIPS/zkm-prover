@@ -5,8 +5,8 @@ pub struct ProveContext {
     pub block_no: Option<u64>,
     pub seg_size: u32,
     pub segment: Vec<u8>,
-    pub receipt_path: String,
-    pub receipts_path: String,
+    pub receipt_output: String,
+    pub receipts_input: Vec<Vec<u8>>,
 }
 
 impl ProveContext {
@@ -14,15 +14,14 @@ impl ProveContext {
         block_no: Option<u64>,
         seg_size: u32,
         segment: &[u8],
-        receipt_path: &String,
-        receipts_path: &String,
+        receipts_input: &Vec<Vec<u8>>,
     ) -> Self {
         ProveContext {
             block_no,
             seg_size,
             segment: segment.to_owned(),
-            receipt_path: receipt_path.to_string(),
-            receipts_path: receipts_path.to_string(),
+            receipts_input: receipts_input.to_owned(),
+            ..Default::default()
         }
     }
 }

@@ -21,11 +21,11 @@ impl Pipeline {
 
     pub fn prove_root(
         &mut self,
-        prove_context: &ProveContext,
+        prove_context: &mut ProveContext,
     ) -> std::result::Result<bool, String> {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
-            Ok(_) => match RootProver::new().prove(prove_context) {
+            Ok(_) => match RootProver::default().prove(prove_context) {
                 Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_root error {:#?}", e);
@@ -41,11 +41,11 @@ impl Pipeline {
 
     pub fn prove_aggregate(
         &mut self,
-        agg_context: &AggContext,
+        agg_context: &mut AggContext,
     ) -> std::result::Result<bool, String> {
         let result = PIPELINE_MUTEX.try_lock();
         match result {
-            Ok(_) => match AggProver::new().prove(agg_context) {
+            Ok(_) => match AggProver::default().prove(agg_context) {
                 Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_aggregate error {:#?}", e);
@@ -61,7 +61,7 @@ impl Pipeline {
 
     pub fn prove_aggregate_all(
         &mut self,
-        final_context: &AggAllContext,
+        final_context: &mut AggAllContext,
     ) -> std::result::Result<bool, String> {
         let result = PIPELINE_MUTEX.try_lock();
         match result {

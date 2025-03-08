@@ -1,4 +1,4 @@
-use crate::split_context::SplitContext;
+use crate::executor::split_context::SplitContext;
 use common::file;
 use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;

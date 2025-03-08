@@ -1,11 +1,11 @@
-use crate::prover_service::prover_service::v1::{
+use crate::proto::prover_service::v1::{
     get_status_response, prover_service_server::ProverService, AggregateAllRequest,
     AggregateAllResponse, AggregateRequest, AggregateResponse, FinalProofRequest,
     FinalProofResponse, GetStatusRequest, GetStatusResponse, GetTaskResultRequest,
     GetTaskResultResponse, ProveRequest, ProveResponse, Result, ResultCode, SplitElfRequest,
     SplitElfResponse,
 };
-use executor::split_context::SplitContext;
+use crate::executor::SplitContext;
 use prover::contexts::{AggAllContext, AggContext, ProveContext};
 use prover::pipeline::Pipeline;
 use std::time::Instant;
@@ -13,18 +13,6 @@ use tonic::{Request, Response, Status};
 
 use crate::metrics;
 
-#[allow(clippy::module_inception)]
-pub mod prover_service {
-    pub mod v1 {
-        tonic::include_proto!("prover.v1");
-    }
-}
-
-pub mod program {
-    pub mod v1 {
-        tonic::include_proto!("program.v1");
-    }
-}
 
 async fn run_back_task<
     T: Send + 'static,
@@ -140,7 +128,7 @@ impl ProverService for ProverServiceSVC {
             );
             let split_func = move || {
                 let s_ctx: SplitContext = split_context;
-                executor::executor::Executor::default().split(&s_ctx)
+                crate::executor::Executor::default().split(&s_ctx)
             };
             let result = run_back_task(split_func).await;
             let mut response = SplitElfResponse {
@@ -183,17 +171,15 @@ impl ProverService for ProverServiceSVC {
             let start = Instant::now();
 
             let prove_context = ProveContext::new(
-                //&request.get_ref().base_dir,
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
                 &request.get_ref().segment,
-                &request.get_ref().receipt_path,
-                &request.get_ref().receipts_path,
+                &request.get_ref().receipts_input,
             );
 
             let prove_func = move || {
-                let s_ctx: ProveContext = prove_context;
-                Pipeline::new().prove_root(&s_ctx)
+                let mut s_ctx: ProveContext = prove_context;
+                Pipeline::new().prove_root(&mut s_ctx)
             };
             let result = run_back_task(prove_func).await;
             let mut response = ProveResponse {
@@ -221,41 +207,42 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateRequest>,
     ) -> tonic::Result<Response<AggregateResponse>, Status> {
         metrics::record_metrics("prover::aggregate", || async {
-            log::info!(
-                "[aggregate] {}:{} {}+{} start",
-                request.get_ref().proof_id,
-                request.get_ref().computed_request_id,
-                request
-                    .get_ref()
-                    .input1
-                    .clone()
-                    .expect("need input1")
-                    .receipt_path,
-                request
-                    .get_ref()
-                    .input2
-                    .clone()
-                    .expect("need input2")
-                    .receipt_path,
-            );
+            //log::info!(
+            //    "[aggregate] {}:{} {}+{} start",
+            //    request.get_ref().proof_id,
+            //    request.get_ref().computed_request_id,
+            //    request
+            //        .get_ref()
+            //        .input1
+            //        .clone()
+            //        .expect("need input1")
+            //        .receipt_path,
+            //    request
+            //        .get_ref()
+            //        .input2
+            //        .clone()
+            //        .expect("need input2")
+            //        .receipt_path,
+            //);
             log::debug!("{:#?}", request);
             let start = Instant::now();
             let input1 = request.get_ref().input1.clone().expect("need input1");
             let input2 = request.get_ref().input2.clone().expect("need input2");
             let agg_context = AggContext::new(
                 request.get_ref().seg_size,
-                &input1.receipt_path,
-                &input2.receipt_path,
+                &input1.receipt_input,
+                &input2.receipt_input,
                 input1.is_agg,
                 input2.is_agg,
                 request.get_ref().is_final,
-                &request.get_ref().agg_receipt_path,
-                &request.get_ref().output_dir,
+                &request.get_ref().agg_receipt,
+                //&request.get_ref().output_dir,
+                &format!("/tmp/agg/{}/{}", request.get_ref().proof_id, request.get_ref().computed_request_id),//FIXME: should not use a directory
             );
 
             let agg_func = move || {
-                let agg_ctx = agg_context;
-                Pipeline::new().prove_aggregate(&agg_ctx)
+                let mut agg_ctx = agg_context;
+                Pipeline::new().prove_aggregate(&mut agg_ctx)
             };
             let result = run_back_task(agg_func).await;
             let mut response = AggregateResponse {
@@ -298,8 +285,8 @@ impl ProverService for ProverServiceSVC {
             );
 
             let agg_all_func = move || {
-                let s_ctx: AggAllContext = final_context;
-                Pipeline::new().prove_aggregate_all(&s_ctx)
+                let mut s_ctx: AggAllContext = final_context;
+                Pipeline::new().prove_aggregate_all(&mut s_ctx)
             };
             let result = run_back_task(agg_all_func).await;
             let mut response = AggregateAllResponse {

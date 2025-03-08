@@ -17,11 +17,15 @@ mod prover_node;
 mod prover_service;
 mod stage_service;
 mod stage_worker;
+mod executor;
+mod stage;
+
+pub mod proto;
 
 use crate::stage_service::StageServiceSVC;
-use stage::stage_service::v1::stage_service_server::StageServiceServer;
+use crate::proto::stage_service::v1::stage_service_server::StageServiceServer;
 
-use crate::prover_service::prover_service::v1::prover_service_server::ProverServiceServer;
+use crate::proto::prover_service::v1::prover_service_server::ProverServiceServer;
 use crate::prover_service::ProverServiceSVC;
 
 #[derive(Parser, Debug)]

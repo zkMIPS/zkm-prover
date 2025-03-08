@@ -1,12 +1,17 @@
-use crate::contexts::generate_context::GenerateContext;
-use crate::safe_read;
-use crate::stage_service::v1::Step;
-use crate::tasks::agg_task::{self, AggTask};
-use crate::tasks::{AggAllTask, FinalTask, ProveTask, SplitTask};
-use crate::tasks::{Trace, TASK_STATE_PROCESSING};
-use crate::tasks::{
-    TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED,
+use crate::stage::{
+    contexts::generate_context::GenerateContext,
+    safe_read,
+    tasks::{
+        agg_task::{self, AggTask},
+        {AggAllTask, FinalTask, ProveTask, SplitTask},
+        {Trace, TASK_STATE_PROCESSING},
+        {
+            TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED,
+        },
+    },
 };
+
+use crate::proto::stage_service::v1::Step;
 use common::file;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -18,7 +23,7 @@ pub fn get_timestamp() -> u64 {
 }
 #[derive(Default)]
 pub struct Stage {
-    pub base_dir: String,
+    //pub base_dir: String,
     pub generate_context: GenerateContext,
     pub split_task: SplitTask,
     pub prove_tasks: Vec<ProveTask>,
@@ -64,7 +69,7 @@ macro_rules! get_task {
 impl Stage {
     pub fn new(generate_context: GenerateContext) -> Self {
         Stage {
-            base_dir: generate_context.base_dir.clone(),
+            //base_dir: generate_context.base_dir.clone(),
             generate_context,
             split_task: SplitTask::default(),
             prove_tasks: Vec::new(),
@@ -169,7 +174,6 @@ impl Stage {
             .clone_from(&self.generate_context.output_stream_path);
         self.split_task.block_no = self.generate_context.block_no;
         self.split_task.seg_size = self.generate_context.seg_size;
-        self.split_task.task_id = uuid::Uuid::new_v4().to_string();
 
         self.split_task.task_id = uuid::Uuid::new_v4().to_string();
         self.split_task.state = TASK_STATE_UNPROCESSED;
@@ -188,7 +192,7 @@ impl Stage {
     }
 
     fn gen_prove_task(&mut self) {
-        let prove_dir = self.generate_context.prove_path(true);
+        //let prove_dir = self.generate_context.prove_path(true);
         let files = file::new(&self.generate_context.seg_path(false))
             .read_dir()
             .unwrap();
@@ -207,8 +211,9 @@ impl Stage {
                     segment: safe_read(&file_name),
                     program: self.generate_context.gen_program(file_no),
                     // FIXME: don't use path
-                    receipt_path: format!("{}/receipt/{}", prove_dir.clone(), file_no),
-                    receipts_path: self.generate_context.receipts_path.clone(),
+                    //receipt_path: format!("{}/receipt/{}", prove_dir.clone(), file_no),
+                    receipts_input: self.generate_context.receipts_input.clone(),
+                    receipt_output: vec![],
                 };
                 self.prove_tasks.push(prove_task);
             }
@@ -255,14 +260,15 @@ impl Stage {
             result.push(agg_task::AggTask::init_from_two_prove_task(
                 &(self.prove_tasks[i]),
                 &(self.prove_tasks[i + 1]),
-                &self.generate_context.prove_path(false),
+                //&self.generate_context.prove_path(false),
                 agg_index,
             ));
         }
         if current_length % 2 == 1 {
             result.push(agg_task::AggTask::init_from_single_prove_task(
                 &(self.prove_tasks[current_length - 1]),
-                &self.generate_context.prove_path(false),
+                //&self.generate_context.prove_path(false),
+                agg_index,
             ));
         }
         self.agg_tasks.append(&mut result.clone());
@@ -275,7 +281,7 @@ impl Stage {
                 let agg_task = agg_task::AggTask::init_from_two_agg_task(
                     &result[i],
                     &result[i + 1],
-                    &self.generate_context.prove_path(false),
+                    //&self.generate_context.prove_path(false),
                     agg_index,
                 );
                 self.agg_tasks.push(agg_task.clone());
@@ -289,9 +295,9 @@ impl Stage {
         }
         let last_agg_tasks = self.agg_tasks.len() - 1;
         self.agg_tasks[last_agg_tasks].is_final = true;
-        self.agg_tasks[last_agg_tasks]
-            .output_dir
-            .clone_from(&self.generate_context.agg_path(false));
+        //self.agg_tasks[last_agg_tasks]
+        //    .output_dir
+        //    .clone_from(&self.generate_context.agg_path(false));
         log::debug!("gen_agg_task {:#?}", self.agg_tasks);
     }
 
@@ -448,8 +454,8 @@ mod tests {
             stage.gen_agg_tasks();
             stage.agg_tasks.iter().for_each(|element| {
                 println!(
-                    "key:{} left:{} right:{} final:{}",
-                    element.file_key,
+                    "agg: left:{} right:{} final:{}",
+                    //element.file_key,
                     element.input1.is_agg,
                     element.input2.is_agg,
                     element.is_final,

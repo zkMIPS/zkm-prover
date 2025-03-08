@@ -1,10 +1,13 @@
 use anyhow::Error;
 use common::tls::Config as TlsConfig;
-use stage::stage_service::v1::{
+use crate::proto::stage_service::v1::{
     stage_service_server::StageService, GenerateProofRequest, GenerateProofResponse,
     GetStatusRequest, GetStatusResponse,
 };
 use std::sync::Mutex;
+
+use crate::stage::tasks;
+use crate::stage::contexts::GenerateContext;
 
 use tonic::{Request, Response, Status};
 
@@ -88,11 +91,11 @@ impl StageService for StageServiceSVC {
             if let Ok(task) = task {
                 response.status = task.status;
                 response.step = task.step;
-                let execute_info: Vec<stage::tasks::SplitTask> = self
+                let execute_info: Vec<tasks::SplitTask> = self
                     .db
                     .get_prove_task_infos(
                         &request.get_ref().proof_id,
-                        stage::tasks::TASK_ITYPE_SPLIT,
+                        tasks::TASK_ITYPE_SPLIT,
                     )
                     .await
                     .unwrap_or_default();
@@ -101,9 +104,9 @@ impl StageService for StageServiceSVC {
                 }
 
                 let (execute_only, precompile) = if let Some(context) = task.context {
-                    match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
+                    match serde_json::from_str::<GenerateContext>(&context) {
                         Ok(context) => {
-                            if task.status == stage::stage_service::v1::Status::Success as i32
+                            if task.status == crate::proto::stage_service::v1::Status::Success as i32
                                 && !context.output_stream_path.is_empty()
                             {
                                 let output_data =
@@ -166,7 +169,7 @@ impl StageService for StageServiceSVC {
             {
                 let response = GenerateProofResponse {
                     proof_id: request.get_ref().proof_id.clone(),
-                    status: stage::stage_service::v1::Status::InvalidParameter.into(),
+                    status: crate::proto::stage_service::v1::Status::InvalidParameter.into(),
                     error_message: format!(
                         "invalid seg_size support [{}-{}]",
                         provers::MIN_SEG_SIZE,
@@ -198,7 +201,7 @@ impl StageService for StageServiceSVC {
                     if users.is_empty() {
                         let response = GenerateProofResponse {
                             proof_id: request.get_ref().proof_id.clone(),
-                            status: stage::stage_service::v1::Status::InvalidParameter.into(),
+                            status: crate::proto::stage_service::v1::Status::InvalidParameter.into(),
                             error_message: "permission denied".to_string(),
                             ..Default::default()
                         };
@@ -213,7 +216,7 @@ impl StageService for StageServiceSVC {
                 Err(e) => {
                     let response = GenerateProofResponse {
                         proof_id: request.get_ref().proof_id.clone(),
-                        status: stage::stage_service::v1::Status::InvalidParameter.into(),
+                        status: crate::proto::stage_service::v1::Status::InvalidParameter.into(),
                         error_message: "invalid signature".to_string(),
                         ..Default::default()
                     };
@@ -274,6 +277,7 @@ impl StageService for StageServiceSVC {
                 private_input_stream_path
             };
 
+            /*
             let receipt_inputs_path = if request.get_ref().receipt_input.is_empty() {
                 "".to_string()
             } else {
@@ -299,6 +303,7 @@ impl StageService for StageServiceSVC {
                     .map_err(|e| Status::internal(e.to_string()))?;
                 receipts_path
             };
+             */
 
             let output_stream_dir = format!("{}/output_stream", dir_path);
             file::new(&output_stream_dir)
@@ -333,7 +338,7 @@ impl StageService for StageServiceSVC {
                 .map_err(|e| Status::internal(e.to_string()))?;
             let final_path = format!("{}/proof_with_public_inputs.json", final_dir);
 
-            let generate_context = stage::contexts::GenerateContext::new(
+            let generate_context = GenerateContext::new(
                 &request.get_ref().proof_id,
                 &dir_path,
                 &elf_path,
@@ -348,8 +353,7 @@ impl StageService for StageServiceSVC {
                 request.get_ref().seg_size,
                 request.get_ref().execute_only,
                 request.get_ref().composite_proof,
-                &receipt_inputs_path,
-                &receipts_path,
+                &request.get_ref().receipts_input,
             );
 
             let _ = self
@@ -357,7 +361,7 @@ impl StageService for StageServiceSVC {
                 .insert_stage_task(
                     &request.get_ref().proof_id,
                     &user_address,
-                    stage::stage_service::v1::Status::Computing.into(),
+                    crate::proto::stage_service::v1::Status::Computing.into(),
                     &serde_json::to_string(&generate_context).unwrap(),
                 )
                 .await;
@@ -397,7 +401,7 @@ impl StageService for StageServiceSVC {
             }
             let response = GenerateProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
-                status: stage::stage_service::v1::Status::Computing.into(),
+                status: crate::proto::stage_service::v1::Status::Computing.into(),
                 proof_url,
                 stark_proof_url,
                 solidity_verifier_url,

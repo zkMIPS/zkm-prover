@@ -3,19 +3,26 @@ use crate::database::StageTask;
 use crate::prover_client;
 use crate::TlsConfig;
 use common::file;
-use stage::stage::get_timestamp;
-use stage::tasks::{
-    Task, TASK_ITYPE_AGG, TASK_ITYPE_AGGALL, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT,
+use crate::stage::{
+    stage::get_timestamp,
+    tasks::{
+        Task, TASK_ITYPE_AGG, TASK_ITYPE_AGGALL, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT,
+        TASK_STATE_FAILED, TASK_STATE_SUCCESS,
+    },
+    contexts::GenerateContext,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::time;
 
-use stage::stage_service;
-use stage::stage_service::v1::Step;
+use crate::proto::{
+    stage_service::{
+        self,
+        v1::Step,
+    }
+};
 
-use stage::tasks::{TASK_STATE_FAILED, TASK_STATE_SUCCESS};
 
 macro_rules! save_task {
     ($task:ident, $db_pool:ident, $type:expr) => {
@@ -42,10 +49,10 @@ async fn run_stage_task(
     db: database::Database,
 ) {
     if let Some(context) = task.context {
-        match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
+        match serde_json::from_str::<GenerateContext>(&context) {
             Ok(generte_context) => {
                 let mut check_at = get_timestamp();
-                let mut stage = stage::stage::Stage::new(generte_context.clone());
+                let mut stage = crate::stage::stage::Stage::new(generte_context.clone());
                 let (tx, mut rx) = tokio::sync::mpsc::channel(128);
                 stage.dispatch();
                 loop {

@@ -1,4 +1,4 @@
-use crate::program::v1::{Program, ProverVersion};
+use crate::proto::includes::v1::{Program, ProverVersion};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -18,8 +18,7 @@ pub struct GenerateContext {
     pub seg_size: u32,
     pub execute_only: bool,
     pub composite_proof: bool,
-    pub receipt_inputs_path: String,
-    pub receipts_path: String,
+    pub receipts_input: Vec<Vec<u8>>,
 }
 
 impl GenerateContext {
@@ -34,9 +33,9 @@ impl GenerateContext {
         }
         _path
     }
-    pub fn prove_path(&self, creating: bool) -> String {
-        self._create(creating, "prove")
-    }
+    //pub fn prove_path(&self, creating: bool) -> String {
+    //    self._create(creating, "prove")
+    //}
     pub fn agg_path(&self, creating: bool) -> String {
         self._create(creating, "aggregate")
     }
@@ -72,8 +71,7 @@ impl GenerateContext {
         seg_size: u32,
         execute_only: bool,
         composite_proof: bool,
-        receipt_inputs_path: &str,
-        receipts_path: &str,
+        receipts_input: &Vec<Vec<u8>>,
     ) -> Self {
         GenerateContext {
             version: ProverVersion::Zkm,
@@ -91,8 +89,7 @@ impl GenerateContext {
             seg_size,
             execute_only,
             composite_proof,
-            receipt_inputs_path: receipt_inputs_path.to_string(),
-            receipts_path: receipts_path.to_string(),
+            receipts_input: receipts_input.to_owned(),
         }
     }
 }

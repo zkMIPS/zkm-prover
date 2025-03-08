@@ -31,7 +31,7 @@ impl AggAllProver {
 }
 
 impl Prover<AggAllContext> for AggAllProver {
-    fn prove(&self, ctx: &AggAllContext) -> anyhow::Result<()> {
+    fn prove(&self, ctx: &mut AggAllContext) -> anyhow::Result<()> {
         type InnerParameters = DefaultParameters;
         type OuterParameters = Groth16WrapperParameters;
         type F = GoldilocksField;

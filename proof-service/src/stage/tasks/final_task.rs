@@ -1,4 +1,4 @@
-use crate::tasks::Trace;
+use crate::stage::tasks::Trace;
 use serde::Deserialize;
 use serde::Serialize;
 

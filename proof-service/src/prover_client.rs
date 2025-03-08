@@ -1,12 +1,13 @@
-use crate::prover_service::prover_service::v1::{
-    prover_service_client::ProverServiceClient, AggregateAllRequest, AggregateInput,
+use crate::proto::prover_service::v1::{
+    prover_service_client::ProverServiceClient, AggregateAllRequest,
     AggregateRequest, FinalProofRequest, GetTaskResultRequest, GetTaskResultResponse, ProveRequest,
     ResultCode, SplitElfRequest,
 };
+use crate::proto::includes::v1::AggregateInput;
 use common::file;
 use common::tls::Config as TlsConfig;
 
-use stage::tasks::{
+use crate::stage::tasks::{
     AggAllTask, AggTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
     TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, TASK_TIMEOUT,
 };
@@ -126,8 +127,8 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             segment: prove_task.segment.clone(),
             block_no: prove_task.program.block_no,
             seg_size: prove_task.program.seg_size,
-            receipt_path: prove_task.receipt_path.clone(),
-            receipts_path: prove_task.receipts_path.clone(),
+            //receipt_path: prove_task.receipt_path.clone(),
+            receipts_input: prove_task.receipts_input.clone(),
         };
         log::info!(
             "[prove] rpc {}:{}start",
@@ -165,27 +166,29 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
         let request = AggregateRequest {
             proof_id: agg_task.proof_id.clone(),
             computed_request_id: agg_task.task_id.clone(),
-            seg_path: "".to_string(),
+            //seg_path: "".to_string(),
             block_no: agg_task.block_no,
             seg_size: agg_task.seg_size,
             input1: Some(AggregateInput {
-                receipt_path: agg_task.input1.receipt_path.clone(),
+                receipt_input: agg_task.input1.receipt_input.clone(),
+                computed_request_id: agg_task.input1.computed_request_id.clone(),
                 is_agg: agg_task.input1.is_agg,
             }),
             input2: Some(AggregateInput {
-                receipt_path: agg_task.input2.receipt_path.clone(),
+                receipt_input: agg_task.input2.receipt_input.clone(),
+                computed_request_id: agg_task.input2.computed_request_id.clone(),
                 is_agg: agg_task.input2.is_agg,
             }),
-            agg_receipt_path: agg_task.output_receipt_path.clone(),
-            output_dir: agg_task.output_dir.clone(),
+            agg_receipt: agg_task.output_receipt.clone(),
+            //output_dir: agg_task.output_dir.clone(),
             is_final: agg_task.is_final,
         };
         log::info!(
             "[aggregate] rpc {}:{} {}+{} start",
             request.proof_id,
             request.computed_request_id,
-            request.input1.clone().expect("need input1").receipt_path,
-            request.input2.clone().expect("need input2").receipt_path,
+            request.input1.clone().expect("need input1").computed_request_id,
+            request.input2.clone().expect("need input2").computed_request_id,
         );
         log::debug!("aggregate request {:#?}", request);
         let mut grpc_request = Request::new(request);

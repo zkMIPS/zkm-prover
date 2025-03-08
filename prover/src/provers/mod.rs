@@ -24,7 +24,7 @@ pub const MIN_SEG_SIZE: usize = 1 << 16;
 pub const MAX_SEG_SIZE: usize = 1 << 22;
 /// Prover trait
 pub trait Prover<T> {
-    fn prove(&self, ctx: &T) -> Result<()>;
+    fn prove(&self, ctx: &mut T) -> Result<()>;
 }
 
 const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 12]; 1] = [[

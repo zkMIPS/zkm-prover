@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package prover.v1;
 
-import "include/v1/program.proto";
+import "include/v1/includes.proto";
 
 message Version {
     string v0_0_1 = 1;
@@ -94,8 +94,8 @@ message ProveRequest {
     bytes segment = 4;
     optional uint64 block_no = 5;
     uint32 seg_size = 6;
-    string receipt_path = 7;
-    string receipts_path = 8;
+    //string receipt_path = 7;
+    repeated bytes receipts_input = 8;
 }
 
 message ProveResponse {
@@ -104,22 +104,17 @@ message ProveResponse {
     Result result = 3;
 }
 
-message AggregateInput {
-    string receipt_path = 1;
-    bool is_agg = 3;
-};
-
 message AggregateRequest {
     string proof_id = 1;
     string computed_request_id = 2;
-    string seg_path = 4;
+    //string seg_path = 4;
     optional uint64 block_no = 5;
     uint32 seg_size = 6;
-    AggregateInput input1 = 7;
-    AggregateInput input2 = 8;
-    string agg_receipt_path = 9;
+    includes.v1.AggregateInput input1 = 7;
+    includes.v1.AggregateInput input2 = 8;
+    bytes agg_receipt = 9;
     bool is_final = 11;
-    string output_dir = 12;
+    //string output_dir = 12;
 }
 
 message AggregateResponse {

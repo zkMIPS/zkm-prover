@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package stage.v1;
 
-import "include/v1/program.proto";
+import "include/v1/includes.proto";
 
 service StageService {
     rpc GenerateProof(GenerateProofRequest) returns (GenerateProofResponse) {}
@@ -33,7 +33,7 @@ enum Step {
 message GenerateProofRequest {
     string proof_id = 1;
     bytes elf_data = 2;
-    repeated program.v1.BlockFileItem block_data = 3;
+    repeated includes.v1.BlockFileItem block_data = 3;
     optional uint64 block_no = 4;
     uint32 seg_size = 5;
     // !!!del!!! string args = 6;
@@ -42,9 +42,9 @@ message GenerateProofRequest {
     bytes private_input_stream = 9;
     bool execute_only = 10;
     bool composite_proof = 11;
-    repeated bytes receipt_input = 12;
-    repeated bytes receipt = 13;
-    //program.v1.Program program = 14;
+    repeated bytes receipts_input = 12;
+    //repeated bytes receipt_output = 13;
+    //includes.v1.Program program = 14;
 }
 
 message GenerateProofResponse {

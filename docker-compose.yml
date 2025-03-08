@@ -18,12 +18,12 @@ services:
     environment:
       - RUST_LOG=info
     volumes:
-      - ./service/config/config_docker_compose.toml:/usr/local/bin/config.toml
+      - ./proof-service/config/config_docker_compose.toml:/usr/local/bin/config.toml
       - /tmp/zkm-prover/data:/zkm/data
     command:
       - "/bin/sh"
       - "-c"
-      - "/usr/local/bin/service --config /usr/local/bin/config.toml --stage"
+      - "/usr/local/bin/proof-service --config /usr/local/bin/config.toml --stage"
 
   zkm-prover:
     container_name: zkm-prover
@@ -32,12 +32,12 @@ services:
     environment:
       - RUST_LOG=info
     volumes:
-      - ./service/config/config_docker_compose.toml:/usr/local/bin/config.toml
+      - ./proof-service/config/config_docker_compose.toml:/usr/local/bin/config.toml
       - /tmp/zkm-prover/data:/zkm/data
     command:
       - "/bin/sh"
       - "-c"
-      - "/usr/local/bin/service --config /usr/local/bin/config.toml"
+      - "/usr/local/bin/proof-service --config /usr/local/bin/config.toml"
 
   zkm-snark:
     container_name: zkm-snark

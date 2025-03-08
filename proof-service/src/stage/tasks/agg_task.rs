@@ -1,7 +1,11 @@
-use crate::tasks::{ProveTask, Trace};
-use crate::tasks::{TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED};
+use crate::stage::tasks::{
+    ProveTask, Trace,
+    TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED,
+};
 use serde::Deserialize;
 use serde::Serialize;
+
+use crate::proto::includes::v1::AggregateInput;
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AggAllTask {
@@ -17,36 +21,37 @@ pub struct AggAllTask {
     pub trace: Trace,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
-pub struct AggInput {
-    pub receipt_path: String,
-    pub is_agg: bool,
-}
-
-impl AggInput {
-    pub fn from_prove_task(prove_task: &ProveTask) -> AggInput {
-        AggInput {
-            receipt_path: prove_task.receipt_path.clone(),
+//#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+//pub struct AggInput {
+//    pub receipt_input: Vec<u8>,
+//    pub is_agg: bool,
+//}
+//
+//impl AggInput {
+    pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
+        AggregateInput {
+            receipt_input: prove_task.receipt_output.clone(),
+            computed_request_id: prove_task.task_id.clone(),
             is_agg: false,
         }
     }
-}
+//}
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AggTask {
-    pub file_key: String,
+    //pub file_key: String,
     pub task_id: String,
     pub state: u32,
 
     pub block_no: Option<u64>,
     pub seg_size: u32,
     pub proof_id: String,
-    pub input1: AggInput,
-    pub input2: AggInput,
+    pub input1: AggregateInput,
+    pub input2: AggregateInput,
     pub is_final: bool,
     pub from_prove: bool,
-    pub output_receipt_path: String,
-    pub output_dir: String,
+    pub output_receipt: Vec<u8>,
+    pub agg_index: i32,
 
     pub trace: Trace,
 
@@ -74,63 +79,65 @@ impl AggTask {
         false
     }
 
-    pub fn set_out_path(&mut self, prove_dir: &str) {
-        self.output_receipt_path = format!("{}/receipt/{}", prove_dir, self.file_key);
-    }
+    //pub fn set_out_path(&mut self, prove_dir: &str) {
+    //    self.output_receipt_path = format!("{}/receipt/{}", prove_dir, self.file_key);
+    //}
 
-    pub fn to_agg_input(&self) -> AggInput {
-        AggInput {
-            receipt_path: self.output_receipt_path.clone(),
+    pub fn to_agg_input(&self) -> AggregateInput {
+        AggregateInput {
+            receipt_input: self.output_receipt.clone(),
+            computed_request_id: self.task_id.clone(),
             is_agg: !self.from_prove,
         }
     }
 
-    pub fn init_from_single_prove_task(prove_task: &ProveTask, prove_dir: &str) -> AggTask {
-        let mut agg_task = AggTask {
-            file_key: format!("{}", prove_task.file_no),
+    pub fn init_from_single_prove_task(prove_task: &ProveTask, agg_index: i32) -> AggTask {
+        let agg_task = AggTask {
+            //file_key: format!("{}", prove_task.file_no),
             task_id: uuid::Uuid::new_v4().to_string(),
             block_no: prove_task.program.block_no,
             state: TASK_STATE_SUCCESS,
             seg_size: prove_task.program.seg_size,
             proof_id: prove_task.proof_id.clone(),
             from_prove: true,
+            agg_index,
             ..Default::default()
         };
-        agg_task.set_out_path(prove_dir);
+        //agg_task.set_out_path(prove_dir);
         agg_task
     }
 
     pub fn init_from_two_prove_task(
         left: &ProveTask,
         right: &ProveTask,
-        prove_dir: &str,
+        //prove_dir: &str,
         agg_index: i32,
     ) -> AggTask {
-        let mut agg_task = AggTask {
+        let agg_task = AggTask {
             // file_key: format!("{}-{}", left.file_no, right.file_no),
-            file_key: format!("agg{}", agg_index),
+            //file_key: format!("agg{}", agg_index),
             task_id: uuid::Uuid::new_v4().to_string(),
             block_no: left.program.block_no,
             state: TASK_STATE_UNPROCESSED,
             seg_size: left.program.seg_size,
             proof_id: left.proof_id.clone(),
-            input1: AggInput::from_prove_task(left),
-            input2: AggInput::from_prove_task(right),
+            input1: from_prove_task(left),
+            input2: from_prove_task(right),
+            agg_index,
             ..Default::default()
         };
-        agg_task.set_out_path(prove_dir);
+        //agg_task.set_out_path(prove_dir);
         agg_task
     }
 
     pub fn init_from_two_agg_task(
         left: &AggTask,
         right: &AggTask,
-        prove_dir: &str,
+        //prove_dir: &str,
         agg_index: i32,
     ) -> AggTask {
         let mut agg_task = AggTask {
-            // file_key: format!("{}-{}", left.file_key, right.file_key),
-            file_key: format!("agg{}", agg_index),
+            //file_key: format!("agg{}", agg_index),
             task_id: uuid::Uuid::new_v4().to_string(),
             block_no: left.block_no,
             state: TASK_STATE_UNPROCESSED,
@@ -138,6 +145,7 @@ impl AggTask {
             proof_id: left.proof_id.clone(),
             input1: left.to_agg_input(),
             input2: right.to_agg_input(),
+            agg_index: agg_index,
             ..Default::default()
         };
         if !left.from_prove {
@@ -146,7 +154,7 @@ impl AggTask {
         if !right.from_prove {
             agg_task.right = Some(right.task_id.clone());
         }
-        agg_task.set_out_path(prove_dir);
+        //agg_task.set_out_path(prove_dir);
         agg_task
     }
 }
@@ -176,9 +184,9 @@ mod tests {
             file_no: 1,
             ..Default::default()
         };
-        let agg_task = crate::tasks::AggTask::init_from_single_prove_task(&prove_task, "/test");
+        let agg_task = crate::stage::tasks::AggTask::init_from_single_prove_task(&prove_task, 1);
         assert!(agg_task.state == TASK_STATE_SUCCESS);
-        assert!(agg_task.file_key == format!("{}", prove_task.file_no));
+        //assert!(agg_task.file_key == format!("{}", prove_task.file_no));
     }
 
     #[test]
@@ -191,34 +199,34 @@ mod tests {
             file_no: 2,
             ..Default::default()
         };
-        let agg_task = crate::tasks::AggTask::init_from_two_prove_task(
+        let agg_task = crate::stage::tasks::AggTask::init_from_two_prove_task(
             &left_prove_task,
             &right_prove_task,
-            "/test",
+        //    "/test",
             1,
         );
         assert!(agg_task.state == TASK_STATE_UNPROCESSED);
-        assert!(agg_task.file_key == format!("agg{}", 1));
+        //assert!(agg_task.file_key == format!("agg{}", 1));
     }
 
     #[test]
     fn test_init_from_two_agg_task() {
         let left_agg_task = AggTask {
-            file_key: "1".to_string(),
+            task_id: "1".to_string(),
             ..Default::default()
         };
         let right_agg_task = AggTask {
-            file_key: "2".to_string(),
+            task_id: "2".to_string(),
             ..Default::default()
         };
-        let agg_task = crate::tasks::AggTask::init_from_two_agg_task(
+        let agg_task = crate::stage::tasks::AggTask::init_from_two_agg_task(
             &left_agg_task,
             &right_agg_task,
-            "/test",
+         //   "/test",
             1,
         );
         assert!(agg_task.state == TASK_STATE_UNPROCESSED);
-        assert!(agg_task.file_key == format!("agg{}", 1));
+        //assert!(agg_task.file_key == format!("agg{}", 1));
         assert!(agg_task.left.is_some());
         assert!(agg_task.right.is_some());
     }
