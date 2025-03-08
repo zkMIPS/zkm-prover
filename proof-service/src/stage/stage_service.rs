@@ -1,13 +1,13 @@
+use crate::proto::stage_service::v1::{
+    stage_service_server::StageService,
+    GenerateProofRequest, GenerateProofResponse, GetStatusRequest, GetStatusResponse,
+    Status::{Computing, InvalidParameter},
+};
 use anyhow::Error;
 use common::tls::Config as TlsConfig;
-use crate::proto::stage_service::v1::{
-    stage_service_server::StageService, GenerateProofRequest, GenerateProofResponse,
-    GetStatusRequest, GetStatusResponse,
-};
 use std::sync::Mutex;
 
-use crate::stage::tasks;
-use crate::stage::contexts::GenerateContext;
+use crate::stage::{contexts::GenerateContext, stage_worker, tasks};
 
 use tonic::{Request, Response, Status};
 
@@ -21,7 +21,6 @@ use std::str::FromStr;
 
 use crate::database;
 use crate::metrics;
-use crate::stage_worker;
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -93,10 +92,7 @@ impl StageService for StageServiceSVC {
                 response.step = task.step;
                 let execute_info: Vec<tasks::SplitTask> = self
                     .db
-                    .get_prove_task_infos(
-                        &request.get_ref().proof_id,
-                        tasks::TASK_ITYPE_SPLIT,
-                    )
+                    .get_prove_task_infos(&request.get_ref().proof_id, tasks::TASK_ITYPE_SPLIT)
                     .await
                     .unwrap_or_default();
                 if !execute_info.is_empty() {
@@ -106,7 +102,8 @@ impl StageService for StageServiceSVC {
                 let (execute_only, precompile) = if let Some(context) = task.context {
                     match serde_json::from_str::<GenerateContext>(&context) {
                         Ok(context) => {
-                            if task.status == crate::proto::stage_service::v1::Status::Success as i32
+                            if task.status
+                                == crate::proto::stage_service::v1::Status::Success as i32
                                 && !context.output_stream_path.is_empty()
                             {
                                 let output_data =
@@ -169,7 +166,7 @@ impl StageService for StageServiceSVC {
             {
                 let response = GenerateProofResponse {
                     proof_id: request.get_ref().proof_id.clone(),
-                    status: crate::proto::stage_service::v1::Status::InvalidParameter.into(),
+                    status: InvalidParameter.into(),
                     error_message: format!(
                         "invalid seg_size support [{}-{}]",
                         provers::MIN_SEG_SIZE,
@@ -201,7 +198,8 @@ impl StageService for StageServiceSVC {
                     if users.is_empty() {
                         let response = GenerateProofResponse {
                             proof_id: request.get_ref().proof_id.clone(),
-                            status: crate::proto::stage_service::v1::Status::InvalidParameter.into(),
+                            status: crate::proto::stage_service::v1::Status::InvalidParameter
+                                .into(),
                             error_message: "permission denied".to_string(),
                             ..Default::default()
                         };
@@ -216,7 +214,7 @@ impl StageService for StageServiceSVC {
                 Err(e) => {
                     let response = GenerateProofResponse {
                         proof_id: request.get_ref().proof_id.clone(),
-                        status: crate::proto::stage_service::v1::Status::InvalidParameter.into(),
+                        status: InvalidParameter.into(),
                         error_message: "invalid signature".to_string(),
                         ..Default::default()
                     };
@@ -361,7 +359,7 @@ impl StageService for StageServiceSVC {
                 .insert_stage_task(
                     &request.get_ref().proof_id,
                     &user_address,
-                    crate::proto::stage_service::v1::Status::Computing.into(),
+                    Computing.into(),
                     &serde_json::to_string(&generate_context).unwrap(),
                 )
                 .await;
@@ -401,7 +399,7 @@ impl StageService for StageServiceSVC {
             }
             let response = GenerateProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
-                status: crate::proto::stage_service::v1::Status::Computing.into(),
+                status: Computing.into(),
                 proof_url,
                 stark_proof_url,
                 solidity_verifier_url,

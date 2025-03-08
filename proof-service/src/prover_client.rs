@@ -1,9 +1,9 @@
-use crate::proto::prover_service::v1::{
-    prover_service_client::ProverServiceClient, AggregateAllRequest,
-    AggregateRequest, FinalProofRequest, GetTaskResultRequest, GetTaskResultResponse, ProveRequest,
-    ResultCode, SplitElfRequest,
-};
 use crate::proto::includes::v1::AggregateInput;
+use crate::proto::prover_service::v1::{
+    prover_service_client::ProverServiceClient, AggregateAllRequest, AggregateRequest,
+    FinalProofRequest, GetTaskResultRequest, GetTaskResultResponse, ProveRequest, ResultCode,
+    SplitElfRequest,
+};
 use common::file;
 use common::tls::Config as TlsConfig;
 
@@ -187,8 +187,16 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             "[aggregate] rpc {}:{} {}+{} start",
             request.proof_id,
             request.computed_request_id,
-            request.input1.clone().expect("need input1").computed_request_id,
-            request.input2.clone().expect("need input2").computed_request_id,
+            request
+                .input1
+                .clone()
+                .expect("need input1")
+                .computed_request_id,
+            request
+                .input2
+                .clone()
+                .expect("need input2")
+                .computed_request_id,
         );
         log::debug!("aggregate request {:#?}", request);
         let mut grpc_request = Request::new(request);

@@ -1,3 +1,4 @@
+use crate::executor::SplitContext;
 use crate::proto::prover_service::v1::{
     get_status_response, prover_service_server::ProverService, AggregateAllRequest,
     AggregateAllResponse, AggregateRequest, AggregateResponse, FinalProofRequest,
@@ -5,14 +6,12 @@ use crate::proto::prover_service::v1::{
     GetTaskResultResponse, ProveRequest, ProveResponse, Result, ResultCode, SplitElfRequest,
     SplitElfResponse,
 };
-use crate::executor::SplitContext;
 use prover::contexts::{AggAllContext, AggContext, ProveContext};
 use prover::pipeline::Pipeline;
 use std::time::Instant;
 use tonic::{Request, Response, Status};
 
 use crate::metrics;
-
 
 async fn run_back_task<
     T: Send + 'static,
@@ -237,7 +236,11 @@ impl ProverService for ProverServiceSVC {
                 request.get_ref().is_final,
                 &request.get_ref().agg_receipt,
                 //&request.get_ref().output_dir,
-                &format!("/tmp/agg/{}/{}", request.get_ref().proof_id, request.get_ref().computed_request_id),//FIXME: should not use a directory
+                &format!(
+                    "/tmp/agg/{}/{}",
+                    request.get_ref().proof_id,
+                    request.get_ref().computed_request_id
+                ), //FIXME: should not use a directory
             );
 
             let agg_func = move || {

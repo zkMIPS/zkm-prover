@@ -11,7 +11,6 @@ use zkm_prover::config::StarkConfig;
 use zkm_prover::cpu::kernel::assembler::segment_kernel;
 use zkm_prover::generation::state::{AssumptionReceipts, Receipt};
 
-
 #[derive(Default)]
 pub struct RootProver {}
 

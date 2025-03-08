@@ -1,9 +1,9 @@
 use crate::proto::prover_service::v1::{
     get_status_response, prover_service_client::ProverServiceClient, GetStatusRequest,
 };
+use crate::stage::tasks::TASK_TIMEOUT;
 use common::tls::Config as TlsConfig;
 use once_cell::sync::OnceCell;
-use crate::stage::tasks::TASK_TIMEOUT;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tonic::transport::Channel;

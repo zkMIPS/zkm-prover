@@ -11,19 +11,17 @@ use prometheus::{Encoder, TextEncoder};
 
 mod config;
 mod database;
+mod executor;
 mod metrics;
 mod prover_client;
 mod prover_node;
 mod prover_service;
-mod stage_service;
-mod stage_worker;
-mod executor;
 mod stage;
 
 pub mod proto;
 
-use crate::stage_service::StageServiceSVC;
 use crate::proto::stage_service::v1::stage_service_server::StageServiceServer;
+use stage::stage_service::StageServiceSVC;
 
 use crate::proto::prover_service::v1::prover_service_server::ProverServiceServer;
 use crate::prover_service::ProverServiceSVC;

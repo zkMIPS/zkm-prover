@@ -1,6 +1,6 @@
 [package]
-name = "zkm-proof-service"
-version = "0.1.0"
+name = "proof-service"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -38,5 +38,3 @@ hyper = { version = "^0.14", features = ["server", "http1", "tcp"] }
 
 [build-dependencies]
 tonic-build = "0.8.0"
-
-

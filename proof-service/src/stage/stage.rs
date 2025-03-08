@@ -3,11 +3,8 @@ use crate::stage::{
     safe_read,
     tasks::{
         agg_task::{self, AggTask},
-        {AggAllTask, FinalTask, ProveTask, SplitTask},
-        {Trace, TASK_STATE_PROCESSING},
-        {
-            TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED,
-        },
+        {AggAllTask, FinalTask, ProveTask, SplitTask}, {Trace, TASK_STATE_PROCESSING},
+        {TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED},
     },
 };
 

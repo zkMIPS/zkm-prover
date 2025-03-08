@@ -1,7 +1,4 @@
-use crate::stage::tasks::{
-    ProveTask, Trace,
-    TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED,
-};
+use crate::stage::tasks::{ProveTask, Trace, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED};
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -28,13 +25,13 @@ pub struct AggAllTask {
 //}
 //
 //impl AggInput {
-    pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
-        AggregateInput {
-            receipt_input: prove_task.receipt_output.clone(),
-            computed_request_id: prove_task.task_id.clone(),
-            is_agg: false,
-        }
+pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
+    AggregateInput {
+        receipt_input: prove_task.receipt_output.clone(),
+        computed_request_id: prove_task.task_id.clone(),
+        is_agg: false,
     }
+}
 //}
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -145,7 +142,7 @@ impl AggTask {
             proof_id: left.proof_id.clone(),
             input1: left.to_agg_input(),
             input2: right.to_agg_input(),
-            agg_index: agg_index,
+            agg_index,
             ..Default::default()
         };
         if !left.from_prove {
@@ -202,7 +199,7 @@ mod tests {
         let agg_task = crate::stage::tasks::AggTask::init_from_two_prove_task(
             &left_prove_task,
             &right_prove_task,
-        //    "/test",
+            //    "/test",
             1,
         );
         assert!(agg_task.state == TASK_STATE_UNPROCESSED);
@@ -222,7 +219,7 @@ mod tests {
         let agg_task = crate::stage::tasks::AggTask::init_from_two_agg_task(
             &left_agg_task,
             &right_agg_task,
-         //   "/test",
+            //   "/test",
             1,
         );
         assert!(agg_task.state == TASK_STATE_UNPROCESSED);
