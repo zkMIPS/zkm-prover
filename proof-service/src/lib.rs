@@ -1,12 +1,12 @@
-mod config;
-mod database;
-mod executor;
-mod metrics;
-mod prover_client;
-mod prover_node;
-mod prover_service;
-mod stage;
+pub mod config;
+pub mod database;
+pub mod executor;
+pub mod metrics;
+pub mod prover_client;
+pub mod prover_node;
+pub mod prover_service;
+pub mod stage;
 
 pub mod proto;
 
-use common::tls::Config as TlsConfig;
+pub use common::tls::Config as TlsConfig;

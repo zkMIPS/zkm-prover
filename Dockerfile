@@ -35,7 +35,7 @@ FROM debian:stable-slim
 RUN apt-get update && apt-get install -y --no-install-recommends apt
 RUN apt-get update && apt-get install -y --no-install-recommends openssl
 
-COPY --from=builder /usr/src/app/target/release/service /usr/local/bin/service  
+COPY --from=builder /usr/src/app/target/release/proof-service /usr/local/bin/service
 COPY --from=builder /usr/src/app/service/config/config.toml /usr/local/bin/config.toml
   
 WORKDIR /  

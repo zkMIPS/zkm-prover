@@ -120,15 +120,15 @@ cargo build --release
 
 ```
 # use prover1_tls.toml and prover2_tls.toml instead if tls is enabled
-$ RUST_LOG=info ./target/release/service --config ./service/config/prover1.toml
-$ RUST_LOG=info ./target/release/service --config ./service/config/prover2.toml
+$ RUST_LOG=info ./target/release/proof-service --config ./service/config/prover1.toml
+$ RUST_LOG=info ./target/release/proof-service --config ./service/config/prover2.toml
 ```
 
 * Start stage_server.
 
 ```
 # use stage_tls.toml instead if tls is enabled
-RUST_LOG=info ./target/release/service --config ./service/config/stage.toml --stage
+RUST_LOG=info ./target/release/proof-service --config ./service/config/stage.toml --stage
 ```
 
 * Start example stage

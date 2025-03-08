@@ -24,7 +24,7 @@ base_dir = "/tmp/zkm/test/test_proof"
 
 Start
 ```
-export RUST_LOG=info; nohup ./target/release/service --config ./service/config/prover.toml > prover.out &
+export RUST_LOG=info; nohup ./target/release/proof-service --config ./service/config/prover.toml > prover.out &
 ```
 
 ## Deployment Stage
@@ -43,5 +43,5 @@ base_dir = "/tmp/zkm/test/test_proof"
 
 Start
 ```
-export RUST_LOG=info; nohup ./target/release/service --config ./service/config/stage.toml --stage > stage.out &
+export RUST_LOG=info; nohup ./target/release/proof-service --config ./service/config/stage.toml --stage > stage.out &
 ```
