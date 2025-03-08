@@ -1,6 +1,6 @@
-use crate::prover_client::prover_service::get_status_response;
-use crate::prover_client::prover_service::prover_service_client::ProverServiceClient;
-use crate::prover_client::prover_service::GetStatusRequest;
+use crate::prover_service::prover_service::v1::{
+    get_status_response, prover_service_client::ProverServiceClient, GetStatusRequest,
+};
 use common::tls::Config as TlsConfig;
 use once_cell::sync::OnceCell;
 use stage::tasks::TASK_TIMEOUT;

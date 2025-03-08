@@ -37,9 +37,6 @@ impl Prover<AggContext> for AggProver {
         const D: usize = 2;
         type C = PoseidonGoldilocksConfig;
 
-        let _basedir = ctx.basedir.clone();
-        let _block_no = ctx.block_no.to_string();
-        // let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
         let receipt_path1 = ctx.receipt_path1.clone();
         let receipt_path2 = ctx.receipt_path2.clone();
         let agg_receipt_path = ctx.agg_receipt_path.clone();

@@ -1,9 +1,10 @@
 [workspace]
 members = [
-  "prover",
-  "stage",
-  "service",
-  "executor",
-  ]
+    "prover",
+    "stage",
+    "executor",
+    "service",
+    "common",
+]
 
 resolver = "2"

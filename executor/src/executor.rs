@@ -9,17 +9,10 @@ use zkm_emulator::utils::get_block_path;
 pub struct Executor {}
 
 impl Executor {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
-impl Executor {
     pub fn split(&self, ctx: &SplitContext) -> Result<u64, String> {
         // 1. split ELF into segs
-        let basedir = ctx.basedir.clone();
         let elf_path = ctx.elf_path.clone();
-        let block_no = ctx.block_no.to_string();
+        let block_no = ctx.block_no.unwrap_or(0);
         let seg_path = ctx.seg_path.clone();
         let seg_size = ctx.seg_size.to_usize().expect("u32->usize failed");
         let mut args: Vec<&str> = ctx.args.split_whitespace().collect();
@@ -29,7 +22,7 @@ impl Executor {
 
         log::info!("split {} load elf file", elf_path);
         let data = file::new(&elf_path).read();
-        let mut block_path = get_block_path(&basedir, &block_no, "");
+        let mut block_path = get_block_path(&ctx.base_dir, &block_no.to_string(), "");
         let input_path = if block_path.ends_with('/') {
             format!("{}input", block_path)
         } else {
@@ -74,7 +67,6 @@ impl Executor {
                         }
                     }
 
-                    let block_no = block_no.parse::<_>().unwrap_or(0);
                     if block_no > 0 {
                         log::info!("split set input data {}", input_path);
                         let input_data = file::new(&input_path).read().unwrap();

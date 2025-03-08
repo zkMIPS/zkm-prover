@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 prover = { path = "../prover" }
-stage = {path = "../stage"}
-executor = {path = "../executor"}
-common = {path = "../common"}
+stage = { path = "../stage"}
+executor = { path = "../executor" }
+common = { path = "../common" }
 bincode = "1.3.3"
 tonic = "0.8.1"
 prost = "0.11.0"

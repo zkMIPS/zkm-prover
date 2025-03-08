@@ -1,0 +1,33 @@
+syntax = "proto3";
+package program.v1;
+
+enum ProverVersion {
+    ZKM = 0;
+    ZKM2 = 1;
+}
+
+message BlockFileItem {
+    string file_name = 1;
+    bytes file_content = 2;
+}
+
+message Receipt {
+    repeated bytes receipt_input = 1;
+    repeated bytes receipt = 2;
+}
+
+message Program {
+    ProverVersion version = 1;
+    bytes elf_data = 2;
+    repeated BlockFileItem block_data = 3;
+    optional uint64 block_no = 4;
+    uint32 seg_size = 5;
+    bytes public_input_stream = 6;
+    bytes private_input_stream = 7;
+    bool execute_only = 8;
+    bool composite_proof = 9;
+    repeated Receipt receipts = 10;
+    string proof_id = 11;
+
+    bytes output_stream = 12;
+}

@@ -1,12 +1,10 @@
+use crate::prover_service::prover_service::v1::{
+    prover_service_client::ProverServiceClient, AggregateAllRequest, AggregateInput,
+    AggregateRequest, FinalProofRequest, GetTaskResultRequest, GetTaskResultResponse, ProveRequest,
+    ResultCode, SplitElfRequest,
+};
 use common::file;
 use common::tls::Config as TlsConfig;
-use prover_service::prover_service_client::ProverServiceClient;
-use prover_service::AggregateAllRequest;
-use prover_service::AggregateRequest;
-use prover_service::FinalProofRequest;
-use prover_service::GetTaskResultRequest;
-use prover_service::ProveRequest;
-use prover_service::SplitElfRequest;
 
 use stage::tasks::{
     AggAllTask, AggTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
@@ -14,16 +12,9 @@ use stage::tasks::{
 };
 use tonic::Request;
 
-use self::prover_service::ResultCode;
-use crate::prover_client::prover_service::AggregateInput;
 use crate::prover_node::ProverNode;
-use prover_service::GetTaskResultResponse;
 use std::time::Duration;
 use tonic::transport::Channel;
-
-pub mod prover_service {
-    tonic::include_proto!("prover.v1");
-}
 
 pub fn get_nodes() -> Vec<ProverNode> {
     let nodes_lock = crate::prover_node::instance();
@@ -82,8 +73,8 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
         let request = SplitElfRequest {
             proof_id: split_task.proof_id.clone(),
             computed_request_id: split_task.task_id.clone(),
-            base_dir: split_task.base_dir.clone(),
             elf_path: split_task.elf_path.clone(),
+            base_dir: split_task.base_dir.clone(),
             seg_path: split_task.seg_path.clone(),
             public_input_path: split_task.public_input_path.clone(),
             private_input_path: split_task.private_input_path.clone(),
@@ -106,7 +97,8 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::debug!("split response {:#?}", response);
                 split_task.state = result_code_to_state(response_result.code);
-                split_task.node_info = addrs;
+                // FIXME: node_info usage?
+                split_task.trace.node_info = addrs;
                 split_task.total_steps = response.get_ref().total_steps;
                 log::info!(
                     "[split] rpc {}:{} code:{:?} message:{:?} end",
@@ -130,18 +122,17 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
         let request = ProveRequest {
             proof_id: prove_task.proof_id.clone(),
             computed_request_id: prove_task.task_id.clone(),
-            base_dir: prove_task.base_dir.clone(),
-            seg_path: prove_task.seg_path.clone(),
-            block_no: prove_task.block_no,
-            seg_size: prove_task.seg_size,
+            //base_dir: prove_task.base_dir.clone(),
+            segment: prove_task.segment.clone(),
+            block_no: prove_task.program.block_no,
+            seg_size: prove_task.program.seg_size,
             receipt_path: prove_task.receipt_path.clone(),
             receipts_path: prove_task.receipts_path.clone(),
         };
         log::info!(
-            "[prove] rpc {}:{} {} start",
+            "[prove] rpc {}:{}start",
             request.proof_id,
             request.computed_request_id,
-            request.seg_path,
         );
         log::debug!("prove request {:#?}", request);
         let mut grpc_request = Request::new(request);
@@ -151,7 +142,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::debug!("prove response {:#?}", response);
                 prove_task.state = result_code_to_state(response_result.code);
-                prove_task.node_info = addrs;
+                prove_task.trace.node_info = addrs;
                 log::info!(
                     "[prove] rpc {}:{} code:{:?} message:{:?} end",
                     response.get_ref().proof_id,
@@ -174,7 +165,6 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
         let request = AggregateRequest {
             proof_id: agg_task.proof_id.clone(),
             computed_request_id: agg_task.task_id.clone(),
-            base_dir: agg_task.base_dir.clone(),
             seg_path: "".to_string(),
             block_no: agg_task.block_no,
             seg_size: agg_task.seg_size,
@@ -205,7 +195,7 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::debug!("aggregate response {:#?}", response);
                 agg_task.state = result_code_to_state(response_result.code);
-                agg_task.node_info = addrs;
+                agg_task.trace.node_info = addrs;
                 log::info!(
                     "[aggregate] rpc {}:{} code:{:?} message:{:?} end",
                     response.get_ref().proof_id,
@@ -231,10 +221,9 @@ pub async fn aggregate_all(
         let request = AggregateAllRequest {
             proof_id: agg_all_task.proof_id.clone(),
             computed_request_id: agg_all_task.task_id.clone(),
-            base_dir: agg_all_task.base_dir.clone(),
-            seg_path: agg_all_task.base_dir.clone(),
-            block_no: agg_all_task.block_no,
             seg_size: agg_all_task.seg_size,
+            block_no: agg_all_task.block_no,
+            segment: agg_all_task.segment.clone(),
             proof_num: agg_all_task.proof_num,
             receipt_dir: agg_all_task.receipt_dir.clone(),
             output_dir: agg_all_task.output_dir.clone(),
@@ -252,7 +241,7 @@ pub async fn aggregate_all(
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 log::debug!("aggregate_all response {:#?}", response);
                 agg_all_task.state = result_code_to_state(response_result.code);
-                agg_all_task.node_info = addrs;
+                agg_all_task.trace.node_info = addrs;
                 log::info!(
                     "[aggregate_all] rpc {}:{}  code:{:?} message:{:?}",
                     response.get_ref().proof_id,
@@ -340,7 +329,7 @@ pub async fn final_proof(
                                             .write(result.message.as_bytes())
                                             .unwrap();
                                         final_task.state = TASK_STATE_SUCCESS;
-                                        final_task.node_info = addrs;
+                                        final_task.trace.node_info = addrs;
                                         return Some(final_task);
                                     }
                                 }

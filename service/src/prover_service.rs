@@ -1,25 +1,29 @@
+use crate::prover_service::prover_service::v1::{
+    get_status_response, prover_service_server::ProverService, AggregateAllRequest,
+    AggregateAllResponse, AggregateRequest, AggregateResponse, FinalProofRequest,
+    FinalProofResponse, GetStatusRequest, GetStatusResponse, GetTaskResultRequest,
+    GetTaskResultResponse, ProveRequest, ProveResponse, Result, ResultCode, SplitElfRequest,
+    SplitElfResponse,
+};
 use executor::split_context::SplitContext;
 use prover::contexts::{AggAllContext, AggContext, ProveContext};
 use prover::pipeline::Pipeline;
-use prover_service::prover_service_server::ProverService;
-use prover_service::{get_status_response, GetStatusRequest, GetStatusResponse};
-use prover_service::{AggregateAllRequest, AggregateAllResponse};
-use prover_service::{AggregateRequest, AggregateResponse};
-use prover_service::{FinalProofRequest, FinalProofResponse};
-use prover_service::{GetTaskResultRequest, GetTaskResultResponse, Result};
-use prover_service::{ProveRequest, ProveResponse};
-use prover_service::{SplitElfRequest, SplitElfResponse};
 use std::time::Instant;
 use tonic::{Request, Response, Status};
 
-use self::prover_service::ResultCode;
-
 use crate::metrics;
-use std::panic;
 
 #[allow(clippy::module_inception)]
 pub mod prover_service {
-    tonic::include_proto!("prover.v1");
+    pub mod v1 {
+        tonic::include_proto!("prover.v1");
+    }
+}
+
+pub mod program {
+    pub mod v1 {
+        tonic::include_proto!("program.v1");
+    }
 }
 
 async fn run_back_task<
@@ -32,7 +36,7 @@ async fn run_back_task<
     let (tx, rx) = tokio::sync::oneshot::channel();
     let _ = rt
         .spawn_blocking(move || {
-            let result = panic::catch_unwind(panic::AssertUnwindSafe(callable));
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(callable));
             // tx.send(result).unwrap();
             // let result = callable();
             let _ = tx.send(result);
@@ -85,7 +89,7 @@ impl ProverService for ProverServiceSVC {
         metrics::record_metrics("prover::get_status", || async {
             // log::info!("{:#?}", request);
 
-            let mut response = prover_service::GetStatusResponse::default();
+            let mut response = GetStatusResponse::default();
             let success = Pipeline::new().get_status();
             if success {
                 response.status = get_status_response::Status::Idle.into();
@@ -103,7 +107,7 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<GetTaskResultResponse>, Status> {
         metrics::record_metrics("prover::get_task_result", || async {
             // log::info!("{:#?}", request);
-            let response = prover_service::GetTaskResultResponse::default();
+            let response = GetTaskResultResponse::default();
             Ok(Response::new(response))
         })
         .await
@@ -136,10 +140,10 @@ impl ProverService for ProverServiceSVC {
             );
             let split_func = move || {
                 let s_ctx: SplitContext = split_context;
-                executor::executor::Executor::new().split(&s_ctx)
+                executor::executor::Executor::default().split(&s_ctx)
             };
             let result = run_back_task(split_func).await;
-            let mut response = prover_service::SplitElfResponse {
+            let mut response = SplitElfResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
                 total_steps: result.clone().unwrap_or_default(),
@@ -170,19 +174,19 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<ProveResponse>, Status> {
         metrics::record_metrics("prover::prove", || async {
             log::info!(
-                "[prove] {}:{} {} start",
+                "[prove] {}:{} start",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
-                request.get_ref().seg_path,
+                //request.get_ref().seg_path,
             );
             log::debug!("{:#?}", request);
             let start = Instant::now();
 
             let prove_context = ProveContext::new(
-                &request.get_ref().base_dir,
+                //&request.get_ref().base_dir,
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
-                &request.get_ref().seg_path,
+                &request.get_ref().segment,
                 &request.get_ref().receipt_path,
                 &request.get_ref().receipts_path,
             );
@@ -192,7 +196,7 @@ impl ProverService for ProverServiceSVC {
                 Pipeline::new().prove_root(&s_ctx)
             };
             let result = run_back_task(prove_func).await;
-            let mut response = prover_service::ProveResponse {
+            let mut response = ProveResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
                 ..Default::default()
@@ -239,8 +243,6 @@ impl ProverService for ProverServiceSVC {
             let input1 = request.get_ref().input1.clone().expect("need input1");
             let input2 = request.get_ref().input2.clone().expect("need input2");
             let agg_context = AggContext::new(
-                &request.get_ref().base_dir,
-                request.get_ref().block_no,
                 request.get_ref().seg_size,
                 &input1.receipt_path,
                 &input2.receipt_path,
@@ -256,7 +258,7 @@ impl ProverService for ProverServiceSVC {
                 Pipeline::new().prove_aggregate(&agg_ctx)
             };
             let result = run_back_task(agg_func).await;
-            let mut response = prover_service::AggregateResponse {
+            let mut response = AggregateResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
                 ..Default::default()
@@ -289,8 +291,6 @@ impl ProverService for ProverServiceSVC {
             log::debug!("{:#?}", request);
             let start = Instant::now();
             let final_context = AggAllContext::new(
-                &request.get_ref().base_dir,
-                request.get_ref().block_no,
                 request.get_ref().seg_size,
                 request.get_ref().proof_num,
                 &request.get_ref().receipt_dir,
@@ -302,7 +302,7 @@ impl ProverService for ProverServiceSVC {
                 Pipeline::new().prove_aggregate_all(&s_ctx)
             };
             let result = run_back_task(agg_all_func).await;
-            let mut response = prover_service::AggregateAllResponse {
+            let mut response = AggregateAllResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
                 ..Default::default()
@@ -328,7 +328,7 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<FinalProofResponse>, Status> {
         metrics::record_metrics("prover::final_proof", || async {
             // log::info!("{:#?}", request);
-            let response = prover_service::FinalProofResponse::default();
+            let response = FinalProofResponse::default();
             Ok(Response::new(response))
         })
         .await

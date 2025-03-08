@@ -27,8 +27,20 @@ pub trait Prover<T> {
     fn prove(&self, ctx: &T) -> Result<()>;
 }
 
-const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 12]; 1] =
-    [[10..21, 12..22, 11..21, 8..21, 6..10, 6..10, 6..16, 6..16, 6..16, 6..16, 6..21, 13..23]];
+const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 12]; 1] = [[
+    10..21,
+    12..22,
+    11..21,
+    8..21,
+    6..10,
+    6..10,
+    6..16,
+    6..16,
+    6..16,
+    6..16,
+    6..21,
+    13..23,
+]];
 
 // const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 5] = [
 //     [16..17, 12..13, 10..16, 9..12, 15..17, 17..19],

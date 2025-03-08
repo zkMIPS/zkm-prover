@@ -1,7 +1,9 @@
 use crate::contexts::generate_context::GenerateContext;
+use crate::safe_read;
+use crate::stage_service::v1::Step;
 use crate::tasks::agg_task::{self, AggTask};
-use crate::tasks::TASK_STATE_PROCESSING;
 use crate::tasks::{AggAllTask, FinalTask, ProveTask, SplitTask};
+use crate::tasks::{Trace, TASK_STATE_PROCESSING};
 use crate::tasks::{
     TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED,
 };
@@ -14,34 +16,9 @@ pub fn get_timestamp() -> u64 {
     let duration_since_epoch = now.duration_since(UNIX_EPOCH).unwrap();
     duration_since_epoch.as_secs()
 }
-#[derive(Default, PartialEq, Clone)]
-pub enum Step {
-    #[default]
-    Init,
-    InSplit,
-    InProve,
-    InAgg,
-    InAggAll,
-    InFinal,
-    End,
-}
-
-impl From<Step> for i32 {
-    fn from(item: Step) -> i32 {
-        match item {
-            Step::Init => 0,
-            Step::InSplit => 1,
-            Step::InProve => 2,
-            Step::InAgg => 3,
-            Step::InAggAll => 4,
-            Step::InFinal => 5,
-            Step::End => 6,
-        }
-    }
-}
-
 #[derive(Default)]
 pub struct Stage {
+    pub base_dir: String,
     pub generate_context: GenerateContext,
     pub split_task: SplitTask,
     pub prove_tasks: Vec<ProveTask>,
@@ -63,8 +40,8 @@ macro_rules! on_task {
             $dst.state = $src.state;
             if TASK_STATE_UNPROCESSED != $src.state {
                 log::debug!("on_task {:#?}", $dst);
-                $dst.finish_ts = get_timestamp();
-                $src.finish_ts = $dst.finish_ts;
+                $dst.trace.finish_ts = get_timestamp();
+                $src.trace.finish_ts = $dst.trace.finish_ts;
             }
             if TASK_STATE_FAILED == $src.state {
                 $stage.is_error = true;
@@ -77,7 +54,7 @@ macro_rules! get_task {
     ($src:ident) => {
         if $src.state == TASK_STATE_UNPROCESSED || $src.state == TASK_STATE_FAILED {
             $src.state = TASK_STATE_PROCESSING;
-            $src.start_ts = get_timestamp();
+            $src.trace.start_ts = get_timestamp();
             return Some($src.clone());
         }
         return None
@@ -87,6 +64,7 @@ macro_rules! get_task {
 impl Stage {
     pub fn new(generate_context: GenerateContext) -> Self {
         Stage {
+            base_dir: generate_context.base_dir.clone(),
             generate_context,
             split_task: SplitTask::default(),
             prove_tasks: Vec::new(),
@@ -173,9 +151,7 @@ impl Stage {
         self.split_task
             .proof_id
             .clone_from(&self.generate_context.proof_id);
-        self.split_task
-            .base_dir
-            .clone_from(&self.generate_context.basedir);
+
         self.split_task
             .elf_path
             .clone_from(&self.generate_context.elf_path);
@@ -194,10 +170,9 @@ impl Stage {
         self.split_task.block_no = self.generate_context.block_no;
         self.split_task.seg_size = self.generate_context.seg_size;
         self.split_task.task_id = uuid::Uuid::new_v4().to_string();
+
+        self.split_task.task_id = uuid::Uuid::new_v4().to_string();
         self.split_task.state = TASK_STATE_UNPROCESSED;
-        self.split_task
-            .recepit_inputs_path
-            .clone_from(&self.generate_context.receipt_inputs_path);
         log::debug!("gen_split_task {:#?}", self.split_task);
     }
 
@@ -213,27 +188,26 @@ impl Stage {
     }
 
     fn gen_prove_task(&mut self) {
-        let prove_dir = self.generate_context.prove_path.clone();
-        file::new(&prove_dir).create_dir_all().unwrap();
-        let files = file::new(&self.generate_context.seg_path)
+        let prove_dir = self.generate_context.prove_path(true);
+        let files = file::new(&self.generate_context.seg_path(false))
             .read_dir()
             .unwrap();
+        // Read the segment and put them in queue.
         for file_name in files {
             let result: Result<usize, <usize as FromStr>::Err> = file_name.parse();
             if let Ok(file_no) = result {
                 let prove_task = ProveTask {
-                    file_no,
-                    task_id: uuid::Uuid::new_v4().to_string(),
-                    base_dir: self.generate_context.basedir.clone(),
-                    block_no: self.generate_context.block_no,
+                    task_id: uuid::Uuid::new_v4().to_string(), // FIXME: Do you need it?
                     state: TASK_STATE_UNPROCESSED,
+                    trace: Trace::default(),
+                    base_dir: self.generate_context.base_dir.clone(),
                     seg_size: self.generate_context.seg_size,
+                    file_no,
                     proof_id: self.generate_context.proof_id.clone(),
+                    segment: safe_read(&file_name),
+                    program: self.generate_context.gen_program(file_no),
+                    // FIXME: don't use path
                     receipt_path: format!("{}/receipt/{}", prove_dir.clone(), file_no),
-                    seg_path: format!("{}/{}", self.generate_context.seg_path, file_name),
-                    start_ts: 0,
-                    finish_ts: 0,
-                    node_info: "".to_string(),
                     receipts_path: self.generate_context.receipts_path.clone(),
                 };
                 self.prove_tasks.push(prove_task);
@@ -255,7 +229,7 @@ impl Stage {
         for prove_task in &mut self.prove_tasks {
             if prove_task.state == TASK_STATE_UNPROCESSED || prove_task.state == TASK_STATE_FAILED {
                 prove_task.state = TASK_STATE_PROCESSING;
-                prove_task.start_ts = get_timestamp();
+                prove_task.trace.start_ts = get_timestamp();
                 return Some(prove_task.clone());
             }
         }
@@ -281,14 +255,14 @@ impl Stage {
             result.push(agg_task::AggTask::init_from_two_prove_task(
                 &(self.prove_tasks[i]),
                 &(self.prove_tasks[i + 1]),
-                &self.generate_context.prove_path,
+                &self.generate_context.prove_path(false),
                 agg_index,
             ));
         }
         if current_length % 2 == 1 {
             result.push(agg_task::AggTask::init_from_single_prove_task(
                 &(self.prove_tasks[current_length - 1]),
-                &self.generate_context.prove_path,
+                &self.generate_context.prove_path(false),
             ));
         }
         self.agg_tasks.append(&mut result.clone());
@@ -301,7 +275,7 @@ impl Stage {
                 let agg_task = agg_task::AggTask::init_from_two_agg_task(
                     &result[i],
                     &result[i + 1],
-                    &self.generate_context.prove_path,
+                    &self.generate_context.prove_path(false),
                     agg_index,
                 );
                 self.agg_tasks.push(agg_task.clone());
@@ -317,7 +291,7 @@ impl Stage {
         self.agg_tasks[last_agg_tasks].is_final = true;
         self.agg_tasks[last_agg_tasks]
             .output_dir
-            .clone_from(&self.generate_context.agg_path);
+            .clone_from(&self.generate_context.agg_path(false));
         log::debug!("gen_agg_task {:#?}", self.agg_tasks);
     }
 
@@ -328,7 +302,7 @@ impl Stage {
             }
             if agg_task.state == TASK_STATE_UNPROCESSED || agg_task.state == TASK_STATE_FAILED {
                 agg_task.state = TASK_STATE_PROCESSING;
-                agg_task.start_ts = get_timestamp();
+                agg_task.trace.start_ts = get_timestamp();
                 return Some(agg_task.clone());
             }
         }
@@ -355,9 +329,6 @@ impl Stage {
         assert!(self.agg_all_task.state == TASK_STATE_INITIAL);
         self.agg_all_task.task_id = uuid::Uuid::new_v4().to_string();
         self.agg_all_task.state = TASK_STATE_UNPROCESSED;
-        self.agg_all_task
-            .base_dir
-            .clone_from(&self.generate_context.basedir);
         self.agg_all_task.block_no = self.generate_context.block_no;
         self.agg_all_task.seg_size = self.generate_context.seg_size;
         self.agg_all_task
@@ -388,10 +359,10 @@ impl Stage {
             .clone_from(&self.generate_context.proof_id.clone());
         self.final_task
             .input_dir
-            .clone_from(&self.generate_context.agg_path.clone());
+            .clone_from(&self.generate_context.agg_path(false));
         self.final_task
             .output_path
-            .clone_from(&self.generate_context.final_path);
+            .clone_from(&self.generate_context.final_path(false));
         self.final_task.task_id = uuid::Uuid::new_v4().to_string();
         self.final_task.state = TASK_STATE_UNPROCESSED;
         log::debug!("gen_final_task {:#?}", self.final_task);
@@ -411,7 +382,7 @@ impl Stage {
         let split_cost = format!(
             "split_id: {} cost: {} sec",
             self.split_task.task_id,
-            self.split_task.finish_ts - self.split_task.start_ts
+            self.split_task.trace.duration(),
         );
         let root_prove_cost = self
             .prove_tasks
@@ -420,7 +391,7 @@ impl Stage {
                 format!(
                     "prove_id: {} cost: {} sec",
                     task.task_id,
-                    task.finish_ts - task.start_ts
+                    task.trace.duration(),
                 )
             })
             .collect::<Vec<String>>()
@@ -432,7 +403,7 @@ impl Stage {
                 format!(
                     "agg_id: {} cost: {} sec",
                     task.task_id,
-                    task.finish_ts - task.start_ts
+                    task.trace.duration(),
                 )
             })
             .collect::<Vec<String>>()
@@ -440,12 +411,12 @@ impl Stage {
         let agg_all_cost = format!(
             "agg_all_id: {} cost: {} sec",
             self.agg_all_task.task_id,
-            self.agg_all_task.finish_ts - self.agg_all_task.start_ts
+            self.agg_all_task.trace.duration(),
         );
         let final_cost = format!(
             "final_id: {} cost: {} sec",
             self.final_task.task_id,
-            self.final_task.finish_ts - self.final_task.start_ts
+            self.final_task.trace.duration(),
         );
         format!(
             "proof_id: {}\r\n {}\r\n {}\r\n {}\r\n {}\r\n {}\r\n",

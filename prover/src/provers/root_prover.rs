@@ -6,7 +6,6 @@ use plonky2::field::goldilocks_field::GoldilocksField;
 use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::util::timing::TimingTree;
 
-use std::io::BufReader;
 use zkm_prover::all_stark::AllStark;
 use zkm_prover::config::StarkConfig;
 use zkm_prover::cpu::kernel::assembler::segment_kernel;
@@ -29,13 +28,11 @@ impl Prover<ProveContext> for RootProver {
         const D: usize = 2;
         type C = PoseidonGoldilocksConfig;
 
-        let basedir = ctx.basedir.clone();
-        let block_no = ctx.block_no.to_string();
-        let seg_path = ctx.seg_path.clone();
-        let _seg_size = ctx.seg_size as usize;
+        //let basedir = ctx.base_dir.clone();
+        let block_no = ctx.block_no.unwrap_or(0);
+        let segment = ctx.segment.clone();
         let receipt_path = ctx.receipt_path.clone();
         let file = String::from("");
-        let _args = "".to_string();
 
         let mut receipts: AssumptionReceipts<F, C, D> = vec![];
         if !ctx.receipts_path.is_empty() {
@@ -62,9 +59,10 @@ impl Prover<ProveContext> for RootProver {
 
         timing = TimingTree::new("root_prove load input", log::Level::Info);
 
-        let seg_data = file::new(&seg_path).read()?;
-        let seg_reader = BufReader::new(seg_data.as_slice());
-        let input = segment_kernel(&basedir, &block_no, &file, seg_reader);
+        //let seg_data = file::new(&seg_path).read()?;
+        let seg_reader = std::io::Cursor::new(segment);
+        // FIXME: why do we need basedir?
+        let input = segment_kernel("", &block_no.to_string(), &file, seg_reader);
         timing.filter(Duration::from_millis(100)).print();
 
         timing = TimingTree::new("root_prove root", log::Level::Info);

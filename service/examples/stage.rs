@@ -1,7 +1,8 @@
 use common::file;
 use common::tls::Config;
-use stage_service::stage_service_client::StageServiceClient;
-use stage_service::{BlockFileItem, GenerateProofRequest, GetStatusRequest};
+use program::v1::{BlockFileItem, Program, ProverVersion};
+use stage_service::v1::stage_service_client::StageServiceClient;
+use stage_service::v1::{GenerateProofRequest, GetStatusRequest};
 use std::env;
 use std::path::Path;
 use std::time::Instant;
@@ -10,10 +11,15 @@ use tonic::transport::ClientTlsConfig;
 use tonic::transport::Endpoint;
 
 use ethers::signers::{LocalWallet, Signer};
-use crate::stage_service::Program;
-
+pub mod program {
+    pub mod v1 {
+        tonic::include_proto!("program.v1");
+    }
+}
 pub mod stage_service {
-    tonic::include_proto!("stage.v1");
+    pub mod v1 {
+        tonic::include_proto!("stage.v1");
+    }
 }
 
 async fn sign_ecdsa(request: &mut GenerateProofRequest, private_key: &str) {
@@ -56,12 +62,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ssl_config = if ca_cert_path.is_empty() {
         None
     } else {
-        Some(Config::new(ca_cert_path, cert_path, key_path).await?)
+        Some(Config::new(&ca_cert_path, &cert_path, &key_path).await?)
     };
 
     let elf_data = file::new(&elf_path).read().unwrap();
-    let mut block_data = Vec::new();
 
+    // FIXME
+    let mut block_data = Vec::new();
     if block_no > 0 {
         let files = file::new(&block_path).read_dir().unwrap();
         for file_name in files {
@@ -88,20 +95,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let proof_id = uuid::Uuid::new_v4().to_string();
     let program: Program = Program {
-        ProverVersion::ZKM,
+        version: ProverVersion::Zkm.into(),
         elf_data,
         block_data,
-        Some(block_no),
+        block_no: Some(block_no),
         seg_size,
         public_input_stream,
         private_input_stream,
         execute_only,
-        composite_proof,
         ..Default::default()
     };
     let mut request = GenerateProofRequest {
         proof_id: proof_id.clone(),
-        program,
+        program: Some(program),
+        ..Default::default()
     };
     sign_ecdsa(&mut request, &private_key).await;
     log::info!("request: {:?}", proof_id);
@@ -122,7 +129,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stage_client = StageServiceClient::connect(endpoint).await?;
     let response = stage_client.generate_proof(request).await?.into_inner();
     log::info!("generate_proof response: {:?}", response);
-    if response.status == crate::stage_service::Status::Computing as u32 {
+    if response.status == crate::stage_service::v1::Status::Computing as i32 {
         loop {
             let get_status_request = GetStatusRequest {
                 proof_id: proof_id.clone(),
@@ -131,12 +138,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .get_status(get_status_request)
                 .await?
                 .into_inner();
-            if get_status_response.status != crate::stage_service::Status::Computing as u32 {
+            if get_status_response.status != crate::stage_service::v1::Status::Computing as i32 {
                 if let Some(status) =
-                    crate::stage_service::Status::from_i32(get_status_response.status as i32)
+                    crate::stage_service::v1::Status::from_i32(get_status_response.status as i32)
                 {
                     match status {
-                        crate::stage_service::Status::Success => {
+                        crate::stage_service::v1::Status::Success => {
                             log::info!(
                                 "generate_proof success public_inputs_size: {}, output_size: {}",
                                 get_status_response.proof_with_public_inputs.len(),

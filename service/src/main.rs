@@ -2,8 +2,6 @@ use clap::Parser;
 use prover_node::ProverNode;
 
 use common::tls::Config as TlsConfig;
-use prover_service::prover_service::prover_service_server::ProverServiceServer;
-use stage_service::stage_service::stage_service_server::StageServiceServer;
 use tonic::transport::Server;
 use tonic::transport::ServerTlsConfig;
 
@@ -19,6 +17,12 @@ mod prover_node;
 mod prover_service;
 mod stage_service;
 mod stage_worker;
+
+use crate::stage_service::StageServiceSVC;
+use stage::stage_service::v1::stage_service_server::StageServiceServer;
+
+use crate::prover_service::prover_service::v1::prover_service_server::ProverServiceServer;
+use crate::prover_service::ProverServiceSVC;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -48,12 +52,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut server = Server::builder();
     if runtime_config.key_path.is_some() {
         let tls_config = TlsConfig::new(
-            runtime_config
+            &runtime_config
                 .ca_cert_path
                 .clone()
                 .unwrap_or("".to_string()),
-            runtime_config.cert_path.clone().unwrap(),
-            runtime_config.key_path.clone().unwrap(),
+            &runtime_config.cert_path.clone().unwrap(),
+            &runtime_config.key_path.clone().unwrap(),
         )
         .await?;
         let mut server_tls_config = ServerTlsConfig::new();
@@ -66,12 +70,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         server = server.tls_config(server_tls_config)?;
     }
     let grpc_server = if args.stage {
-        let stage = stage_service::StageServiceSVC::new(runtime_config.clone()).await?;
+        let stage = StageServiceSVC::new(runtime_config.clone()).await?;
         server
             .add_service(StageServiceServer::new(stage))
             .serve(addr)
     } else {
-        let prover = prover_service::ProverServiceSVC::default();
+        let prover = ProverServiceSVC::default();
         server
             .add_service(ProverServiceServer::new(prover))
             .serve(addr)

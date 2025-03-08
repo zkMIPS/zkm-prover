@@ -3,16 +3,17 @@ use crate::database::StageTask;
 use crate::prover_client;
 use crate::TlsConfig;
 use common::file;
+use stage::stage::get_timestamp;
+use stage::tasks::{
+    Task, TASK_ITYPE_AGG, TASK_ITYPE_AGGALL, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::time;
 
-use stage::tasks::{
-    Task, TASK_ITYPE_AGG, TASK_ITYPE_AGGALL, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT,
-};
-
-use stage::stage::Step;
+use stage::stage_service;
+use stage::stage_service::v1::Step;
 
 use stage::tasks::{TASK_STATE_FAILED, TASK_STATE_SUCCESS};
 
@@ -25,21 +26,14 @@ macro_rules! save_task {
                 itype: $type,
                 proof_id: $task.proof_id,
                 status: $task.state as i32,
-                node_info: $task.node_info,
+                node_info: $task.trace.node_info.clone(),
                 content: Some(content),
-                time_cost: ($task.finish_ts - $task.start_ts) as i64,
+                time_cost: ($task.trace.duration()) as i64,
                 ..Default::default()
             };
             let _ = $db_pool.insert_prove_task(&prove_task).await;
         }
     };
-}
-
-pub fn now_timestamp() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
 }
 
 async fn run_stage_task(
@@ -49,13 +43,13 @@ async fn run_stage_task(
 ) {
     if let Some(context) = task.context {
         match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
-            Ok(generate_context) => {
-                let mut check_at = now_timestamp();
-                let mut stage = stage::stage::Stage::new(generate_context.clone());
+            Ok(generte_context) => {
+                let mut check_at = get_timestamp();
+                let mut stage = stage::stage::Stage::new(generte_context.clone());
                 let (tx, mut rx) = tokio::sync::mpsc::channel(128);
                 stage.dispatch();
                 loop {
-                    let current_step = stage.step.clone();
+                    let current_step = stage.step;
                     match stage.step {
                         Step::InSplit => {
                             let split_task = stage.get_split_task();
@@ -164,7 +158,7 @@ async fn run_stage_task(
                         break;
                     }
                     stage.dispatch();
-                    let ts_now = now_timestamp();
+                    let ts_now = get_timestamp();
                     if check_at + 10 < ts_now || current_step != stage.step {
                         check_at = ts_now;
                         let rows_affected = db
@@ -172,7 +166,7 @@ async fn run_stage_task(
                                 &task.id,
                                 task.check_at as u64,
                                 check_at,
-                                stage.step.clone().into(),
+                                stage.step.into(),
                             )
                             .await;
                         if let Ok(rows_affected) = rows_affected {
@@ -184,25 +178,26 @@ async fn run_stage_task(
                 }
                 if stage.is_error() {
                     let get_status = || match stage.step {
-                        Step::InSplit => crate::stage_service::stage_service::Status::SplitError,
-                        Step::InProve => crate::stage_service::stage_service::Status::ProveError,
-                        Step::InAgg => crate::stage_service::stage_service::Status::AggError,
-                        Step::InAggAll => crate::stage_service::stage_service::Status::AggError,
-                        Step::InFinal => crate::stage_service::stage_service::Status::FinalError,
-                        _ => crate::stage_service::stage_service::Status::InternalError,
+                        Step::InSplit => stage_service::v1::Status::SplitError,
+                        Step::InProve => stage_service::v1::Status::ProveError,
+                        Step::InAgg => stage_service::v1::Status::AggError,
+                        Step::InAggAll => stage_service::v1::Status::AggError,
+                        Step::InFinal => stage_service::v1::Status::FinalError,
+                        _ => stage_service::v1::Status::InternalError,
                     };
                     let status = get_status();
                     let _ = db.update_stage_task(&task.id, status.into(), "").await;
                 } else {
-                    let result = if generate_context.execute_only || generate_context.composite_proof {
+                    let result = if generte_context.execute_only || generte_context.composite_proof
+                    {
                         vec![]
                     } else {
-                        file::new(&generate_context.final_path).read().unwrap()
+                        file::new(&generte_context.final_path).read().unwrap()
                     };
                     let _ = db
                         .update_stage_task(
                             &task.id,
-                            crate::stage_service::stage_service::Status::Success.into(),
+                            stage_service::v1::Status::Success.into(),
                             &String::from_utf8(result).expect("Invalid UTF-8 bytes"),
                         )
                         .await;
@@ -213,7 +208,7 @@ async fn run_stage_task(
                 let _ = db
                     .update_stage_task(
                         &task.id,
-                        crate::stage_service::stage_service::Status::InternalError.into(),
+                        stage_service::v1::Status::InternalError.into(),
                         "",
                     )
                     .await;
@@ -226,8 +221,9 @@ async fn load_stage_task(tls_config: Option<TlsConfig>, db: database::Database) 
     let store = Arc::new(Mutex::new(HashMap::new()));
     loop {
         let limit = 5;
-        let status = crate::stage_service::stage_service::Status::Computing.into();
-        let check_at = now_timestamp();
+        let status = stage_service::v1::Status::Computing.into();
+        let check_at = get_timestamp();
+        // FIXME: why do we just fetch the task in last 1 min?
         let result = db
             .get_incomplete_stage_tasks(status, (check_at - 60) as i64, limit)
             .await;

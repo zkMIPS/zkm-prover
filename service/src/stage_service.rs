@@ -1,8 +1,9 @@
 use anyhow::Error;
 use common::tls::Config as TlsConfig;
-use stage_service::stage_service_server::StageService;
-use stage_service::{GenerateProofRequest, GenerateProofResponse};
-use stage_service::{GetStatusRequest, GetStatusResponse};
+use stage::stage_service::v1::{
+    stage_service_server::StageService, GenerateProofRequest, GenerateProofResponse,
+    GetStatusRequest, GetStatusResponse,
+};
 use std::sync::Mutex;
 
 use tonic::{Request, Response, Status};
@@ -18,11 +19,6 @@ use std::str::FromStr;
 use crate::database;
 use crate::metrics;
 use crate::stage_worker;
-
-#[allow(clippy::module_inception)]
-pub mod stage_service {
-    tonic::include_proto!("stage.v1");
-}
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -42,9 +38,9 @@ impl StageServiceSVC {
         let tls_config = if config.ca_cert_path.is_some() {
             Some(
                 TlsConfig::new(
-                    config.ca_cert_path.unwrap(),
-                    config.cert_path.unwrap(),
-                    config.key_path.unwrap(),
+                    config.ca_cert_path.as_ref().unwrap(),
+                    config.cert_path.as_ref().unwrap(),
+                    config.key_path.as_ref().unwrap(),
                 )
                 .await?,
             )
@@ -63,14 +59,12 @@ impl StageServiceSVC {
     }
 
     pub fn valid_signature(&self, request: &GenerateProofRequest) -> Result<String, Error> {
-        let block_no = request.program.as_ref().unwrap().block_no;
-        let seg_size = request.program.as_ref().unwrap().seg_size;
-        let sign_data = match block_no {
+        let sign_data = match request.block_no {
             Some(block_no) => {
-                format!("{}&{}&{}", request.proof_id, block_no, seg_size)
+                format!("{}&{}&{}", request.proof_id, block_no, request.seg_size)
             }
             None => {
-                format!("{}&{}", request.proof_id, seg_size)
+                format!("{}&{}", request.proof_id, request.seg_size)
             }
         };
         let signature = Signature::from_str(&request.signature)?;
@@ -87,7 +81,7 @@ impl StageService for StageServiceSVC {
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
         metrics::record_metrics("stage::get_status", || async {
             let task = self.db.get_stage_task(&request.get_ref().proof_id).await;
-            let mut response = stage_service::GetStatusResponse {
+            let mut response = GetStatusResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 ..Default::default()
             };
@@ -106,10 +100,10 @@ impl StageService for StageServiceSVC {
                     response.total_steps = execute_info[0].total_steps;
                 }
 
-                let (execute_only, composite_proof) = if let Some(context) = task.context {
+                let (execute_only, precompile) = if let Some(context) = task.context {
                     match serde_json::from_str::<stage::contexts::GenerateContext>(&context) {
                         Ok(context) => {
-                            if task.status == stage_service::Status::Success as i32
+                            if task.status == stage::stage_service::v1::Status::Success as i32
                                 && !context.output_stream_path.is_empty()
                             {
                                 let output_data =
@@ -128,7 +122,7 @@ impl StageService for StageServiceSVC {
                 } else {
                     (false, false)
                 };
-                if !execute_only && !composite_proof {
+                if !execute_only && !precompile {
                     if let Some(result) = task.result {
                         response.proof_with_public_inputs = result.into_bytes();
                     }
@@ -163,17 +157,16 @@ impl StageService for StageServiceSVC {
         &self,
         request: Request<GenerateProofRequest>,
     ) -> tonic::Result<Response<GenerateProofResponse>, Status> {
-        let program = request.get_ref().program.as_ref().unwrap();
         metrics::record_metrics("stage::generate_proof", || async {
             log::info!("[generate_proof] {} start", request.get_ref().proof_id);
 
             // check seg_size
-            if !program.composite_proof
-                && !provers::valid_seg_size(program.seg_size as usize)
+            if !request.get_ref().composite_proof
+                && !provers::valid_seg_size(request.get_ref().seg_size as usize)
             {
-                let response = stage_service::GenerateProofResponse {
+                let response = GenerateProofResponse {
                     proof_id: request.get_ref().proof_id.clone(),
-                    status: stage_service::Status::InvalidParameter.into(),
+                    status: stage::stage_service::v1::Status::InvalidParameter.into(),
                     error_message: format!(
                         "invalid seg_size support [{}-{}]",
                         provers::MIN_SEG_SIZE,
@@ -184,7 +177,7 @@ impl StageService for StageServiceSVC {
                 log::warn!(
                     "[generate_proof] {} invalid seg_size support [{}-{}] {}",
                     request.get_ref().proof_id,
-                    program.seg_size,
+                    request.get_ref().seg_size,
                     provers::MIN_SEG_SIZE,
                     provers::MAX_SEG_SIZE
                 );
@@ -203,9 +196,9 @@ impl StageService for StageServiceSVC {
                         !users.is_empty(),
                     );
                     if users.is_empty() {
-                        let response = stage_service::GenerateProofResponse {
+                        let response = GenerateProofResponse {
                             proof_id: request.get_ref().proof_id.clone(),
-                            status: stage_service::Status::InvalidParameter.into(),
+                            status: stage::stage_service::v1::Status::InvalidParameter.into(),
                             error_message: "permission denied".to_string(),
                             ..Default::default()
                         };
@@ -218,9 +211,9 @@ impl StageService for StageServiceSVC {
                     user_address = users[0].address.clone();
                 }
                 Err(e) => {
-                    let response = stage_service::GenerateProofResponse {
+                    let response = GenerateProofResponse {
                         proof_id: request.get_ref().proof_id.clone(),
-                        status: stage_service::Status::InvalidParameter.into(),
+                        status: stage::stage_service::v1::Status::InvalidParameter.into(),
                         error_message: "invalid signature".to_string(),
                         ..Default::default()
                     };
@@ -241,16 +234,16 @@ impl StageService for StageServiceSVC {
 
             let elf_path = format!("{}/elf", dir_path);
             file::new(&elf_path)
-                .write(&program.elf_data)
+                .write(&request.get_ref().elf_data)
                 .map_err(|e| Status::internal(e.to_string()))?;
 
-            let block_no = program.block_no.unwrap_or(0u64);
+            let block_no = request.get_ref().block_no.unwrap_or(0u64);
             let block_dir = format!("{}/0_{}", dir_path, block_no);
             file::new(&block_dir)
                 .create_dir_all()
                 .map_err(|e| Status::internal(e.to_string()))?;
 
-            for file_block_item in &program.block_data {
+            for file_block_item in &request.get_ref().block_data {
                 let block_path = format!("{}/{}", block_dir, file_block_item.file_name);
                 file::new(&block_path)
                     .write(&file_block_item.file_content)
@@ -261,32 +254,32 @@ impl StageService for StageServiceSVC {
             file::new(&input_stream_dir)
                 .create_dir_all()
                 .map_err(|e| Status::internal(e.to_string()))?;
-            let public_input_stream_path = if program.public_input_stream.is_empty() {
+            let public_input_stream_path = if request.get_ref().public_input_stream.is_empty() {
                 "".to_string()
             } else {
                 let public_input_stream_path = format!("{}/{}", input_stream_dir, "public_input");
                 file::new(&public_input_stream_path)
-                    .write(&program.public_input_stream)
+                    .write(&request.get_ref().public_input_stream)
                     .map_err(|e| Status::internal(e.to_string()))?;
                 public_input_stream_path
             };
 
-            let private_input_stream_path = if program.private_input_stream.is_empty() {
+            let private_input_stream_path = if request.get_ref().private_input_stream.is_empty() {
                 "".to_string()
             } else {
                 let private_input_stream_path = format!("{}/{}", input_stream_dir, "private_input");
                 file::new(&private_input_stream_path)
-                    .write(&program.private_input_stream)
+                    .write(&request.get_ref().private_input_stream)
                     .map_err(|e| Status::internal(e.to_string()))?;
                 private_input_stream_path
             };
 
-            let receipt_inputs_path = if program.receipt_input.is_empty() {
+            let receipt_inputs_path = if request.get_ref().receipt_input.is_empty() {
                 "".to_string()
             } else {
                 let receipt_inputs_path = format!("{}/{}", input_stream_dir, "receipt_inputs");
                 let mut buf = Vec::new();
-                bincode::serialize_into(&mut buf, &program.receipt_input)
+                bincode::serialize_into(&mut buf, &request.get_ref().receipt_input)
                     .expect("serialization failed");
                 file::new(&receipt_inputs_path)
                     .write(&buf)
@@ -294,12 +287,12 @@ impl StageService for StageServiceSVC {
                 receipt_inputs_path
             };
 
-            let receipts_path = if program.receipt.is_empty() {
+            let receipts_path = if request.get_ref().receipt.is_empty() {
                 "".to_string()
             } else {
                 let receipts_path = format!("{}/{}", input_stream_dir, "receipts");
                 let mut buf = Vec::new();
-                bincode::serialize_into(&mut buf, &program.receipt)
+                bincode::serialize_into(&mut buf, &request.get_ref().receipt)
                     .expect("serialization failed");
                 file::new(&receipts_path)
                     .write(&buf)
@@ -351,10 +344,10 @@ impl StageService for StageServiceSVC {
                 &public_input_stream_path,
                 &private_input_stream_path,
                 &output_stream_path,
-                block_no,
-                program.seg_size,
-                program.execute_only,
-                program.composite_proof,
+                Some(block_no),
+                request.get_ref().seg_size,
+                request.get_ref().execute_only,
+                request.get_ref().composite_proof,
                 &receipt_inputs_path,
                 &receipts_path,
             );
@@ -364,7 +357,7 @@ impl StageService for StageServiceSVC {
                 .insert_stage_task(
                     &request.get_ref().proof_id,
                     &user_address,
-                    stage_service::Status::Computing as i32,
+                    stage::stage_service::v1::Status::Computing.into(),
                     &serde_json::to_string(&generate_context).unwrap(),
                 )
                 .await;
@@ -396,15 +389,15 @@ impl StageService for StageServiceSVC {
                 Some(verifier_url) => verifier_url.clone(),
                 None => "".to_string(),
             };
-            if program.execute_only {
+            if request.get_ref().execute_only {
                 proof_url = "".to_string();
                 stark_proof_url = "".to_string();
                 solidity_verifier_url = "".to_string();
                 public_values_url = "".to_string();
             }
-            let response = stage_service::GenerateProofResponse {
+            let response = GenerateProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
-                status: stage_service::Status::Computing.into(),
+                status: stage::stage_service::v1::Status::Computing.into(),
                 proof_url,
                 stark_proof_url,
                 solidity_verifier_url,

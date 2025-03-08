@@ -1,41 +1,20 @@
-use crate::tasks::ProveTask;
+use crate::tasks::{ProveTask, Trace};
 use crate::tasks::{TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED};
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AggAllTask {
     pub task_id: String,
     pub state: u32,
-    pub base_dir: String,
-    pub block_no: u64,
+    pub block_no: Option<u64>,
     pub seg_size: u32,
+    pub segment: Vec<u8>,
     pub proof_num: u32,
     pub proof_id: String,
     pub receipt_dir: String,
     pub output_dir: String,
-    pub start_ts: u64,
-    pub finish_ts: u64,
-    pub node_info: String,
-}
-
-impl Clone for AggAllTask {
-    fn clone(&self) -> Self {
-        AggAllTask {
-            task_id: self.task_id.clone(),
-            state: self.state,
-            base_dir: self.base_dir.clone(),
-            block_no: self.block_no,
-            seg_size: self.seg_size,
-            proof_id: self.proof_id.clone(),
-            proof_num: self.proof_num,
-            receipt_dir: self.receipt_dir.clone(),
-            output_dir: self.output_dir.clone(),
-            start_ts: self.start_ts,
-            finish_ts: self.finish_ts,
-            node_info: self.node_info.clone(),
-        }
-    }
+    pub trace: Trace,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
@@ -53,13 +32,13 @@ impl AggInput {
     }
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AggTask {
     pub file_key: String,
     pub task_id: String,
     pub state: u32,
-    pub base_dir: String,
-    pub block_no: u64,
+
+    pub block_no: Option<u64>,
     pub seg_size: u32,
     pub proof_id: String,
     pub input1: AggInput,
@@ -68,38 +47,12 @@ pub struct AggTask {
     pub from_prove: bool,
     pub output_receipt_path: String,
     pub output_dir: String,
-    pub start_ts: u64,
-    pub finish_ts: u64,
-    pub node_info: String,
+
+    pub trace: Trace,
 
     // depend
     pub left: Option<String>,
     pub right: Option<String>,
-}
-
-impl Clone for AggTask {
-    fn clone(&self) -> Self {
-        AggTask {
-            file_key: self.file_key.clone(),
-            task_id: self.task_id.clone(),
-            state: self.state,
-            base_dir: self.base_dir.clone(),
-            block_no: self.block_no,
-            seg_size: self.seg_size,
-            proof_id: self.proof_id.clone(),
-            input1: self.input1.clone(),
-            input2: self.input2.clone(),
-            is_final: self.is_final,
-            from_prove: self.from_prove,
-            output_receipt_path: self.output_receipt_path.clone(),
-            output_dir: self.output_dir.clone(),
-            start_ts: self.start_ts,
-            finish_ts: self.finish_ts,
-            node_info: self.node_info.clone(),
-            left: self.left.clone(),
-            right: self.right.clone(),
-        }
-    }
 }
 
 impl AggTask {
@@ -136,10 +89,9 @@ impl AggTask {
         let mut agg_task = AggTask {
             file_key: format!("{}", prove_task.file_no),
             task_id: uuid::Uuid::new_v4().to_string(),
-            base_dir: prove_task.base_dir.clone(),
-            block_no: prove_task.block_no,
+            block_no: prove_task.program.block_no,
             state: TASK_STATE_SUCCESS,
-            seg_size: prove_task.seg_size,
+            seg_size: prove_task.program.seg_size,
             proof_id: prove_task.proof_id.clone(),
             from_prove: true,
             ..Default::default()
@@ -158,10 +110,9 @@ impl AggTask {
             // file_key: format!("{}-{}", left.file_no, right.file_no),
             file_key: format!("agg{}", agg_index),
             task_id: uuid::Uuid::new_v4().to_string(),
-            base_dir: left.base_dir.clone(),
-            block_no: left.block_no,
+            block_no: left.program.block_no,
             state: TASK_STATE_UNPROCESSED,
-            seg_size: left.seg_size,
+            seg_size: left.program.seg_size,
             proof_id: left.proof_id.clone(),
             input1: AggInput::from_prove_task(left),
             input2: AggInput::from_prove_task(right),
@@ -181,7 +132,6 @@ impl AggTask {
             // file_key: format!("{}-{}", left.file_key, right.file_key),
             file_key: format!("agg{}", agg_index),
             task_id: uuid::Uuid::new_v4().to_string(),
-            base_dir: left.base_dir.clone(),
             block_no: left.block_no,
             state: TASK_STATE_UNPROCESSED,
             seg_size: left.seg_size,

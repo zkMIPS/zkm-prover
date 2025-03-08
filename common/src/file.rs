@@ -97,6 +97,7 @@ impl S3File {
 }
 
 impl Write for S3File {
+    #[allow(clippy::io_other_error)]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let path = self.path.clone();
         let length = buf.len();

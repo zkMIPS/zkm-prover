@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package prover.v1;
 
+import "include/v1/program.proto";
+
 message Version {
     string v0_0_1 = 1;
 }
@@ -65,9 +67,9 @@ message SplitElfRequest {
     string proof_id = 1;
     string computed_request_id = 2;
     string base_dir = 3;
-    string elf_path = 4;
     string seg_path = 5;
-    uint64 block_no = 6;
+    string elf_path = 4;
+    optional uint64 block_no = 6;
     uint32 seg_size = 7;
     string args = 8;
     string public_input_path = 9;
@@ -87,9 +89,10 @@ message ProveRequest {
     string proof_id = 1;
     string computed_request_id = 2;
 
-    string base_dir = 3;
-    string seg_path = 4;
-    uint64 block_no = 5;
+    //string base_dir = 3;
+    //string seg_path = 4;
+    bytes segment = 4;
+    optional uint64 block_no = 5;
     uint32 seg_size = 6;
     string receipt_path = 7;
     string receipts_path = 8;
@@ -109,9 +112,8 @@ message AggregateInput {
 message AggregateRequest {
     string proof_id = 1;
     string computed_request_id = 2;
-    string base_dir = 3;
     string seg_path = 4;
-    uint64 block_no = 5;
+    optional uint64 block_no = 5;
     uint32 seg_size = 6;
     AggregateInput input1 = 7;
     AggregateInput input2 = 8;
@@ -129,9 +131,9 @@ message AggregateResponse {
 message AggregateAllRequest {
     string proof_id = 1;
     string computed_request_id = 2;
-    string base_dir = 3;
-    string seg_path = 4;
-    uint64 block_no = 5;
+    //string seg_path = 4;
+    bytes segment = 4;
+    optional uint64 block_no = 5;
     uint32 seg_size = 6;
     uint32 proof_num = 7;
     string receipt_dir = 8;
