@@ -6,12 +6,10 @@ pub use agg_prover::AggProver;
 
 mod agg_all_prover;
 mod snark_prover;
-
+pub use snark_prover::SnarkProver;
 pub use agg_all_prover::AggAllProver;
 
 use anyhow::Result;
-use lazy_static::lazy_static;
-use std::collections::HashMap;
 
 use plonky2::field::goldilocks_field::GoldilocksField;
 use plonky2::plonk::config::PoseidonGoldilocksConfig;

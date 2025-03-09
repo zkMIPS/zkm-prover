@@ -1,8 +1,8 @@
-pub mod contexts;
 pub mod stage;
 pub mod stage_service;
 mod stage_worker;
 pub mod tasks;
+pub use tasks::generate_task::GenerateTask;
 
 use crate::proto::includes::v1::BlockFileItem;
 use common::file;

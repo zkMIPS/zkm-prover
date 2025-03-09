@@ -1,7 +1,7 @@
 use crate::proto::prover_service::v1::{
     get_status_response, prover_service_server::ProverService, AggregateAllRequest,
-    AggregateAllResponse, AggregateRequest, AggregateResponse, FinalProofRequest,
-    FinalProofResponse, GetStatusRequest, GetStatusResponse, GetTaskResultRequest,
+    AggregateAllResponse, AggregateRequest, AggregateResponse, SnarkProofRequest,
+    SnarkProofResponse, GetStatusRequest, GetStatusResponse, GetTaskResultRequest,
     GetTaskResultResponse, ProveRequest, ProveResponse, Result, ResultCode, SplitElfRequest,
     SplitElfResponse,
 };
@@ -110,7 +110,6 @@ impl ProverService for ProverServiceSVC {
             );
             log::debug!("{:#?}", request);
             let start = Instant::now();
-            //let split_elf_request = request.get_ref().clone();
             let split_context = SplitContext::new(
                 &request.get_ref().base_dir,
                 &request.get_ref().elf_path,
@@ -204,23 +203,23 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateRequest>,
     ) -> tonic::Result<Response<AggregateResponse>, Status> {
         metrics::record_metrics("prover::aggregate", || async {
-            //log::info!(
-            //    "[aggregate] {}:{} {}+{} start",
-            //    request.get_ref().proof_id,
-            //    request.get_ref().computed_request_id,
-            //    request
-            //        .get_ref()
-            //        .input1
-            //        .clone()
-            //        .expect("need input1")
-            //        .receipt_path,
-            //    request
-            //        .get_ref()
-            //        .input2
-            //        .clone()
-            //        .expect("need input2")
-            //        .receipt_path,
-            //);
+            log::info!(
+                "[aggregate] {}:{} {}+{} start",
+                request.get_ref().proof_id,
+                request.get_ref().computed_request_id,
+                request
+                    .get_ref()
+                    .input1
+                    .clone()
+                    .expect("need input1")
+                    .computed_request_id,
+                request
+                    .get_ref()
+                    .input2
+                    .clone()
+                    .expect("need input2")
+                    .computed_request_id,
+            );
             log::debug!("{:#?}", request);
             let start = Instant::now();
             let input1 = request.get_ref().input1.clone().expect("need input1");
@@ -310,13 +309,13 @@ impl ProverService for ProverServiceSVC {
         .await
     }
 
-    async fn final_proof(
+    async fn snark_proof(
         &self,
-        _request: Request<FinalProofRequest>,
-    ) -> tonic::Result<Response<FinalProofResponse>, Status> {
-        metrics::record_metrics("prover::final_proof", || async {
+        request: Request<SnarkProofRequest>,
+    ) -> tonic::Result<Response<SnarkProofResponse>, Status> {
+        metrics::record_metrics("prover::snark_proof", || async {
             // log::info!("{:#?}", request);
-            let response = FinalProofResponse::default();
+            let response = SnarkProofResponse::default();
             Ok(Response::new(response))
         })
         .await

@@ -18,9 +18,10 @@ pub mod agg_task;
 pub use agg_task::AggAllTask;
 pub use agg_task::AggTask;
 
-pub mod final_task;
+pub mod snark_task;
+pub mod generate_task;
 
-pub use final_task::FinalTask;
+pub use snark_task::SnarkTask;
 
 pub const TASK_ITYPE_SPLIT: i32 = 1;
 pub const TASK_ITYPE_PROVE: i32 = 2;
@@ -33,7 +34,7 @@ pub enum Task {
     Prove(ProveTask),
     Agg(AggTask),
     AggAll(AggAllTask),
-    Final(FinalTask),
+    Snark(SnarkTask),
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]

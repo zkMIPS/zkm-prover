@@ -30,7 +30,7 @@ service ProverService {
     rpc Prove(ProveRequest) returns (ProveResponse) {}
     rpc Aggregate(AggregateRequest) returns (AggregateResponse) {}
     rpc AggregateAll(AggregateAllRequest) returns (AggregateAllResponse) {}
-    rpc FinalProof(FinalProofRequest) returns (FinalProofResponse) {}
+    rpc SnarkProof(SnarkProofRequest) returns (SnarkProofResponse) {}
 }
 
 message GetStatusRequest {}
@@ -141,7 +141,7 @@ message AggregateAllResponse {
     Result result = 3;
 }
 
-message FinalProofRequest {
+message SnarkProofRequest {
     string proof_id = 1;
     string computed_request_id = 2;
     bytes common_circuit_data = 3;
@@ -150,7 +150,7 @@ message FinalProofRequest {
     bytes block_public_inputs = 6;
 }
 
-message FinalProofResponse {
+message SnarkProofResponse {
     string proof_id = 1;
     string computed_request_id = 2;
     Result result = 3;

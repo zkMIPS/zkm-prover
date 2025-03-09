@@ -7,7 +7,7 @@ use anyhow::Error;
 use common::tls::Config as TlsConfig;
 use std::sync::Mutex;
 
-use crate::stage::{contexts::GenerateContext, stage_worker, tasks};
+use crate::stage::{GenerateTask, stage_worker, tasks};
 
 use tonic::{Request, Response, Status};
 
@@ -34,6 +34,8 @@ lazy_static! {
 pub struct StageServiceSVC {
     db: database::Database,
     fileserver_url: Option<String>,
+
+    // FIXME: why do we need this?
     verifier_url: Option<String>,
 }
 
@@ -102,7 +104,7 @@ impl StageService for StageServiceSVC {
                 }
 
                 let (execute_only, precompile) = if let Some(context) = task.context {
-                    match serde_json::from_str::<GenerateContext>(&context) {
+                    match serde_json::from_str::<GenerateTask>(&context) {
                         Ok(context) => {
                             if task.status
                                 == crate::proto::stage_service::v1::Status::Success as i32
@@ -130,7 +132,7 @@ impl StageService for StageServiceSVC {
                     }
                     if let Some(fileserver_url) = &self.fileserver_url {
                         response.proof_url = format!(
-                            "{}/{}/final/proof_with_public_inputs.json",
+                            "{}/{}/snark/proof_with_public_inputs.json",
                             fileserver_url,
                             request.get_ref().proof_id
                         );
@@ -330,20 +332,20 @@ impl StageService for StageServiceSVC {
                 .create_dir_all()
                 .map_err(|e| Status::internal(e.to_string()))?;
 
-            let final_dir = format!("{}/final", dir_path);
-            file::new(&final_dir)
+            let snark_dir = format!("{}/snark", dir_path);
+            file::new(&snark_dir)
                 .create_dir_all()
                 .map_err(|e| Status::internal(e.to_string()))?;
-            let final_path = format!("{}/proof_with_public_inputs.json", final_dir);
+            let snark_path = format!("{}/proof_with_public_inputs.json", snark_dir);
 
-            let generate_context = GenerateContext::new(
+            let generate_task = GenerateTask::new(
                 &request.get_ref().proof_id,
                 &dir_path,
                 &elf_path,
                 &seg_path,
                 &prove_path,
                 &agg_path,
-                &final_path,
+                &snark_path,
                 &public_input_stream_path,
                 &private_input_stream_path,
                 &output_stream_path,
@@ -361,12 +363,12 @@ impl StageService for StageServiceSVC {
                     &request.get_ref().proof_id,
                     &user_address,
                     Computing.into(),
-                    &serde_json::to_string(&generate_context).unwrap(),
+                    &serde_json::to_string(&generate_task).unwrap(),
                 )
                 .await;
             let mut proof_url = match &self.fileserver_url {
                 Some(fileserver_url) => format!(
-                    "{}/{}/final/proof_with_public_inputs.json",
+                    "{}/{}/snark/proof_with_public_inputs.json",
                     fileserver_url,
                     request.get_ref().proof_id
                 ),

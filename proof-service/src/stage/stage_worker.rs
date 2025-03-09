@@ -2,7 +2,7 @@ use crate::database;
 use crate::database::StageTask;
 use crate::prover_client;
 use crate::stage::{
-    contexts::GenerateContext,
+    GenerateTask,
     stage::get_timestamp,
     stage::Stage,
     tasks::{
@@ -44,7 +44,8 @@ async fn run_stage_task(
     db: database::Database,
 ) {
     if let Some(context) = task.context {
-        match serde_json::from_str::<GenerateContext>(&context) {
+        let task_decoded = serde_json::from_str::<GenerateTask>(&context);
+        match task_decoded {
             Ok(generte_context) => {
                 let mut check_at = get_timestamp();
                 let mut stage = Stage::new(generte_context.clone());
@@ -110,16 +111,16 @@ async fn run_stage_task(
                                 });
                             }
                         }
-                        Step::InFinal => {
-                            let final_task = stage.get_final_task();
-                            if let Some(final_task) = final_task {
+                        Step::InSnark => {
+                            let snark_task = stage.get_snark_task();
+                            if let Some(snark_task) = snark_task {
                                 let tx = tx.clone();
                                 let tls_config = tls_config.clone();
                                 tokio::spawn(async move {
                                     let response =
-                                        prover_client::final_proof(final_task, tls_config).await;
-                                    if let Some(final_task) = response {
-                                        let _ = tx.send(Task::Final(final_task)).await;
+                                        prover_client::snark_proof(snark_task, tls_config).await;
+                                    if let Some(snark_task) = response {
+                                        let _ = tx.send(Task::Snark(snark_task)).await;
                                     }
                                 });
                             }
@@ -146,8 +147,8 @@ async fn run_stage_task(
                                         stage.on_agg_all_task(&mut data);
                                         save_task!(data, db, TASK_ITYPE_AGGALL);
                                     },
-                                    Task::Final(mut data) => {
-                                        stage.on_final_task(&mut data);
+                                    Task::Snark(mut data) => {
+                                        stage.on_snark_task(&mut data);
                                         save_task!(data, db, TASK_ITYPE_FINAL);
                                     },
                                 };
@@ -184,7 +185,7 @@ async fn run_stage_task(
                         Step::InProve => stage_service::v1::Status::ProveError,
                         Step::InAgg => stage_service::v1::Status::AggError,
                         Step::InAggAll => stage_service::v1::Status::AggError,
-                        Step::InFinal => stage_service::v1::Status::FinalError,
+                        Step::InSnark => stage_service::v1::Status::SnarkError,
                         _ => stage_service::v1::Status::InternalError,
                     };
                     let status = get_status();
@@ -194,7 +195,7 @@ async fn run_stage_task(
                     {
                         vec![]
                     } else {
-                        file::new(&generte_context.final_path).read().unwrap()
+                        file::new(&generte_context.snark_path).read().unwrap()
                     };
                     let _ = db
                         .update_stage_task(

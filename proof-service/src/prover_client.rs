@@ -1,14 +1,14 @@
 use crate::proto::includes::v1::AggregateInput;
 use crate::proto::prover_service::v1::{
     prover_service_client::ProverServiceClient, AggregateAllRequest, AggregateRequest,
-    FinalProofRequest, GetTaskResultRequest, GetTaskResultResponse, ProveRequest, ResultCode,
+    SnarkProofRequest, GetTaskResultRequest, GetTaskResultResponse, ProveRequest, ResultCode,
     SplitElfRequest,
 };
 use common::file;
 use common::tls::Config as TlsConfig;
 
 use crate::stage::tasks::{
-    AggAllTask, AggTask, FinalTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
+    AggAllTask, AggTask, SnarkTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
     TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, TASK_TIMEOUT,
 };
 use tonic::Request;
@@ -268,10 +268,18 @@ pub async fn aggregate_all(
     Some(agg_all_task)
 }
 
-pub async fn final_proof(
-    mut final_task: FinalTask,
+pub async fn snark_proof(
+    mut snark_task: SnarkTask,
+    tls_config: Option<TlsConfig>,
+) -> Option<SnarkTask> {
+    let client = get_snark_client(None).await;
+    if let Some((addrs, mut client)) = client {}
+}
+
+pub async fn _snark_proof(
+    mut snark_task: SnarkTask,
     _tls_config: Option<TlsConfig>,
-) -> Option<FinalTask> {
+) -> Option<SnarkTask> {
     let client = get_snark_client(None).await;
     if let Some((addrs, mut client)) = client {
         let (
@@ -279,19 +287,19 @@ pub async fn final_proof(
             verifier_only_circuit_data_file,
             proof_with_public_inputs_file,
             block_public_inputs_file,
-        ) = if final_task.input_dir.ends_with('/') {
+        ) = if snark_task.input_dir.ends_with('/') {
             (
-                format!("{}common_circuit_data.json", final_task.input_dir),
-                format!("{}verifier_only_circuit_data.json", final_task.input_dir),
-                format!("{}proof_with_public_inputs.json", final_task.input_dir),
-                format!("{}block_public_inputs.json", final_task.input_dir),
+                format!("{}common_circuit_data.json", snark_task.input_dir),
+                format!("{}verifier_only_circuit_data.json", snark_task.input_dir),
+                format!("{}proof_with_public_inputs.json", snark_task.input_dir),
+                format!("{}block_public_inputs.json", snark_task.input_dir),
             )
         } else {
             (
-                format!("{}/common_circuit_data.json", final_task.input_dir),
-                format!("{}/verifier_only_circuit_data.json", final_task.input_dir),
-                format!("{}/proof_with_public_inputs.json", final_task.input_dir),
-                format!("{}/block_public_inputs.json", final_task.input_dir),
+                format!("{}/common_circuit_data.json", snark_task.input_dir),
+                format!("{}/verifier_only_circuit_data.json", snark_task.input_dir),
+                format!("{}/proof_with_public_inputs.json", snark_task.input_dir),
+                format!("{}/block_public_inputs.json", snark_task.input_dir),
             )
         };
         let common_circuit_data = file::new(&common_circuit_data_file).read().unwrap();
@@ -299,49 +307,49 @@ pub async fn final_proof(
             file::new(&verifier_only_circuit_data_file).read().unwrap();
         let proof_with_public_inputs = file::new(&proof_with_public_inputs_file).read().unwrap();
         let block_public_inputs = file::new(&block_public_inputs_file).read().unwrap();
-        let request = FinalProofRequest {
-            proof_id: final_task.proof_id.clone(),
-            computed_request_id: final_task.task_id.clone(),
+        let request = SnarkProofRequest {
+            proof_id: snark_task.proof_id.clone(),
+            computed_request_id: snark_task.task_id.clone(),
             common_circuit_data,
             proof_with_public_inputs,
             verifier_only_circuit_data,
             block_public_inputs,
         };
         log::info!(
-            "[final_proof] rpc {}:{} start",
+            "[snark_proof] rpc {}:{} start",
             request.proof_id,
             request.computed_request_id,
         );
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
-        let response = client.final_proof(grpc_request).await;
+        let response = client.snark_proof(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::debug!("final_proof response {:#?}", response);
+                log::debug!("snark_proof response {:#?}", response);
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
                     let mut loop_count = 0;
                     loop {
                         let task_result =
-                            get_task_result(&mut client, &final_task.proof_id, &final_task.task_id)
+                            get_task_result(&mut client, &snark_task.proof_id, &snark_task.task_id)
                                 .await;
                         if let Some(task_result) = task_result {
                             if let Some(result) = task_result.result {
                                 if let Some(code) = ResultCode::from_i32(result.code) {
                                     if code == ResultCode::Ok {
                                         log::info!(
-                                            "[final_proof] rpc {}:{}  code:{:?} message:{:?}",
+                                            "[snark_proof] rpc {}:{}  code:{:?} message:{:?}",
                                             response.get_ref().proof_id,
                                             response.get_ref().computed_request_id,
                                             response_result.code,
                                             response_result.message,
                                         );
-                                        log::debug!("[final_proof] rpc {:#?} end", result);
-                                        let _ = file::new(&final_task.output_path)
+                                        log::debug!("[snark_proof] rpc {:#?} end", result);
+                                        let _ = file::new(&snark_task.output_path)
                                             .write(result.message.as_bytes())
                                             .unwrap();
-                                        final_task.state = TASK_STATE_SUCCESS;
-                                        final_task.trace.node_info = addrs;
-                                        return Some(final_task);
+                                        snark_task.state = TASK_STATE_SUCCESS;
+                                        snark_task.trace.node_info = addrs;
+                                        return Some(snark_task);
                                     }
                                 }
                             }
@@ -355,12 +363,12 @@ pub async fn final_proof(
                 }
             }
         }
-        final_task.state = TASK_STATE_FAILED;
+        snark_task.state = TASK_STATE_FAILED;
     } else {
-        final_task.state = TASK_STATE_UNPROCESSED;
+        snark_task.state = TASK_STATE_UNPROCESSED;
     }
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    Some(final_task)
+    Some(snark_task)
 }
 
 #[allow(dead_code)]
