@@ -34,7 +34,7 @@ pub struct Stage {
 
 macro_rules! on_task {
     ($src:ident, $dst:ident, $stage:ident) => {
-        assert!($src.proof_id == $dst.proof_id);
+        //assert!($src.proof_id == $dst.proof_id);
         if $src.state == TASK_STATE_FAILED
             || $src.state == TASK_STATE_SUCCESS
             || $src.state == TASK_STATE_UNPROCESSED
@@ -202,15 +202,13 @@ impl Stage {
                     state: TASK_STATE_UNPROCESSED,
                     trace: Trace::default(),
                     base_dir: self.generate_context.base_dir.clone(),
-                    seg_size: self.generate_context.seg_size,
                     file_no,
-                    proof_id: self.generate_context.proof_id.clone(),
                     segment: safe_read(&file_name),
-                    program: self.generate_context.gen_program(file_no),
+                    program: self.generate_context.gen_program(),
                     // FIXME: don't use path
                     //receipt_path: format!("{}/receipt/{}", prove_dir.clone(), file_no),
-                    receipts_input: self.generate_context.receipts_input.clone(),
-                    receipt_output: vec![],
+                    //receipts_input: self.generate_context.receipts_input.clone(),
+                    receipt_output: safe_read(&self.generate_context.receipts_path),
                 };
                 self.prove_tasks.push(prove_task);
             }

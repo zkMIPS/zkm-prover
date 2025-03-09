@@ -11,11 +11,6 @@ message BlockFileItem {
     bytes file_content = 2;
 }
 
-message Receipt {
-    repeated bytes receipt_input = 1;
-    repeated bytes receipt = 2;
-}
-
 message Program {
     ProverVersion version = 1;
     bytes elf_data = 2;
@@ -26,7 +21,7 @@ message Program {
     bytes private_input_stream = 7;
     bool execute_only = 8;
     bool composite_proof = 9;
-    repeated Receipt receipts = 10;
+    repeated bytes receipts = 10;
     string proof_id = 11;
 
     bytes output_stream = 12;

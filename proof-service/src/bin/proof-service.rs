@@ -40,9 +40,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         for node in &runtime_config.prover_addrs {
             nodes_data.add_node(ProverNode::new(node));
         }
-        for node in &runtime_config.snark_addrs {
-            nodes_data.add_snark_node(ProverNode::new(node));
-        }
     }
     let mut server = Server::builder();
     if runtime_config.key_path.is_some() {

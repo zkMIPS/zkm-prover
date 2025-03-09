@@ -1,3 +1,8 @@
+mod executor;
+
+pub use executor::*;
+
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -17,7 +22,7 @@ pub struct SplitContext {
 impl SplitContext {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        base_dir: &str,
+        basedir: &str,
         elf_path: &str,
         block_no: Option<u64>,
         seg_size: u32,
@@ -29,7 +34,7 @@ impl SplitContext {
         receipt_inputs_path: &str,
     ) -> Self {
         SplitContext {
-            base_dir: base_dir.into(),
+            base_dir: basedir.to_string(),
             elf_path: elf_path.to_string(),
             block_no,
             seg_size,

@@ -13,7 +13,7 @@ use tonic::{Request, Response, Status};
 
 use crate::config;
 use common::file;
-use prover::provers;
+use zkm_prover::provers;
 use std::io::Write;
 
 use ethers::types::Signature;
@@ -275,13 +275,12 @@ impl StageService for StageServiceSVC {
                 private_input_stream_path
             };
 
-            /*
-            let receipt_inputs_path = if request.get_ref().receipt_input.is_empty() {
+            let receipt_inputs_path = if request.get_ref().receipt_inputs.is_empty() {
                 "".to_string()
             } else {
                 let receipt_inputs_path = format!("{}/{}", input_stream_dir, "receipt_inputs");
                 let mut buf = Vec::new();
-                bincode::serialize_into(&mut buf, &request.get_ref().receipt_input)
+                bincode::serialize_into(&mut buf, &request.get_ref().receipt_inputs)
                     .expect("serialization failed");
                 file::new(&receipt_inputs_path)
                     .write(&buf)
@@ -289,19 +288,18 @@ impl StageService for StageServiceSVC {
                 receipt_inputs_path
             };
 
-            let receipts_path = if request.get_ref().receipt.is_empty() {
+            let receipts_path = if request.get_ref().receipts.is_empty() {
                 "".to_string()
             } else {
                 let receipts_path = format!("{}/{}", input_stream_dir, "receipts");
                 let mut buf = Vec::new();
-                bincode::serialize_into(&mut buf, &request.get_ref().receipt)
+                bincode::serialize_into(&mut buf, &request.get_ref().receipts)
                     .expect("serialization failed");
                 file::new(&receipts_path)
                     .write(&buf)
                     .map_err(|e| Status::internal(e.to_string()))?;
                 receipts_path
             };
-             */
 
             let output_stream_dir = format!("{}/output_stream", dir_path);
             file::new(&output_stream_dir)
@@ -351,7 +349,8 @@ impl StageService for StageServiceSVC {
                 request.get_ref().seg_size,
                 request.get_ref().execute_only,
                 request.get_ref().composite_proof,
-                &request.get_ref().receipts_input,
+                &receipt_inputs_path,
+                &receipts_path,
             );
 
             let _ = self

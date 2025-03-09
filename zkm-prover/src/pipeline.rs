@@ -79,7 +79,7 @@ impl Pipeline {
         }
     }
 
-    /// Return prover status
+    /// Return zkm-prover status
     pub fn get_status(&mut self) -> bool {
         let result = PIPELINE_MUTEX.try_lock();
         result.is_ok()

@@ -1,6 +1,7 @@
 use crate::proto::includes::v1::{Program, ProverVersion};
 use serde::{Deserialize, Serialize};
-
+//use zkm_emulator::utils::get_block_path;
+use crate::stage::{read_block_data, safe_read};
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct GenerateContext {
     pub base_dir: String,
@@ -18,7 +19,10 @@ pub struct GenerateContext {
     pub seg_size: u32,
     pub execute_only: bool,
     pub composite_proof: bool,
-    pub receipts_input: Vec<Vec<u8>>,
+    pub receipt_inputs_path: String,
+    pub receipts_path: String,
+
+    pub program: Option<Program>,
 }
 
 impl GenerateContext {
@@ -33,9 +37,6 @@ impl GenerateContext {
         }
         _path
     }
-    //pub fn prove_path(&self, creating: bool) -> String {
-    //    self._create(creating, "prove")
-    //}
     pub fn agg_path(&self, creating: bool) -> String {
         self._create(creating, "aggregate")
     }
@@ -47,11 +48,46 @@ impl GenerateContext {
         self._create(creating, "segment")
     }
 
-    // FIXME: should load the Program
-    pub fn gen_program(&self, _file_no: usize) -> Program {
-        Program {
-            version: ProverVersion::Zkm.into(),
-            ..Default::default()
+    // load the segement from file_no
+    pub fn gen_program(&self) -> Program {
+        if self.program.is_some() {
+            self.program.clone().unwrap()
+        } else {
+
+            let block_data = if let Some(block_no) = self.block_no {
+                //let block_path = get_block_path(&self.base_dir, &block_no.to_string(), "");
+                //read_block_data(block_no, &block_path)
+                // FIXME
+                todo!()
+            } else {
+                vec![]
+            };
+
+            let receipts = if !self.receipt_inputs_path.is_empty() {
+                let data = common::file::new(&self.receipt_inputs_path)
+                    .read()
+                    .expect("read receipt_inputs_stream failed");
+                bincode::deserialize::<Vec<Vec<u8>>>(&data)
+                    .expect("deserialize receipt_inputs_stream failed")
+            } else {
+                vec![]
+            };
+
+            Program {
+                version: self.version.into(),
+                seg_size: self.seg_size,
+                elf_data: common::file::new(&self.elf_path).read().unwrap(),
+                block_no: self.block_no,
+                block_data,
+                public_input_stream: safe_read(&self.public_input_path),
+                private_input_stream: safe_read(&self.private_input_path),
+                execute_only: self.execute_only,
+                composite_proof: self.composite_proof,
+                proof_id: self.proof_id.clone(),
+                receipts,
+                output_stream: safe_read(&self.output_stream_path),
+            }
+
         }
     }
 
@@ -71,7 +107,8 @@ impl GenerateContext {
         seg_size: u32,
         execute_only: bool,
         composite_proof: bool,
-        receipts_input: &Vec<Vec<u8>>,
+        receipt_inputs_path: &str,
+        receipts_path: &str,
     ) -> Self {
         GenerateContext {
             version: ProverVersion::Zkm,
@@ -89,7 +126,9 @@ impl GenerateContext {
             seg_size,
             execute_only,
             composite_proof,
-            receipts_input: receipts_input.to_owned(),
+            receipt_inputs_path: receipt_inputs_path.to_string(),
+            receipts_path: receipts_path.to_string(),
+            program: None,
         }
     }
 }

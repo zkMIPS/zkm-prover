@@ -1,4 +1,3 @@
-use crate::executor::split_context::SplitContext;
 use common::file;
 use elf::{endian::AnyEndian, ElfBytes};
 use num::ToPrimitive;
@@ -7,6 +6,8 @@ use zkm_emulator::utils::get_block_path;
 
 #[derive(Default)]
 pub struct Executor {}
+
+use crate::executor::SplitContext;
 
 impl Executor {
     pub fn split(&self, ctx: &SplitContext) -> Result<u64, String> {

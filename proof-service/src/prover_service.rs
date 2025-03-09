@@ -1,4 +1,3 @@
-use crate::executor::SplitContext;
 use crate::proto::prover_service::v1::{
     get_status_response, prover_service_server::ProverService, AggregateAllRequest,
     AggregateAllResponse, AggregateRequest, AggregateResponse, FinalProofRequest,
@@ -6,8 +5,10 @@ use crate::proto::prover_service::v1::{
     GetTaskResultResponse, ProveRequest, ProveResponse, Result, ResultCode, SplitElfRequest,
     SplitElfResponse,
 };
-use prover::contexts::{AggAllContext, AggContext, ProveContext};
-use prover::pipeline::Pipeline;
+use zkm_prover::contexts::{AggAllContext, AggContext, ProveContext};
+use zkm_prover::executor::{SplitContext, Executor};
+use zkm_prover::pipeline::Pipeline;
+
 use std::time::Instant;
 use tonic::{Request, Response, Status};
 
@@ -29,13 +30,10 @@ async fn run_back_task<
             let _ = tx.send(result);
         })
         .await;
-    match rx.await.unwrap() {
-        Ok(result) => result,
-        Err(e) => {
-            log::error!("{:#?}", e);
-            Err("panic".to_string())
-        }
-    }
+    rx.await.unwrap().unwrap_or_else(|e| {
+        log::error!("{:#?}", e);
+        Err("panic".to_string())
+    })
 }
 
 #[derive(Debug, Default)]
@@ -112,7 +110,7 @@ impl ProverService for ProverServiceSVC {
             );
             log::debug!("{:#?}", request);
             let start = Instant::now();
-
+            //let split_elf_request = request.get_ref().clone();
             let split_context = SplitContext::new(
                 &request.get_ref().base_dir,
                 &request.get_ref().elf_path,
@@ -125,9 +123,9 @@ impl ProverService for ProverServiceSVC {
                 &request.get_ref().args,
                 &request.get_ref().receipt_inputs_path,
             );
+
             let split_func = move || {
-                let s_ctx: SplitContext = split_context;
-                crate::executor::Executor::default().split(&s_ctx)
+                Executor::default().split(&split_context)
             };
             let result = run_back_task(split_func).await;
             let mut response = SplitElfResponse {

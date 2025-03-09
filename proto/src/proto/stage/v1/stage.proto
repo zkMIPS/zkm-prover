@@ -42,9 +42,8 @@ message GenerateProofRequest {
     bytes private_input_stream = 9;
     bool execute_only = 10;
     bool composite_proof = 11;
-    repeated bytes receipts_input = 12;
-    //repeated bytes receipt_output = 13;
-    //includes.v1.Program program = 14;
+    repeated bytes receipt_inputs = 12;
+    repeated bytes receipts = 13;
 }
 
 message GenerateProofResponse {

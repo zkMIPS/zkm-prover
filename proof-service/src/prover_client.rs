@@ -121,14 +121,14 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
     let client = get_idle_client(tls_config).await;
     if let Some((addrs, mut client)) = client {
         let request = ProveRequest {
-            proof_id: prove_task.proof_id.clone(),
+            proof_id: prove_task.program.proof_id.clone(),
             computed_request_id: prove_task.task_id.clone(),
             //base_dir: prove_task.base_dir.clone(),
             segment: prove_task.segment.clone(),
             block_no: prove_task.program.block_no,
             seg_size: prove_task.program.seg_size,
             //receipt_path: prove_task.receipt_path.clone(),
-            receipts_input: prove_task.receipts_input.clone(),
+            receipts_input: prove_task.program.receipts.clone(),
         };
         log::info!(
             "[prove] rpc {}:{}start",

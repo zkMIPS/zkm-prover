@@ -16,10 +16,13 @@ pub struct RuntimeConfig {
     pub metrics_addr: String,
     pub database_url: String,
     pub prover_addrs: Vec<String>,
-    pub snark_addrs: Vec<String>,
+
     pub base_dir: String,
+
+    // FIXME: remove
     pub fileserver_url: Option<String>,
     pub verifier_url: Option<String>,
+
     pub ca_cert_path: Option<String>,
     pub cert_path: Option<String>,
     pub key_path: Option<String>,
@@ -32,7 +35,6 @@ impl RuntimeConfig {
             metrics_addr: "0.0.0.0:50010".to_string(),
             database_url: "mysql://user:password@localhost:3306/dbname".to_string(),
             prover_addrs: ["0.0.0.0:50000".to_string()].to_vec(),
-            snark_addrs: ["0.0.0.0:50000".to_string()].to_vec(),
             base_dir: "/tmp".to_string(),
             fileserver_url: None,
             verifier_url: None,
@@ -100,11 +102,6 @@ impl RuntimeConfig {
             .unwrap()
             .verifier_url
             .clone_from(&config.verifier_url);
-        instance()
-            .lock()
-            .unwrap()
-            .snark_addrs
-            .clone_from(&config.snark_addrs);
         instance()
             .lock()
             .unwrap()

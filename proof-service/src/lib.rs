@@ -1,6 +1,5 @@
 pub mod config;
 pub mod database;
-pub mod executor;
 pub mod metrics;
 pub mod prover_client;
 pub mod prover_node;

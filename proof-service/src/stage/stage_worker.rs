@@ -26,7 +26,7 @@ macro_rules! save_task {
             let prove_task = database::ProveTask {
                 id: $task.task_id,
                 itype: $type,
-                proof_id: $task.proof_id,
+                //proof_id: $task.proof_id,
                 status: $task.state as i32,
                 node_info: $task.trace.node_info.clone(),
                 content: Some(content),

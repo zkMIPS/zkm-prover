@@ -27,6 +27,8 @@ pub struct AggAllTask {
 //impl AggInput {
 pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
     AggregateInput {
+        // we put the receipt of prove_task, instead of the file path
+        //  receipt_path: prove_task.receipt_path.clone(),
         receipt_input: prove_task.receipt_output.clone(),
         computed_request_id: prove_task.task_id.clone(),
         is_agg: false,
@@ -95,7 +97,7 @@ impl AggTask {
             block_no: prove_task.program.block_no,
             state: TASK_STATE_SUCCESS,
             seg_size: prove_task.program.seg_size,
-            proof_id: prove_task.proof_id.clone(),
+            proof_id: prove_task.program.proof_id.clone(),
             from_prove: true,
             agg_index,
             ..Default::default()
@@ -117,7 +119,7 @@ impl AggTask {
             block_no: left.program.block_no,
             state: TASK_STATE_UNPROCESSED,
             seg_size: left.program.seg_size,
-            proof_id: left.proof_id.clone(),
+            proof_id: left.program.proof_id.clone(),
             input1: from_prove_task(left),
             input2: from_prove_task(right),
             agg_index,
@@ -143,7 +145,12 @@ impl AggTask {
             input1: left.to_agg_input(),
             input2: right.to_agg_input(),
             agg_index,
-            ..Default::default()
+            is_final: false,
+            from_prove: false,
+            trace: Trace::default(),
+            output_receipt: vec![],
+            left: Some(left.task_id.clone()),
+            right: Some(right.task_id.clone()),
         };
         if !left.from_prove {
             agg_task.left = Some(left.task_id.clone());

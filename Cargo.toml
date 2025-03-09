@@ -1,8 +1,8 @@
 [workspace]
 members = [
-    "prover",
+    "zkm-prover",
     "common",
-    "proof-service",
+    "proof-service", "zkm2-prover",
 ]
 
 resolver = "2"
