@@ -5,6 +5,8 @@ mod agg_prover;
 pub use agg_prover::AggProver;
 
 mod agg_all_prover;
+mod snark_prover;
+
 pub use agg_all_prover::AggAllProver;
 
 use anyhow::Result;
@@ -19,54 +21,11 @@ use zkm_prover::fixed_recursive_verifier::AllRecursiveCircuits;
 
 use once_cell::sync::OnceCell;
 use std::sync::Mutex;
+pub use zkm_recursion::DEGREE_BITS_RANGE;
+
 
 pub const MIN_SEG_SIZE: usize = 1 << 16;
 pub const MAX_SEG_SIZE: usize = 1 << 22;
-/// Prover trait
-pub trait Prover<T> {
-    fn prove(&self, ctx: &mut T) -> Result<()>;
-}
-
-const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 12]; 1] = [[
-    10..21,
-    12..22,
-    11..21,
-    8..21,
-    6..10,
-    6..10,
-    6..16,
-    6..16,
-    6..16,
-    6..16,
-    6..21,
-    13..23,
-]];
-
-// const DEGREE_BITS_RANGE: [[std::ops::Range<usize>; 6]; 5] = [
-//     [16..17, 12..13, 10..16, 9..12, 15..17, 17..19],
-//     [16..17, 15..17, 12..19, 9..14, 15..17, 19..20],
-//     [16..17, 15..17, 12..19, 11..14, 16..19, 19..21],
-//     [16..17, 17..18, 14..19, 11..14, 16..19, 21..22],
-//     [16..18, 16..20, 16..21, 14..15, 18..21, 21..23],
-// ];
-
-lazy_static! {
-    static ref SEG_SIZE_TO_BITS: HashMap<usize, usize> = {
-        let mut map = HashMap::new();
-        map.insert(MAX_SEG_SIZE, 0);
-        map
-    };
-}
-
-fn select_degree_bits(seg_size: usize) -> [std::ops::Range<usize>; 12] {
-    match SEG_SIZE_TO_BITS.get(&seg_size) {
-        Some(s) => DEGREE_BITS_RANGE[*s].clone(),
-        None => panic!(
-            "Invalid segment size, supported: {:?}",
-            SEG_SIZE_TO_BITS.keys()
-        ),
-    }
-}
 
 pub fn valid_seg_size(seg_size: usize) -> bool {
     if (MIN_SEG_SIZE..=MAX_SEG_SIZE).contains(&seg_size) {
@@ -75,6 +34,10 @@ pub fn valid_seg_size(seg_size: usize) -> bool {
     false
 }
 
+
+pub trait Prover<T> {
+    fn prove(&self, ctx: &mut T) -> Result<()>;
+}
 type F = GoldilocksField;
 const D: usize = 2;
 type C = PoseidonGoldilocksConfig;
@@ -88,7 +51,7 @@ pub fn instance() -> &'static Mutex<AllRecursiveCircuits<F, C, D>> {
         // Preprocess all circuits.
         Mutex::new(AllRecursiveCircuits::<F, C, D>::new(
             &all_stark,
-            &select_degree_bits(MAX_SEG_SIZE),
+            &DEGREE_BITS_RANGE,
             &config,
         ))
     })

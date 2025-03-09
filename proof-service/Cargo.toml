@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-zkm-prover = { path = "../zkm-prover", optional = true}
-zkm2-prover = { path = "../zkm2-prover", optional = true}
+prover = { path = "../prover", optional = true}
+prover_v2 = { path = "../prover_v2", optional = true}
 
 common = { path = "../common" }
 
@@ -39,5 +39,5 @@ tonic-build = "0.8.0"
 
 
 [features]
-default = ["zkm-prover"]
+default = ["prover"]
 #zkm2-prover = ["zkm2-prover"]

@@ -13,7 +13,9 @@ use tonic::{Request, Response, Status};
 
 use crate::config;
 use common::file;
-use zkm_prover::provers;
+
+use prover::provers;
+
 use std::io::Write;
 
 use ethers::types::Signature;

@@ -5,9 +5,9 @@ use crate::proto::prover_service::v1::{
     GetTaskResultResponse, ProveRequest, ProveResponse, Result, ResultCode, SplitElfRequest,
     SplitElfResponse,
 };
-use zkm_prover::contexts::{AggAllContext, AggContext, ProveContext};
-use zkm_prover::executor::{SplitContext, Executor};
-use zkm_prover::pipeline::Pipeline;
+use prover::contexts::{AggAllContext, AggContext, ProveContext};
+use prover::executor::{SplitContext, Executor};
+use prover::pipeline::Pipeline;
 
 use std::time::Instant;
 use tonic::{Request, Response, Status};
