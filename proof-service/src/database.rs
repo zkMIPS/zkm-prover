@@ -1,3 +1,4 @@
+use ethers::abi::ethereum_types;
 use serde_derive::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone, Default, sqlx::FromRow)]
 pub struct StageTask {
@@ -185,11 +186,20 @@ impl Database {
         Ok(task_infos)
     }
 
+    /// Query the whitelisting user
+    /// EIP55 support
     #[allow(dead_code)]
     pub async fn get_user(&self, address: &str) -> anyhow::Result<Vec<User>> {
-        let rows = sqlx::query_as!(User, "SELECT address from user where address = ?", address)
-            .fetch_all(&self.db_pool)
-            .await?;
+        let checksum_addresss =
+            ethers::utils::to_checksum(&address.parse::<ethereum_types::Address>()?, None);
+        let rows = sqlx::query_as!(
+            User,
+            "SELECT address from user where address = ?",
+            checksum_addresss,
+        )
+        .fetch_all(&self.db_pool)
+        .await?;
+        log::debug!("get_user: {:?}", rows);
         Ok(rows)
     }
 }

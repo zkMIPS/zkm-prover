@@ -26,7 +26,7 @@
         "name": "proof_id",
         "type_info": {
           "type": "VarString",
-          "flags": "NOT_NULL",
+          "flags": "NOT_NULL | MULTIPLE_KEY",
           "max_size": 1020
         }
       },

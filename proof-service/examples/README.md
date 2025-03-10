@@ -77,9 +77,11 @@ $ cargo build --release  --target=mips-unknown-linux-musl
 
 - `ENDPOINT`: zkm-prover service endpoint
 - `CA_CERT_PATH`: zkm-prover service CA CERT 
-- `PRIVATE_KEY`: wallet private key, used for message signing
+- `PRIVATE_KEY`: wallet private key, used for message signing only. DON'T hold any asset in this address.
 - `ELF_PATH`: the file compiled in the previous step
 - `PUBLIC_INPUT_PATH`: Output file for the Generate Suite_json step
+
+When you apply the access of the proof network, you need to submit the address with checksum.
 
 ```
 $ export RUST_LOG=info

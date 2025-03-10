@@ -57,7 +57,7 @@ impl StageServiceSVC {
         Ok(StageServiceSVC { db, config })
     }
 
-    pub fn valid_signature(&self, request: &GenerateProofRequest) -> Result<String, Error> {
+    pub fn verify_signature(&self, request: &GenerateProofRequest) -> Result<String, Error> {
         let sign_data = match request.block_no {
             Some(block_no) => {
                 format!("{}&{}&{}", request.proof_id, block_no, request.seg_size)
@@ -68,7 +68,7 @@ impl StageServiceSVC {
         };
         let signature = Signature::from_str(&request.signature)?;
         let recovered = signature.recover(sign_data)?;
-        Ok(hex::encode(recovered))
+        Ok(format!("{:?}", recovered))
     }
 }
 
@@ -182,7 +182,7 @@ impl StageService for StageServiceSVC {
             }
             // check signature
             let user_address: String;
-            match self.valid_signature(request.get_ref()) {
+            match self.verify_signature(request.get_ref()) {
                 Ok(address) => {
                     // check white list
                     let users = self.db.get_user(&address).await.unwrap();

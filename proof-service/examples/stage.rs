@@ -16,6 +16,7 @@ use proof_service::proto::stage_service::v1::{
 };
 
 async fn sign_ecdsa(request: &mut GenerateProofRequest, private_key: &str) {
+    assert!(!private_key.is_empty());
     if !private_key.is_empty() {
         let wallet = private_key.parse::<LocalWallet>().unwrap();
         let sign_data = match request.block_no {
