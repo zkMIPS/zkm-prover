@@ -10,8 +10,6 @@ services:
     depends_on:
       zkm-prover:
         condition: service_started
-      zkm-snark:
-        condition: service_started
     image: zkmips/zkm-prover:latest
     ports:
       - 50000:50000
@@ -39,15 +37,6 @@ services:
       - "-c"
       - "/usr/local/bin/proof-service --config /usr/local/bin/config.toml"
 
-  zkm-snark:
-    container_name: zkm-snark
-    restart: unless-stopped
-    image: zkmips/gnark-plonky2-verifier:stage
-    #volumes:
-    #  - /tmp/zkm-prover/data:/zkm/data
-    command: >
-      /usr/local/bin/start.sh
-  
   zkm-mysql:
     image: mysql:latest
     container_name: zkm-mysql

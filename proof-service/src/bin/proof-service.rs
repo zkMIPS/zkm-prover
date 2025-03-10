@@ -67,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .add_service(StageServiceServer::new(stage))
             .serve(addr)
     } else {
-        let prover = ProverServiceSVC::default();
+        let prover = ProverServiceSVC::new(runtime_config.clone());
         server
             .add_service(ProverServiceServer::new(prover))
             .serve(addr)
@@ -101,6 +101,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::pin!(grpc_server);
     tokio::pin!(metrics_server);
     tokio::pin!(file_server);
+
+    log::info!(
+        "Starting stage/prover:{} on {}",
+        args.stage,
+        runtime_config.addr
+    );
 
     tokio::select! {
         res = grpc_server => res?,

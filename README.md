@@ -62,7 +62,17 @@ it's necessary to schedule different instance onto different machine by its reso
 Especially, `split_elf` reads the ELF from the disk, which is written by the `Stage`'s `GenerateTask`, this means its corresponding `ProverNode` should be able to access the `Stage`'s disk. Currently, the shared filesystems, like AWS S3 or NFS, are employed to make it possible. 
 This additional dependency of the `proof-service` can be practical in short-term, but it's best to transit the data by `GRPC` directly in the long-term[TODO]. 
 
-## Deployment
+## Local Deployment
+
+### MySQL
+
+Install Docker for your platform, and run the MySQL container.
+```aiignore
+docker pull mysql:latest
+docker run --name db-proof-service -e MYSQL_ROOT_PASSWORD=123456 -v ./initdb.d:/docker-entrypoint-initdb.d/initdb.sql -p 3306:3306 -d mysql:latest
+# Create database zkm
+
+```
 
 ### Prover
 
@@ -79,7 +89,7 @@ proving_key_paths = ["/tmp/zkm/proving.key"]
 
 Start
 ```
-export RUST_LOG=info; nohup ./target/release/proof-service --config ./service/config/prover.toml > prover.out &
+export RUST_LOG=info; nohup ./target/release/proof-service --config ./proof-service/config/config.toml > prover.out &
 ```
 
 ### Stage
@@ -91,15 +101,16 @@ Create the stage server `config.toml` below, and set up the `prover_addrs`.
 addr = "0.0.0.0:50000"
 # All prover node 
 prover_addrs = ["127.0.0.1:50001"]
-
+database_url = "mysql://root:123456@localhost:3306/zkm"
 # The NFS file system path / S3 must be used, and all node configurations must be the same
 base_dir = "/tmp/zkm/test_proof"
 
 # File Server
 fileserver_url = "http://0.0.0.0:40000/public"
+fileserver_addr = "0.0.0.0:40000"
 ```
 
 Start
 ```
-export RUST_LOG=info; nohup ./target/release/proof-service --config ./service/config/stage.toml --stage > stage.out &
+export RUST_LOG=info; nohup ./target/release/proof-service --stage --config ./proof-service/config/stage.toml > stage.out &
 ```
