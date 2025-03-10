@@ -53,11 +53,15 @@ impl GenerateTask {
         if self.program.is_some() {
             self.program.clone().unwrap()
         } else {
-            let block_data = if let Some(_block_no) = self.block_no {
+            let block_data = if let Some(block_no) = self.block_no {
                 //let block_path = get_block_path(&self.base_dir, &block_no.to_string(), "");
                 //read_block_data(block_no, &block_path)
                 // FIXME
-                todo!()
+                if block_no > 0 {
+                    todo!()
+                } else {
+                    vec![]
+                }
             } else {
                 vec![]
             };

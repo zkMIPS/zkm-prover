@@ -47,6 +47,7 @@ impl Executor {
                         log::info!("split set public_input data {}", data.len());
 
                         // private_input_stream
+                        // FIXME: only one private input is allowed. need to support many.
                         if !ctx.private_input_path.is_empty() {
                             let data = file::new(&ctx.private_input_path)
                                 .read()

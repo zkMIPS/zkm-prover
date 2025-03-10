@@ -20,7 +20,6 @@ pub fn get_timestamp() -> u64 {
 }
 #[derive(Default)]
 pub struct Stage {
-    //pub base_dir: String,
     pub generate_task: GenerateTask,
     pub split_task: SplitTask,
     pub prove_tasks: Vec<ProveTask>,
@@ -153,7 +152,9 @@ impl Stage {
         self.split_task
             .proof_id
             .clone_from(&self.generate_task.proof_id);
-
+        self.split_task
+            .base_dir
+            .clone_from(&self.generate_task.base_dir);
         self.split_task
             .elf_path
             .clone_from(&self.generate_task.elf_path);
