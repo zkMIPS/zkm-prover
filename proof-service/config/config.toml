@@ -5,4 +5,5 @@ database_url = "mysql://root:123456@localhost:3306/zkm"
 proving_key_paths = ["/mnt/data/zkm/proving.key", "/mnt/data/zkm2/proving.key"]
 prover_addrs = ["127.0.0.1:50000"]
 base_dir = "/tmp/zkm/test/test_proof"
-fileserver_url = ""
+fileserver_url = "/tmp/zkm/fileserver/"
+fileserver_addr = "0.0.0.0:40000"

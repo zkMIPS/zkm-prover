@@ -1,6 +1,6 @@
 use clap::Parser;
-
 use common::tls::Config as TlsConfig;
+use std::net::SocketAddr;
 use tonic::transport::Server;
 use tonic::transport::ServerTlsConfig;
 
@@ -92,12 +92,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     metrics::init_registry();
     let metrics_server = hyper::Server::bind(&metrics_addr).serve(make_svc);
 
+    let file_server = tokio::spawn(async move {
+        if let Err(e) = start_file_server(&runtime_config.fileserver_addr).await {
+            eprintln!("Error running HTTP server: {}", e);
+        }
+    });
+
     tokio::pin!(grpc_server);
     tokio::pin!(metrics_server);
+    tokio::pin!(file_server);
 
     tokio::select! {
         res = grpc_server => res?,
         res = metrics_server => res?,
+        res = file_server => res?,
     }
+    Ok(())
+}
+
+pub async fn start_file_server(host: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let file_server = warp::fs::dir("public");
+    warp::serve(file_server)
+        .run(host.parse::<SocketAddr>().expect("host is invalid"))
+        .await;
     Ok(())
 }

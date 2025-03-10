@@ -33,6 +33,7 @@ graph TD
     User --> Stage;
     Stage <--read,write,update--> Database;
     Stage --record metrics--> Metrics;
+    Stage <--grpc--> Executor; 
     Stage <--grpc--> ProveNodes; 
 ```
 
@@ -58,22 +59,22 @@ For each ProverNodes, it begins to serve after registering to the Stage, and pro
 A ProverNode can be an instance to run `prove`, `aggregate`, `aggregate_all` or `snark_proof`. Consider that, the `snark_proof` can not utilize the GPU accelerator,
 it's necessary to schedule different instance onto different machine by its resource requirement to realize hardware affinity for better machine utilization.
 
-Specially, `split_elf` reads the ELF from the disk, which is written by the `Stage`'s `GenerateTask`, this means its corresponding `ProverNode` should be able to access the `Stage`'s disk. Currently, the shared filesystems, like AWS S3 or NFS, are employed to make it possible. 
+Especially, `split_elf` reads the ELF from the disk, which is written by the `Stage`'s `GenerateTask`, this means its corresponding `ProverNode` should be able to access the `Stage`'s disk. Currently, the shared filesystems, like AWS S3 or NFS, are employed to make it possible. 
 This additional dependency of the `proof-service` can be practical in short-term, but it's best to transit the data by `GRPC` directly in the long-term[TODO]. 
 
 ## Deployment
 
-### Deployment Prover
+### Prover
 
-You can only deploy the provider service for other stage services to call
+Create the prover nodes `config.toml` below.
 
-Configure
-```
+```toml
 # Replace it with your IP address and port
 addr = "0.0.0.0:50000"
 prover_addrs = []
 # The NFS file system path / S3 must be used, and all node configurations must be the same
-base_dir = "/tmp/zkm/test/test_proof"
+base_dir = "/tmp/zkm/test_proof"
+proving_key_paths = ["/tmp/zkm/proving.key"]
 ```
 
 Start
@@ -81,16 +82,21 @@ Start
 export RUST_LOG=info; nohup ./target/release/proof-service --config ./service/config/prover.toml > prover.out &
 ```
 
-### Deployment Stage
+### Stage
 
-Configure
-```
+Create the stage server `config.toml` below, and set up the `prover_addrs`. 
+
+```toml
 # Replace it with your IP address and port
 addr = "0.0.0.0:50000"
 # All prover node 
-prover_addrs = ["192.168.0.1:50000", "192.168.0.2:50000"]
+prover_addrs = ["127.0.0.1:50001"]
+
 # The NFS file system path / S3 must be used, and all node configurations must be the same
-base_dir = "/tmp/zkm/test/test_proof"
+base_dir = "/tmp/zkm/test_proof"
+
+# File Server
+fileserver_url = "http://0.0.0.0:40000/public"
 ```
 
 Start
