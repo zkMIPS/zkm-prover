@@ -1,7 +1,7 @@
 use crate::proto::includes::v1::{Program, ProverVersion};
 use serde::{Deserialize, Serialize};
 //use zkm_emulator::utils::get_block_path;
-use crate::stage::{read_block_data, safe_read};
+use crate::stage::{/*read_block_data, */ safe_read};
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct GenerateTask {
     pub base_dir: String,
@@ -53,8 +53,7 @@ impl GenerateTask {
         if self.program.is_some() {
             self.program.clone().unwrap()
         } else {
-
-            let block_data = if let Some(block_no) = self.block_no {
+            let block_data = if let Some(_block_no) = self.block_no {
                 //let block_path = get_block_path(&self.base_dir, &block_no.to_string(), "");
                 //read_block_data(block_no, &block_path)
                 // FIXME
@@ -87,7 +86,6 @@ impl GenerateTask {
                 receipts,
                 output_stream: safe_read(&self.output_stream_path),
             }
-
         }
     }
 

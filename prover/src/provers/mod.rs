@@ -6,8 +6,8 @@ pub use agg_prover::AggProver;
 
 mod agg_all_prover;
 mod snark_prover;
-pub use snark_prover::SnarkProver;
 pub use agg_all_prover::AggAllProver;
+pub use snark_prover::SnarkProver;
 
 use anyhow::Result;
 
@@ -21,7 +21,6 @@ use once_cell::sync::OnceCell;
 use std::sync::Mutex;
 pub use zkm_recursion::DEGREE_BITS_RANGE;
 
-
 pub const MIN_SEG_SIZE: usize = 1 << 16;
 pub const MAX_SEG_SIZE: usize = 1 << 22;
 
@@ -31,7 +30,6 @@ pub fn valid_seg_size(seg_size: usize) -> bool {
     }
     false
 }
-
 
 pub trait Prover<T> {
     fn prove(&self, ctx: &mut T) -> Result<()>;

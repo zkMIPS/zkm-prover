@@ -45,15 +45,15 @@ For the Stage, it provides the functions as below.
 
 For each ProverNodes, it begins to serve after registering to the Stage, and provides the functions as below.
 
-| Method          | In Disk/Memory | Functionality                                                            |
-|-----------------|----------------|--------------------------------------------------------------------------|
-| split_elf       | Disk       | Split the ELF program into multiple segments, dump the segment into disk |  
-| prove           | Memory         | Prove the batches                                                        |
-| aggregate       | Memory         | Aggregate the two batch proofs                                           |
-| aggregate_all   | Memory         | Aggregate the multiple batch proofs                                      |
-| snark_proof     | Memory         | Generate the SNARK proof of the stark verifier on large field            |
-| get_status      | Memory         | Query the prover's status, Idle or Computing                             | 
-| get_task_result | Memory         | Query the task status, returning 200 or else.                            | 
+| Method          | Hardware Dependency | Functionality                                                            |
+|-----------------|---------------------|--------------------------------------------------------------------------|
+| split_elf       | Disk, IO            | Split the ELF program into multiple segments, dump the segment into disk |  
+| prove           | Memory, GPU         | Prove the batches                                                        |
+| aggregate       | Memory, GPU         | Aggregate the two batch proofs                                           |
+| aggregate_all   | Memory, GPU         | Aggregate the multiple batch proofs                                      |
+| snark_proof     | Memory, CPU or GPU  | Generate the SNARK proof of the stark verifier on large field            |
+| get_status      | Memory, CPU         | Query the prover's status, Idle or Computing                             | 
+| get_task_result | Memory, CPU         | Query the task status, returning 200 or else.                            | 
 
 A ProverNode can be an instance to run `prove`, `aggregate`, `aggregate_all` or `snark_proof`. Consider that, the `snark_proof` can not utilize the GPU accelerator,
 it's necessary to schedule different instance onto different machine by its resource requirement to realize hardware affinity for better machine utilization.

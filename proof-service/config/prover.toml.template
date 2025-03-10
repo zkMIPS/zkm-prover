@@ -1,3 +1,4 @@
 addr = "{{addr}}"
 prover_addrs = [{{prover_addrs}}]
 base_dir = "{{base_dir}}"
+proving_key_paths = ["/mnt/data/zkm/proving.key", "/mnt/data/zkm2/proving.key"]

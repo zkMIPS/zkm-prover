@@ -7,7 +7,7 @@ use anyhow::Error;
 use common::tls::Config as TlsConfig;
 use std::sync::Mutex;
 
-use crate::stage::{GenerateTask, stage_worker, tasks};
+use crate::stage::{stage_worker, tasks, GenerateTask};
 
 use tonic::{Request, Response, Status};
 
@@ -33,10 +33,7 @@ lazy_static! {
 
 pub struct StageServiceSVC {
     db: database::Database,
-    fileserver_url: Option<String>,
-
-    // FIXME: why do we need this?
-    verifier_url: Option<String>,
+    config: config::RuntimeConfig,
 }
 
 impl StageServiceSVC {
@@ -57,11 +54,7 @@ impl StageServiceSVC {
         let db = database::Database::new(database_url);
         sqlx::migrate!("./migrations").run(&db.db_pool).await?;
         let _ = stage_worker::start(tls_config.clone(), db.clone()).await;
-        Ok(StageServiceSVC {
-            db,
-            fileserver_url: config.fileserver_url.clone(),
-            verifier_url: config.verifier_url.clone(),
-        })
+        Ok(StageServiceSVC { db, config })
     }
 
     pub fn valid_signature(&self, request: &GenerateProofRequest) -> Result<String, Error> {
@@ -103,7 +96,7 @@ impl StageService for StageServiceSVC {
                     response.total_steps = execute_info[0].total_steps;
                 }
 
-                let (execute_only, precompile) = if let Some(context) = task.context {
+                let (execute_only, composite_proof) = if let Some(context) = task.context {
                     match serde_json::from_str::<GenerateTask>(&context) {
                         Ok(context) => {
                             if task.status
@@ -126,30 +119,30 @@ impl StageService for StageServiceSVC {
                 } else {
                     (false, false)
                 };
-                if !execute_only && !precompile {
+                if !execute_only && !composite_proof {
                     if let Some(result) = task.result {
                         response.proof_with_public_inputs = result.into_bytes();
                     }
-                    if let Some(fileserver_url) = &self.fileserver_url {
-                        response.proof_url = format!(
-                            "{}/{}/snark/proof_with_public_inputs.json",
-                            fileserver_url,
-                            request.get_ref().proof_id
-                        );
-                        response.stark_proof_url = format!(
-                            "{}/{}/aggregate/proof_with_public_inputs.json",
-                            fileserver_url,
-                            request.get_ref().proof_id
-                        );
-                        response.public_values_url = format!(
-                            "{}/{}/aggregate/public_values.json",
-                            fileserver_url,
-                            request.get_ref().proof_id
-                        );
-                    }
-                    if let Some(verifier_url) = &self.verifier_url {
-                        response.solidity_verifier_url.clone_from(verifier_url);
-                    }
+                    //if let Some(fileserver_url) = &self.fileserver_url {
+                    //    response.proof_url = format!(
+                    //        "{}/{}/snark/proof_with_public_inputs.json",
+                    //        fileserver_url,
+                    //        request.get_ref().proof_id
+                    //    );
+                    //    response.stark_proof_url = format!(
+                    //        "{}/{}/aggregate/proof_with_public_inputs.json",
+                    //        fileserver_url,
+                    //        request.get_ref().proof_id
+                    //    );
+                    //    response.public_values_url = format!(
+                    //        "{}/{}/aggregate/public_values.json",
+                    //        fileserver_url,
+                    //        request.get_ref().proof_id
+                    //    );
+                    //}
+                    //if let Some(verifier_url) = &self.verifier_url {
+                    //    response.solidity_verifier_url.clone_from(verifier_url);
+                    //}
                 }
             }
             Ok(Response::new(response))
@@ -231,7 +224,7 @@ impl StageService for StageServiceSVC {
                 }
             }
 
-            let base_dir = config::instance().lock().unwrap().base_dir.clone();
+            let base_dir = self.config.base_dir.clone();
             let dir_path = format!("{}/proof/{}", base_dir, request.get_ref().proof_id);
             file::new(&dir_path)
                 .create_dir_all()
@@ -366,7 +359,8 @@ impl StageService for StageServiceSVC {
                     &serde_json::to_string(&generate_task).unwrap(),
                 )
                 .await;
-            let mut proof_url = match &self.fileserver_url {
+            // TODO: we use the stage server as the file server, any better way?
+            let mut snark_proof_url = match &self.config.fileserver_url {
                 Some(fileserver_url) => format!(
                     "{}/{}/snark/proof_with_public_inputs.json",
                     fileserver_url,
@@ -374,7 +368,7 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
-            let mut stark_proof_url = match &self.fileserver_url {
+            let mut stark_proof_url = match &self.config.fileserver_url {
                 Some(fileserver_url) => format!(
                     "{}/{}/aggregate/proof_with_public_inputs.json",
                     fileserver_url,
@@ -382,7 +376,7 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
-            let mut public_values_url = match &self.fileserver_url {
+            let mut public_values_url = match &self.config.fileserver_url {
                 Some(fileserver_url) => format!(
                     "{}/{}/aggregate/public_values.json",
                     fileserver_url,
@@ -390,22 +384,16 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
-            let mut solidity_verifier_url = match &self.verifier_url {
-                Some(verifier_url) => verifier_url.clone(),
-                None => "".to_string(),
-            };
             if request.get_ref().execute_only {
-                proof_url = "".to_string();
+                snark_proof_url = "".to_string();
                 stark_proof_url = "".to_string();
-                solidity_verifier_url = "".to_string();
                 public_values_url = "".to_string();
             }
             let response = GenerateProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 status: Computing.into(),
-                proof_url,
+                snark_proof_url,
                 stark_proof_url,
-                solidity_verifier_url,
                 public_values_url,
                 ..Default::default()
             };

@@ -1,28 +1,46 @@
 use crate::contexts::{AggAllContext, AggContext, ProveContext, SnarkContext};
 use crate::provers::{AggAllProver, AggProver, Prover, RootProver, SnarkProver};
 
-// use anyhow::{anyhow, bail, Result};
-// use std::path::Path;
+use crate::executor::{Executor, SplitContext};
 use std::sync::Mutex;
-#[derive(Debug, Default)]
+
+#[derive(Default)]
 pub struct Pipeline {
     mutex: Mutex<usize>,
+    executor: Executor,
+    root_prover: RootProver,
+    agg_prover: AggProver,
+    agg_all_prover: AggAllProver,
+    snark_prover: SnarkProver,
 }
 
 impl Pipeline {
-    pub fn new() -> Self {
+    pub fn new(base_dir: &str, proving_key_path: &str) -> Self {
         Pipeline {
             mutex: Mutex::new(0),
+            executor: Executor::default(),
+            root_prover: RootProver::default(),
+            agg_prover: AggProver::default(),
+            agg_all_prover: AggAllProver::default(),
+            snark_prover: SnarkProver::new(
+                proving_key_path.to_string(),
+                format!("{}/input", base_dir),
+                format!("{}/output", base_dir),
+            ),
         }
     }
 
+    pub fn split(&self, split_context: &mut SplitContext) -> Result<u64, String> {
+        self.executor.split(split_context)
+    }
+
     pub fn prove_root(
-        &mut self,
+        &self,
         prove_context: &mut ProveContext,
     ) -> std::result::Result<bool, String> {
         let result = self.mutex.try_lock();
         match result {
-            Ok(_) => match RootProver::default().prove(prove_context) {
+            Ok(_) => match self.root_prover.prove(prove_context) {
                 Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_root error {:#?}", e);
@@ -42,7 +60,7 @@ impl Pipeline {
     ) -> std::result::Result<bool, String> {
         let result = self.mutex.try_lock();
         match result {
-            Ok(_) => match AggProver::default().prove(agg_context) {
+            Ok(_) => match self.agg_prover.prove(agg_context) {
                 Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_aggregate error {:#?}", e);
@@ -62,7 +80,7 @@ impl Pipeline {
     ) -> std::result::Result<bool, String> {
         let result = self.mutex.try_lock();
         match result {
-            Ok(_) => match SnarkProver::default().prove(snark_context) {
+            Ok(_) => match self.snark_prover.prove(snark_context) {
                 Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_snark error {:#?}", e);
@@ -82,7 +100,7 @@ impl Pipeline {
     ) -> std::result::Result<bool, String> {
         let result = self.mutex.try_lock();
         match result {
-            Ok(_) => match AggAllProver::new().prove(final_context) {
+            Ok(_) => match self.agg_all_prover.prove(final_context) {
                 Ok(()) => Ok(true),
                 Err(e) => {
                     log::error!("prove_aggregate_all error {:#?}", e);
@@ -97,7 +115,7 @@ impl Pipeline {
     }
 
     /// Return zkm-prover status
-    pub fn get_status(&mut self) -> bool {
+    pub fn get_status(&self) -> bool {
         let result = self.mutex.try_lock();
         result.is_ok()
     }

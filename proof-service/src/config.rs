@@ -1,16 +1,8 @@
+use crate::proto::includes::v1::ProverVersion;
 use common::file;
-use log::error;
-use once_cell::sync::OnceCell;
 use serde_derive::Deserialize;
-use std::sync::Mutex;
 
-static INSTANCE: OnceCell<Mutex<RuntimeConfig>> = OnceCell::new();
-
-pub fn instance() -> &'static Mutex<RuntimeConfig> {
-    INSTANCE.get_or_init(|| Mutex::new(RuntimeConfig::new()))
-}
-
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Default)]
 pub struct RuntimeConfig {
     pub addr: String,
     pub metrics_addr: String,
@@ -19,9 +11,8 @@ pub struct RuntimeConfig {
 
     pub base_dir: String,
 
-    // FIXME: remove
     pub fileserver_url: Option<String>,
-    pub verifier_url: Option<String>,
+    pub proving_key_paths: Vec<String>,
 
     pub ca_cert_path: Option<String>,
     pub cert_path: Option<String>,
@@ -37,86 +28,23 @@ impl RuntimeConfig {
             prover_addrs: ["0.0.0.0:50000".to_string()].to_vec(),
             base_dir: "/tmp".to_string(),
             fileserver_url: None,
-            verifier_url: None,
+            proving_key_paths: vec![],
             ca_cert_path: None,
             cert_path: None,
             key_path: None,
         }
     }
 
-    pub fn from_toml(path: &str) -> Option<Self> {
-        let contents = match file::new(path).read_to_string() {
-            Ok(c) => c,
-            Err(e) => {
-                error!(
-                    "Something went wrong reading the runtime config file, {:?}",
-                    e
-                );
-                return None;
-            }
-        };
-        let config: RuntimeConfig = match toml::from_str(&contents) {
-            Ok(c) => c,
-            Err(e) => {
-                error!(
-                    "Something went wrong reading the runtime config file, {:?}",
-                    e
-                );
-                return None;
-            }
-        };
-        // both of ca_cert_path, cert_path, key_path should be some or none
-        // if (config.ca_cert_path.is_some()
-        //     || config.cert_path.is_some()
-        //     || config.key_path.is_some())
-        //     && (config.ca_cert_path.is_none()
-        //         || config.cert_path.is_none()
-        //         || config.key_path.is_none())
-        // {
-        //     error!("both of ca_cert_path, cert_path, key_path should be some or none");
-        //     return None;
-        // }
-        instance().lock().unwrap().addr.clone_from(&config.addr);
-        instance()
-            .lock()
-            .unwrap()
-            .metrics_addr
-            .clone_from(&config.metrics_addr);
-        instance()
-            .lock()
-            .unwrap()
-            .prover_addrs
-            .clone_from(&config.prover_addrs);
-        instance()
-            .lock()
-            .unwrap()
-            .base_dir
-            .clone_from(&config.base_dir);
-        instance()
-            .lock()
-            .unwrap()
-            .fileserver_url
-            .clone_from(&config.fileserver_url);
-        instance()
-            .lock()
-            .unwrap()
-            .verifier_url
-            .clone_from(&config.verifier_url);
-        instance()
-            .lock()
-            .unwrap()
-            .ca_cert_path
-            .clone_from(&config.ca_cert_path);
-        instance()
-            .lock()
-            .unwrap()
-            .cert_path
-            .clone_from(&config.cert_path);
-        instance()
-            .lock()
-            .unwrap()
-            .key_path
-            .clone_from(&config.key_path);
-        Some(config)
+    pub fn from_toml(path: &str) -> anyhow::Result<Self> {
+        let contents = file::new(path).read_to_string()?;
+        Ok(toml::from_str(&contents)?)
+    }
+
+    pub fn get_proving_key_path(&self, version: i32) -> String {
+        match ProverVersion::from_i32(version) {
+            Some(ProverVersion::Zkm) => self.proving_key_paths[0].clone(),
+            Some(ProverVersion::Zkm2) => self.proving_key_paths[1].clone(),
+            None => unimplemented!("Invalid prover version found: {}", version),
+        }
     }
 }

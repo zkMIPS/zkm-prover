@@ -1,14 +1,14 @@
 use crate::proto::includes::v1::AggregateInput;
 use crate::proto::prover_service::v1::{
     prover_service_client::ProverServiceClient, AggregateAllRequest, AggregateRequest,
-    SnarkProofRequest, GetTaskResultRequest, GetTaskResultResponse, ProveRequest, ResultCode,
+    GetTaskResultRequest, GetTaskResultResponse, ProveRequest, ResultCode, SnarkProofRequest,
     SplitElfRequest,
 };
 use common::file;
 use common::tls::Config as TlsConfig;
 
 use crate::stage::tasks::{
-    AggAllTask, AggTask, SnarkTask, ProveTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
+    AggAllTask, AggTask, ProveTask, SnarkTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
     TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, TASK_TIMEOUT,
 };
 use tonic::Request;
@@ -270,36 +270,22 @@ pub async fn aggregate_all(
 
 pub async fn snark_proof(
     mut snark_task: SnarkTask,
-    tls_config: Option<TlsConfig>,
-) -> Option<SnarkTask> {
-    let client = get_snark_client(None).await;
-    if let Some((addrs, mut client)) = client {}
-}
-
-pub async fn _snark_proof(
-    mut snark_task: SnarkTask,
     _tls_config: Option<TlsConfig>,
 ) -> Option<SnarkTask> {
     let client = get_snark_client(None).await;
     if let Some((addrs, mut client)) = client {
+        let input_dir = snark_task.input_dir.trim_end_matches("/");
         let (
             common_circuit_data_file,
             verifier_only_circuit_data_file,
             proof_with_public_inputs_file,
             block_public_inputs_file,
-        ) = if snark_task.input_dir.ends_with('/') {
+        ) = {
             (
-                format!("{}common_circuit_data.json", snark_task.input_dir),
-                format!("{}verifier_only_circuit_data.json", snark_task.input_dir),
-                format!("{}proof_with_public_inputs.json", snark_task.input_dir),
-                format!("{}block_public_inputs.json", snark_task.input_dir),
-            )
-        } else {
-            (
-                format!("{}/common_circuit_data.json", snark_task.input_dir),
-                format!("{}/verifier_only_circuit_data.json", snark_task.input_dir),
-                format!("{}/proof_with_public_inputs.json", snark_task.input_dir),
-                format!("{}/block_public_inputs.json", snark_task.input_dir),
+                format!("{}/common_circuit_data.json", input_dir),
+                format!("{}/verifier_only_circuit_data.json", input_dir),
+                format!("{}/proof_with_public_inputs.json", input_dir),
+                format!("{}/block_public_inputs.json", input_dir),
             )
         };
         let common_circuit_data = file::new(&common_circuit_data_file).read().unwrap();
@@ -308,6 +294,7 @@ pub async fn _snark_proof(
         let proof_with_public_inputs = file::new(&proof_with_public_inputs_file).read().unwrap();
         let block_public_inputs = file::new(&block_public_inputs_file).read().unwrap();
         let request = SnarkProofRequest {
+            version: snark_task.version,
             proof_id: snark_task.proof_id.clone(),
             computed_request_id: snark_task.task_id.clone(),
             common_circuit_data,

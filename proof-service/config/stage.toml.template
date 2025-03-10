@@ -1,3 +1,4 @@
 addr = "{{addr}}"
 prover_addrs = [{{prover_addrs}}]
 base_dir = "{{base_dir}}"
+fileserver_url = ""

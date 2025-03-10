@@ -2,13 +2,13 @@ use crate::database;
 use crate::database::StageTask;
 use crate::prover_client;
 use crate::stage::{
-    GenerateTask,
     stage::get_timestamp,
     stage::Stage,
     tasks::{
         Task, TASK_ITYPE_AGG, TASK_ITYPE_AGGALL, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE,
         TASK_ITYPE_SPLIT, TASK_STATE_FAILED, TASK_STATE_SUCCESS,
     },
+    GenerateTask,
 };
 use crate::TlsConfig;
 use common::file;

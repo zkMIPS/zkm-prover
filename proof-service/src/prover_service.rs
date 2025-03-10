@@ -1,18 +1,18 @@
 use crate::proto::prover_service::v1::{
     get_status_response, prover_service_server::ProverService, AggregateAllRequest,
-    AggregateAllResponse, AggregateRequest, AggregateResponse, SnarkProofRequest,
-    SnarkProofResponse, GetStatusRequest, GetStatusResponse, GetTaskResultRequest,
-    GetTaskResultResponse, ProveRequest, ProveResponse, Result, ResultCode, SplitElfRequest,
-    SplitElfResponse,
+    AggregateAllResponse, AggregateRequest, AggregateResponse, GetStatusRequest, GetStatusResponse,
+    GetTaskResultRequest, GetTaskResultResponse, ProveRequest, ProveResponse, Result, ResultCode,
+    SnarkProofRequest, SnarkProofResponse, SplitElfRequest, SplitElfResponse,
 };
-use prover::contexts::{AggAllContext, AggContext, ProveContext};
-use prover::executor::{SplitContext, Executor};
+use prover::contexts::{AggAllContext, AggContext, ProveContext, SnarkContext};
+use prover::executor::SplitContext;
 use prover::pipeline::Pipeline;
 
 use std::time::Instant;
 use tonic::{Request, Response, Status};
 
-use crate::metrics;
+use crate::proto::includes::v1::ProverVersion;
+use crate::{config, metrics};
 
 async fn run_back_task<
     T: Send + 'static,
@@ -36,8 +36,21 @@ async fn run_back_task<
     })
 }
 
-#[derive(Debug, Default)]
-pub struct ProverServiceSVC {}
+use std::sync::{Arc, Mutex};
+#[derive(Default)]
+pub struct ProverServiceSVC {
+    pub config: config::RuntimeConfig,
+    pipeline: Arc<Mutex<Pipeline>>,
+}
+impl ProverServiceSVC {
+    pub fn new(config: config::RuntimeConfig) -> Self {
+        let pipeline = Arc::new(Mutex::new(Pipeline::new(
+            &config.base_dir,
+            &config.get_proving_key_path(ProverVersion::Zkm.into()),
+        )));
+        Self { config, pipeline }
+    }
+}
 
 macro_rules! on_done {
     ($result:ident, $resp:ident) => {
@@ -73,9 +86,8 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
         metrics::record_metrics("prover::get_status", || async {
             // log::info!("{:#?}", request);
-
             let mut response = GetStatusResponse::default();
-            let success = Pipeline::new().get_status();
+            let success = self.pipeline.lock().unwrap().get_status();
             if success {
                 response.status = get_status_response::Status::Idle.into();
             } else {
@@ -110,7 +122,7 @@ impl ProverService for ProverServiceSVC {
             );
             log::debug!("{:#?}", request);
             let start = Instant::now();
-            let split_context = SplitContext::new(
+            let mut split_context = SplitContext::new(
                 &request.get_ref().base_dir,
                 &request.get_ref().elf_path,
                 request.get_ref().block_no,
@@ -123,9 +135,8 @@ impl ProverService for ProverServiceSVC {
                 &request.get_ref().receipt_inputs_path,
             );
 
-            let split_func = move || {
-                Executor::default().split(&split_context)
-            };
+            let pipeline = self.pipeline.clone();
+            let split_func = move || pipeline.lock().unwrap().split(&mut split_context);
             let result = run_back_task(split_func).await;
             let mut response = SplitElfResponse {
                 proof_id: request.get_ref().proof_id.clone(),
@@ -173,9 +184,10 @@ impl ProverService for ProverServiceSVC {
                 &request.get_ref().receipts_input,
             );
 
+            let pipeline = self.pipeline.clone();
             let prove_func = move || {
                 let mut s_ctx: ProveContext = prove_context;
-                Pipeline::new().prove_root(&mut s_ctx)
+                pipeline.lock().unwrap().prove_root(&mut s_ctx)
             };
             let result = run_back_task(prove_func).await;
             let mut response = ProveResponse {
@@ -240,9 +252,10 @@ impl ProverService for ProverServiceSVC {
                 ), //FIXME: should not use a directory
             );
 
+            let pipeline = self.pipeline.clone();
             let agg_func = move || {
                 let mut agg_ctx = agg_context;
-                Pipeline::new().prove_aggregate(&mut agg_ctx)
+                pipeline.lock().unwrap().prove_aggregate(&mut agg_ctx)
             };
             let result = run_back_task(agg_func).await;
             let mut response = AggregateResponse {
@@ -284,9 +297,10 @@ impl ProverService for ProverServiceSVC {
                 &request.get_ref().output_dir,
             );
 
+            let pipeline = self.pipeline.clone();
             let agg_all_func = move || {
                 let mut s_ctx: AggAllContext = final_context;
-                Pipeline::new().prove_aggregate_all(&mut s_ctx)
+                pipeline.lock().unwrap().prove_aggregate_all(&mut s_ctx)
             };
             let result = run_back_task(agg_all_func).await;
             let mut response = AggregateAllResponse {
@@ -315,6 +329,48 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<SnarkProofResponse>, Status> {
         metrics::record_metrics("prover::snark_proof", || async {
             // log::info!("{:#?}", request);
+            log::info!(
+                "[snark_proof] {}:{} start",
+                request.get_ref().proof_id,
+                request.get_ref().computed_request_id,
+            );
+            log::debug!("{:#?}", request);
+            let start = Instant::now();
+
+            let snark_context = SnarkContext {
+                version: request.get_ref().version.into(),
+                proof_id: request.get_ref().proof_id.clone(),
+                proving_key_path: self
+                    .config
+                    .get_proving_key_path(request.get_ref().version.into()),
+                common_circuit_data: request.get_ref().common_circuit_data.clone(),
+                verifier_only_circuit_data: request.get_ref().verifier_only_circuit_data.clone(),
+                block_public_inputs: request.get_ref().block_public_inputs.clone(),
+                proof_with_public_inputs: request.get_ref().proof_with_public_inputs.clone(),
+                snark_proof_with_public_inputs: vec![],
+            };
+
+            let pipeline = self.pipeline.clone();
+            let snark_func = move || {
+                let mut ctx: SnarkContext = snark_context;
+                pipeline.lock().unwrap().prove_snark(&mut ctx)
+            };
+            let result = run_back_task(snark_func).await;
+            let mut response = AggregateAllResponse {
+                proof_id: request.get_ref().proof_id.clone(),
+                computed_request_id: request.get_ref().computed_request_id.clone(),
+                ..Default::default()
+            };
+            on_done!(result, response);
+            let end = Instant::now();
+            let elapsed = end.duration_since(start);
+            log::info!(
+                "[aggregate_all] {}:{} code:{} elapsed:{} end",
+                request.get_ref().proof_id,
+                request.get_ref().computed_request_id,
+                response.result.as_ref().unwrap().code,
+                elapsed.as_secs()
+            );
             let response = SnarkProofResponse::default();
             Ok(Response::new(response))
         })

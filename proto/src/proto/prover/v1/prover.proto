@@ -148,10 +148,12 @@ message SnarkProofRequest {
     bytes verifier_only_circuit_data = 4;
     bytes proof_with_public_inputs = 5;
     bytes block_public_inputs = 6;
+    includes.v1.ProverVersion version = 7;
 }
 
 message SnarkProofResponse {
     string proof_id = 1;
     string computed_request_id = 2;
-    Result result = 3;
+    bytes proof_with_public_inputs = 3;
+    Result result = 4;
 }

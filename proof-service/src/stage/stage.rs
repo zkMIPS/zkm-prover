@@ -8,10 +8,10 @@ use crate::stage::{
 };
 
 use crate::proto::stage_service::v1::Step;
+use crate::stage::tasks::generate_task::GenerateTask;
 use common::file;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::stage::tasks::generate_task::GenerateTask;
 
 pub fn get_timestamp() -> u64 {
     let now = SystemTime::now();

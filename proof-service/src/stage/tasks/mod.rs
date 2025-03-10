@@ -18,8 +18,8 @@ pub mod agg_task;
 pub use agg_task::AggAllTask;
 pub use agg_task::AggTask;
 
-pub mod snark_task;
 pub mod generate_task;
+pub mod snark_task;
 
 pub use snark_task::SnarkTask;
 
