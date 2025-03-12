@@ -6,6 +6,7 @@ use crate::stage::{
         {TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED},
     },
 };
+use std::fmt::{Debug, Formatter};
 
 use crate::proto::stage_service::v1::Step;
 use crate::stage::tasks::generate_task::GenerateTask;
@@ -294,14 +295,21 @@ impl Stage {
 
     pub fn get_agg_task(&mut self) -> Option<AggTask> {
         let mut result: Option<AggTask> = None;
+        log::info!("get_aag_task: {:?}", self.agg_tasks.len());
         for agg_task in &mut self.agg_tasks {
             if agg_task.left.is_some() || agg_task.right.is_some() {
+                log::info!(
+                    "get_aag_task: left: {:?}, right: {:?}",
+                    agg_task.left.is_some(),
+                    agg_task.right.is_some()
+                );
                 continue;
             }
             if agg_task.state == TASK_STATE_UNPROCESSED || agg_task.state == TASK_STATE_FAILED {
                 agg_task.state = TASK_STATE_PROCESSING;
                 agg_task.trace.start_ts = get_timestamp();
                 result = Some(agg_task.clone());
+                break;
             }
         }
         // Fill in the input1/2
@@ -326,43 +334,22 @@ impl Stage {
                         input.receipt_input = tmp.output.clone();
                     }
                 });
-                log::info!("to_agg_task: {:?}, {:?}", agg_task.input1.receipt_input.len(), agg_task.input2.receipt_input.len());
+                log::info!(
+                    "to_agg_task: {:?}, {:?}",
+                    agg_task.input1.receipt_input.len(),
+                    agg_task.input2.receipt_input.len()
+                );
             }
             _ => {}
         };
+        log::info!("get_aag_task:yes? {:?}", result.is_some());
         result
     }
 
     pub fn on_agg_task(&mut self, agg_task: &mut AggTask) {
         for item_task in &mut self.agg_tasks {
             if item_task.task_id == agg_task.task_id && item_task.state == TASK_STATE_PROCESSING {
-                log::info!(
-                    "task_id: {}, is_final: {}, from_prove: {}, is_agg: {}/{}",
-                    agg_task.task_id,
-                    agg_task.is_final,
-                    agg_task.from_prove,
-                    agg_task.input1.is_agg,
-                    agg_task.input2.is_agg
-                );
-                log::info!(
-                    "on_agg_task:before dst {} src {}",
-                    item_task.output.len(),
-                    agg_task.output.len()
-                );
                 on_task!(agg_task, item_task, self);
-                log::info!(
-                    "task_id: {}, is_final: {}, from_prove: {}, is_agg: {}/{}",
-                    agg_task.task_id,
-                    agg_task.is_final,
-                    agg_task.from_prove,
-                    agg_task.input1.is_agg,
-                    agg_task.input2.is_agg
-                );
-                log::info!(
-                    "on_agg_task: dst {} src {}",
-                    item_task.output.len(),
-                    agg_task.output.len()
-                );
                 break;
             }
         }
@@ -414,11 +401,22 @@ impl Stage {
             .clone_from(&self.generate_task.snark_path);
         self.snark_task.task_id = uuid::Uuid::new_v4().to_string();
         self.snark_task.state = TASK_STATE_UNPROCESSED;
-        log::debug!("gen_snark_task {:#?}", self.snark_task);
+        // fill in the input receipts
+        for agg_task in &self.agg_tasks {
+            if agg_task.is_final == true {
+                self.snark_task.agg_receipt = agg_task.output.clone();
+            }
+        }
+        log::info!(
+            "gen_snark_task: {:?} {:?}",
+            self.snark_task.proof_id,
+            self.snark_task.task_id
+        );
     }
 
     pub fn get_snark_task(&mut self) -> Option<SnarkTask> {
         let src = &mut self.snark_task;
+        log::info!("get_snark_task: {:?} {:?}", src.proof_id, src.task_id);
         get_task!(src);
     }
 
@@ -426,8 +424,10 @@ impl Stage {
         let dst = &mut self.snark_task;
         on_task!(snark_task, dst, self);
     }
+}
 
-    pub fn timecost_string(&self) -> String {
+impl Debug for Stage {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let split_cost = format!(
             "split_id: {} cost: {} sec",
             self.split_task.task_id,
@@ -467,7 +467,9 @@ impl Stage {
             self.snark_task.task_id,
             self.snark_task.trace.duration(),
         );
-        format!(
+
+        write!(
+            f,
             "proof_id: {}\r\n {}\r\n {}\r\n {}\r\n {}\r\n {}\r\n",
             self.generate_task.proof_id,
             split_cost,

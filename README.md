@@ -7,23 +7,20 @@ A parallel proving service for [ZKM](https://github.com/zkMIPS/zkm).
 graph TD
     Init --> InSplit;
     InSplit --> InProve;
-    InProve --prove_tasks>3--> InAgg;
-    InProve --prove_tasks<=3--> InAggAll;
+    InProve --prove_tasks--> InAgg;
     InProve --composite_proof?--> End;
     InAgg --> InSnark;
-    InAggAll --> InSnark;
     InSnark --> End;
 ```
 
 
-| Stage    | Input        | Action                                  | In Disk/Memory |
-|----------|--------------|-----------------------------------------|----------------|
-| Init     | GenerateTask | gen_split_task                          | Memory         |
-| InSplit  | SplitTask    | gen_prove_task                          | Disk           |
-| InProve  | ProveTask    | gen_agg_task or gen_agg_all_task or END | Memory         |
-| InAgg    | AggTask      | gen_snark_task                          | Memory         |
-| InAggAll | AggAllTask   | gen_snark_task                          | Memory         |
-| InSnark  | SnarkTask    | END                                     | Memory         |
+| Stage    | Input        | Action                | In Disk/Memory |
+|----------|--------------|-----------------------|----------------|
+| Init     | GenerateTask | gen_split_task        | Memory         |
+| InSplit  | SplitTask    | gen_prove_task        | Disk           |
+| InProve  | ProveTask    | gen_agg_task or END   | Memory         |
+| InAgg    | AggTask      | gen_snark_task        | Memory         |
+| InSnark  | SnarkTask    | END                   | Memory         |
 
 
 This repository consists of a stage service and multiple prover nodes. Each node can run a proving task. 
@@ -61,6 +58,22 @@ it's necessary to schedule different instance onto different machine by its reso
 
 Especially, `split_elf` reads the ELF from the disk, which is written by the `Stage`'s `GenerateTask`, this means its corresponding `ProverNode` should be able to access the `Stage`'s disk. Currently, the shared filesystems, like AWS S3 or NFS, are employed to make it possible. 
 This additional dependency of the `proof-service` can be practical in short-term, but it's best to transit the data by `GRPC` directly in the long-term[TODO]. 
+
+### Dataflow
+
+```mermaid
+sequenceDiagram
+    User ->> Stage Service: Submit GenerateTask by Stage Client(GRPC)
+    Stage Service ->> Stage: GenerateTask and generate all the computing graph
+    Stage ->> Prover Client: Generate Tasks, SplitELF, Prove, Agg, Snark, and puts them in the Cache
+    Prover Client ->> Prover Service: Submit tasks to remote ProveNode by GRPC
+    Prover Service ->> Provers: Call the specific provers to finish the tasks.
+    Provers ->> Prover Service: Response of each tasks
+    Prover Service ->> Prover Client: Response of each tasks by GRPC
+    Prover Client ->> Stage: Update the task's output and status (including the cahce), update the database
+    
+    User ->> Stage Service: Get task status by Stage Client(GRPC)
+```
 
 ## Local Deployment
 

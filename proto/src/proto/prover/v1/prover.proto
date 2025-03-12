@@ -146,12 +146,8 @@ message AggregateAllResponse {
 message SnarkProofRequest {
     string proof_id = 1;
     string computed_request_id = 2;
-    bytes common_circuit_data = 3;
-    bytes verifier_only_circuit_data = 4;
-    bytes proof_with_public_inputs = 5;
-    bytes block_public_inputs = 6;
-    includes.v1.ProverVersion version = 7;
-    bytes agg_receipt = 8;
+    includes.v1.ProverVersion version = 3;
+    bytes agg_receipt = 4;
 }
 
 message SnarkProofResponse {

@@ -43,20 +43,6 @@ pub fn get_snark_nodes() -> Vec<ProverNode> {
     nodes_data.get_snark_nodes()
 }
 
-pub async fn get_snark_client(
-    tls_config: Option<TlsConfig>,
-) -> Option<(String, ProverServiceClient<Channel>)> {
-    let nodes: Vec<ProverNode> = get_snark_nodes();
-    for mut node in nodes {
-        let client = node.is_active(tls_config.clone()).await;
-        if let Some(client) = client {
-            return Some((node.addr.clone(), client));
-        }
-    }
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    None
-}
-
 pub fn result_code_to_state(code: i32) -> u32 {
     match ResultCode::from_i32(code) {
         Some(ResultCode::Unspecified) => TASK_STATE_PROCESSING,
@@ -251,38 +237,14 @@ pub async fn aggregate_all(
 
 pub async fn snark_proof(
     mut snark_task: SnarkTask,
-    _tls_config: Option<TlsConfig>,
+    tls_config: Option<TlsConfig>,
 ) -> Option<SnarkTask> {
-    let client = get_snark_client(None).await;
+    let client = get_idle_client(tls_config).await;
     if let Some((addrs, mut client)) = client {
-        let input_dir = snark_task.input_dir.trim_end_matches("/");
-        let (
-            common_circuit_data_file,
-            verifier_only_circuit_data_file,
-            proof_with_public_inputs_file,
-            block_public_inputs_file,
-        ) = {
-            (
-                format!("{}/common_circuit_data.json", input_dir),
-                format!("{}/verifier_only_circuit_data.json", input_dir),
-                format!("{}/proof_with_public_inputs.json", input_dir),
-                format!("{}/block_public_inputs.json", input_dir),
-            )
-        };
-        let common_circuit_data = file::new(&common_circuit_data_file).read().unwrap();
-        let verifier_only_circuit_data =
-            file::new(&verifier_only_circuit_data_file).read().unwrap();
-        let proof_with_public_inputs = file::new(&proof_with_public_inputs_file).read().unwrap();
-        let block_public_inputs = file::new(&block_public_inputs_file).read().unwrap();
-
         let request = SnarkProofRequest {
             version: snark_task.version,
             proof_id: snark_task.proof_id.clone(),
             computed_request_id: snark_task.task_id.clone(),
-            common_circuit_data,
-            proof_with_public_inputs,
-            verifier_only_circuit_data,
-            block_public_inputs,
             agg_receipt: snark_task.agg_receipt.clone(),
         };
         log::info!(

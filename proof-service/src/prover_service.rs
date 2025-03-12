@@ -350,10 +350,6 @@ impl ProverService for ProverServiceSVC {
                 proving_key_path: self
                     .config
                     .get_proving_key_path(request.get_ref().version.into()),
-                common_circuit_data: request.get_ref().common_circuit_data.clone(),
-                verifier_only_circuit_data: request.get_ref().verifier_only_circuit_data.clone(),
-                block_public_inputs: request.get_ref().block_public_inputs.clone(),
-                proof_with_public_inputs: request.get_ref().proof_with_public_inputs.clone(),
                 agg_receipt: request.get_ref().agg_receipt.clone(),
             };
 
@@ -376,7 +372,7 @@ impl ProverService for ProverServiceSVC {
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             log::info!(
-                "[aggregate_all] {}:{} code:{} elapsed:{} end",
+                "[snark_proof] {}:{} code:{} elapsed:{} end",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
                 response.result.as_ref().unwrap().code,

@@ -204,7 +204,7 @@ async fn run_stage_task(
                             &String::from_utf8(result).expect("Invalid UTF-8 bytes"),
                         )
                         .await;
-                    log::info!("[stage] finished {} ", stage.timecost_string());
+                    log::info!("[stage] finished {:?} ", stage);
                 }
             }
             Err(_) => {
