@@ -32,7 +32,6 @@ impl Prover<AggContext, Vec<u8>> for AggProver {
         //let receipt_next_content = file::new(&receipt_path2).read_to_string()?;
         let receipt_next: Receipt<F, C, D> = serde_json::from_slice(&receipt_path2)?;
 
-        timing = TimingTree::new("agg agg", log::Level::Info);
         // We can duplicate the proofs here because the state hasn't mutated.
         let new_agg_receipt = zkm_recursion::aggregate_proof(
             all_circuits,

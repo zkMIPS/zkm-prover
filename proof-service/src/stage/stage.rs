@@ -181,7 +181,6 @@ impl Stage {
 
         self.split_task.task_id = uuid::Uuid::new_v4().to_string();
         self.split_task.state = TASK_STATE_UNPROCESSED;
-        log::debug!("gen_split_task {:#?}", self.split_task);
     }
 
     pub fn get_split_task(&mut self) -> Option<SplitTask> {
@@ -218,7 +217,6 @@ impl Stage {
             }
         }
         self.prove_tasks.sort_by_key(|p| p.file_no);
-        log::debug!("gen_prove_task {:#?}", self.prove_tasks);
 
         if self.prove_tasks.len() < 2 {
             self.is_error = true;
@@ -327,11 +325,11 @@ impl Stage {
                             .unwrap();
                         input.receipt_input = tmp.output.clone();
                     }
-                })
+                });
+                log::info!("to_agg_task: {:?}, {:?}", agg_task.input1.receipt_input.len(), agg_task.input2.receipt_input.len());
             }
             _ => {}
         };
-
         result
     }
 

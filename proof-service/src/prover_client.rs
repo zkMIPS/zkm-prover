@@ -161,21 +161,10 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
         let request = AggregateRequest {
             proof_id: agg_task.proof_id.clone(),
             computed_request_id: agg_task.task_id.clone(),
-            //seg_path: "".to_string(),
             block_no: agg_task.block_no,
             seg_size: agg_task.seg_size,
-            input1: Some(AggregateInput {
-                receipt_input: agg_task.input1.receipt_input.clone(),
-                computed_request_id: agg_task.input1.computed_request_id.clone(),
-                is_agg: agg_task.input1.is_agg,
-            }),
-            input2: Some(AggregateInput {
-                receipt_input: agg_task.input2.receipt_input.clone(),
-                computed_request_id: agg_task.input2.computed_request_id.clone(),
-                is_agg: agg_task.input2.is_agg,
-            }),
-            //agg_receipt: agg_task.output_receipt.clone(),
-            //output_dir: agg_task.output_dir.clone(),
+            input1: Some(agg_task.input1.clone()),
+            input2: Some(agg_task.input2.clone()),
             is_final: agg_task.is_final,
         };
         log::info!(
