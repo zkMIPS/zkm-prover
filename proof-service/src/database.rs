@@ -190,12 +190,13 @@ impl Database {
     /// EIP55 support
     #[allow(dead_code)]
     pub async fn get_user(&self, address: &str) -> anyhow::Result<Vec<User>> {
-        let checksum_addresss =
+        let checksum_address =
             ethers::utils::to_checksum(&address.parse::<ethereum_types::Address>()?, None);
+        log::debug!("searching address {}", checksum_address);
         let rows = sqlx::query_as!(
             User,
             "SELECT address from user where address = ?",
-            checksum_addresss,
+            checksum_address,
         )
         .fetch_all(&self.db_pool)
         .await?;

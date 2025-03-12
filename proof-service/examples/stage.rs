@@ -34,6 +34,17 @@ async fn sign_ecdsa(request: &mut GenerateProofRequest, private_key: &str) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // first wallet in hardhat node
+    env::set_var(
+        "PRIVATE_KEY",
+        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    );
+
+    env::set_var(
+        "ARGS",
+        "711e9609339e92b03ddc0a211827dba421f38f9ed8b9d806e1ffdd8c15ffa03d world!",
+    );
+
     env_logger::try_init().unwrap_or_default();
     let elf_path = env::var("ELF_PATH").unwrap_or("/tmp/zkm/test/hello_world".to_string());
     let output_dir = env::var("OUTPUT_DIR").unwrap_or("/tmp/zkm/test".to_string());

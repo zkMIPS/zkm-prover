@@ -18,6 +18,7 @@ pub struct SplitTask {
     pub recepit_inputs_path: String,
 
     pub trace: Trace,
+    pub output: Vec<u8>, //void
 
     pub total_steps: u64,
 }

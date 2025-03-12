@@ -8,8 +8,7 @@ pub struct AggContext {
     pub is_agg_1: bool,
     pub is_agg_2: bool,
     pub is_final: bool,
-    pub agg_receipt_path: Vec<u8>,
-    pub output_dir: String,
+    // temprary output directory
 }
 
 impl AggContext {
@@ -21,8 +20,6 @@ impl AggContext {
         is_agg_1: bool,
         is_agg_2: bool,
         is_final: bool,
-        agg_receipt_path: &Vec<u8>,
-        output_dir: &String,
     ) -> Self {
         AggContext {
             seg_size,
@@ -31,8 +28,6 @@ impl AggContext {
             is_agg_1,
             is_agg_2,
             is_final,
-            agg_receipt_path: agg_receipt_path.to_owned(),
-            output_dir: output_dir.to_string(),
         }
     }
 }

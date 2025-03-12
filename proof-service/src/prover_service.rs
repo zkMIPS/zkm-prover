@@ -25,14 +25,21 @@ async fn run_back_task<
     let _ = rt
         .spawn_blocking(move || {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(callable));
-            // tx.send(result).unwrap();
-            // let result = callable();
             let _ = tx.send(result);
         })
         .await;
+
     rx.await.unwrap().unwrap_or_else(|e| {
-        log::error!("{:#?}", e);
-        Err("panic".to_string())
+        let panic_message = if let Some(msg) = e.downcast_ref::<&str>() {
+            msg.to_string()
+        } else if let Some(msg) = e.downcast_ref::<String>() {
+            msg.clone()
+        } else {
+            "Unknown panic".to_string()
+        };
+
+        log::error!("Task panicked: {}", panic_message);
+        Err(panic_message.into()) // Convert into a boxed error
     })
 }
 
@@ -55,11 +62,11 @@ impl ProverServiceSVC {
 macro_rules! on_done {
     ($result:ident, $resp:ident) => {
         match $result {
-            Ok(done) => {
+            Ok((done, _data)) => {
                 if done {
                     $resp.result = Some(Result {
                         code: (ResultCode::Ok.into()),
-                        message: ("SUCCESS".to_string()),
+                        message: "SUCCESS".to_string(),
                     });
                 } else {
                     $resp.result = Some(Result {
@@ -124,9 +131,8 @@ impl ProverService for ProverServiceSVC {
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
             );
-            log::debug!("{:#?}", request);
             let start = Instant::now();
-            let mut split_context = SplitContext::new(
+            let split_context = SplitContext::new(
                 &request.get_ref().base_dir,
                 &request.get_ref().elf_path,
                 request.get_ref().block_no,
@@ -140,16 +146,17 @@ impl ProverService for ProverServiceSVC {
             );
 
             let pipeline = self.pipeline.clone();
-            let split_func = move || pipeline.lock().unwrap().split(&mut split_context);
+            let split_func = move || pipeline.lock().unwrap().split(&split_context);
             let result = run_back_task(split_func).await;
             let mut response = SplitElfResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
-                total_steps: result.clone().unwrap_or_default(),
+                total_steps: result.clone().unwrap_or_default().1,
                 ..Default::default()
             };
-            let result = match result {
-                Ok(cycle) => Ok(cycle > 0),
+            // True if and only if no error occurs and ELF size > 0
+            let result: std::result::Result<(bool, Vec<u8>), String> = match result {
+                Ok(cycle) => Ok((cycle.1 > 0 && cycle.0, vec![])),
                 Err(e) => Err(e),
             };
             on_done!(result, response);
@@ -178,7 +185,6 @@ impl ProverService for ProverServiceSVC {
                 request.get_ref().computed_request_id,
                 //request.get_ref().seg_path,
             );
-            log::debug!("{:#?}", request);
             let start = Instant::now();
 
             let prove_context = ProveContext::new(
@@ -190,13 +196,17 @@ impl ProverService for ProverServiceSVC {
 
             let pipeline = self.pipeline.clone();
             let prove_func = move || {
-                let mut s_ctx: ProveContext = prove_context;
-                pipeline.lock().unwrap().prove_root(&mut s_ctx)
+                let s_ctx: ProveContext = prove_context;
+                pipeline.lock().unwrap().prove_root(&s_ctx)
             };
             let result = run_back_task(prove_func).await;
             let mut response = ProveResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
+                output_receipt: match &result {
+                    Ok((_, x)) => x.clone(),
+                    _ => vec![],
+                },
                 ..Default::default()
             };
             on_done!(result, response);
@@ -236,7 +246,6 @@ impl ProverService for ProverServiceSVC {
                     .expect("need input2")
                     .computed_request_id,
             );
-            log::debug!("{:#?}", request);
             let start = Instant::now();
             let input1 = request.get_ref().input1.clone().expect("need input1");
             let input2 = request.get_ref().input2.clone().expect("need input2");
@@ -247,24 +256,21 @@ impl ProverService for ProverServiceSVC {
                 input1.is_agg,
                 input2.is_agg,
                 request.get_ref().is_final,
-                &request.get_ref().agg_receipt,
-                //&request.get_ref().output_dir,
-                &format!(
-                    "/tmp/agg/{}/{}",
-                    request.get_ref().proof_id,
-                    request.get_ref().computed_request_id
-                ), //FIXME: should not use a directory
             );
 
             let pipeline = self.pipeline.clone();
             let agg_func = move || {
-                let mut agg_ctx = agg_context;
-                pipeline.lock().unwrap().prove_aggregate(&mut agg_ctx)
+                let agg_ctx = agg_context;
+                pipeline.lock().unwrap().prove_aggregate(&agg_ctx)
             };
             let result = run_back_task(agg_func).await;
             let mut response = AggregateResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
+                agg_receipt: match &result {
+                    Ok((_, x)) => x.clone(),
+                    _ => vec![],
+                },
                 ..Default::default()
             };
             on_done!(result, response);
@@ -292,7 +298,6 @@ impl ProverService for ProverServiceSVC {
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
             );
-            log::debug!("{:#?}", request);
             let start = Instant::now();
             let final_context = AggAllContext::new(
                 request.get_ref().seg_size,
@@ -303,8 +308,8 @@ impl ProverService for ProverServiceSVC {
 
             let pipeline = self.pipeline.clone();
             let agg_all_func = move || {
-                let mut s_ctx: AggAllContext = final_context;
-                pipeline.lock().unwrap().prove_aggregate_all(&mut s_ctx)
+                let s_ctx: AggAllContext = final_context;
+                pipeline.lock().unwrap().prove_aggregate_all(&s_ctx)
             };
             let result = run_back_task(agg_all_func).await;
             let mut response = AggregateAllResponse {
@@ -332,13 +337,11 @@ impl ProverService for ProverServiceSVC {
         request: Request<SnarkProofRequest>,
     ) -> tonic::Result<Response<SnarkProofResponse>, Status> {
         metrics::record_metrics("prover::snark_proof", || async {
-            // log::info!("{:#?}", request);
             log::info!(
                 "[snark_proof] {}:{} start",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
             );
-            log::debug!("{:#?}", request);
             let start = Instant::now();
 
             let snark_context = SnarkContext {
@@ -351,18 +354,22 @@ impl ProverService for ProverServiceSVC {
                 verifier_only_circuit_data: request.get_ref().verifier_only_circuit_data.clone(),
                 block_public_inputs: request.get_ref().block_public_inputs.clone(),
                 proof_with_public_inputs: request.get_ref().proof_with_public_inputs.clone(),
-                snark_proof_with_public_inputs: vec![],
+                agg_receipt: request.get_ref().agg_receipt.clone(),
             };
 
             let pipeline = self.pipeline.clone();
             let snark_func = move || {
-                let mut ctx: SnarkContext = snark_context;
-                pipeline.lock().unwrap().prove_snark(&mut ctx)
+                let ctx: SnarkContext = snark_context;
+                pipeline.lock().unwrap().prove_snark(&ctx)
             };
             let result = run_back_task(snark_func).await;
-            let mut response = AggregateAllResponse {
+            let mut response = SnarkProofResponse {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
+                snark_proof_with_public_inputs: match &result {
+                    Ok((_, x)) => x.clone(),
+                    _ => vec![],
+                },
                 ..Default::default()
             };
             on_done!(result, response);
@@ -375,7 +382,6 @@ impl ProverService for ProverServiceSVC {
                 response.result.as_ref().unwrap().code,
                 elapsed.as_secs()
             );
-            let response = SnarkProofResponse::default();
             Ok(Response::new(response))
         })
         .await

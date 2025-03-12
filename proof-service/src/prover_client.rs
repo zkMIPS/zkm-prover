@@ -90,13 +90,11 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             request.proof_id,
             request.computed_request_id
         );
-        log::debug!("split request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.split_elf(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::debug!("split response {:#?}", response);
                 split_task.state = result_code_to_state(response_result.code);
                 // FIXME: node_info usage?
                 split_task.trace.node_info = addrs;
@@ -123,11 +121,9 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
         let request = ProveRequest {
             proof_id: prove_task.program.proof_id.clone(),
             computed_request_id: prove_task.task_id.clone(),
-            //base_dir: prove_task.base_dir.clone(),
             segment: prove_task.segment.clone(),
             block_no: prove_task.program.block_no,
             seg_size: prove_task.program.seg_size,
-            //receipt_path: prove_task.receipt_path.clone(),
             receipts_input: prove_task.program.receipts.clone(),
         };
         log::info!(
@@ -135,13 +131,11 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             request.proof_id,
             request.computed_request_id,
         );
-        log::debug!("prove request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.prove(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::debug!("prove response {:#?}", response);
                 prove_task.state = result_code_to_state(response_result.code);
                 prove_task.trace.node_info = addrs;
                 log::info!(
@@ -151,6 +145,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
                     response_result.code,
                     response_result.message,
                 );
+                prove_task.output = response.get_ref().output_receipt.clone();
                 return Some(prove_task);
             }
         }
@@ -179,7 +174,7 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
                 computed_request_id: agg_task.input2.computed_request_id.clone(),
                 is_agg: agg_task.input2.is_agg,
             }),
-            agg_receipt: agg_task.output_receipt.clone(),
+            //agg_receipt: agg_task.output_receipt.clone(),
             //output_dir: agg_task.output_dir.clone(),
             is_final: agg_task.is_final,
         };
@@ -198,13 +193,11 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
                 .expect("need input2")
                 .computed_request_id,
         );
-        log::debug!("aggregate request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.aggregate(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::debug!("aggregate response {:#?}", response);
                 agg_task.state = result_code_to_state(response_result.code);
                 agg_task.trace.node_info = addrs;
                 log::info!(
@@ -214,6 +207,7 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
                     response_result.code,
                     response_result.message,
                 );
+                agg_task.output = response.get_ref().agg_receipt.clone();
                 return Some(agg_task);
             }
         }
@@ -244,13 +238,11 @@ pub async fn aggregate_all(
             request.proof_id,
             request.computed_request_id
         );
-        log::debug!("aggregate_all request {:#?}", request);
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.aggregate_all(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::debug!("aggregate_all response {:#?}", response);
                 agg_all_task.state = result_code_to_state(response_result.code);
                 agg_all_task.trace.node_info = addrs;
                 log::info!(
@@ -293,6 +285,7 @@ pub async fn snark_proof(
             file::new(&verifier_only_circuit_data_file).read().unwrap();
         let proof_with_public_inputs = file::new(&proof_with_public_inputs_file).read().unwrap();
         let block_public_inputs = file::new(&block_public_inputs_file).read().unwrap();
+
         let request = SnarkProofRequest {
             version: snark_task.version,
             proof_id: snark_task.proof_id.clone(),
@@ -301,6 +294,7 @@ pub async fn snark_proof(
             proof_with_public_inputs,
             verifier_only_circuit_data,
             block_public_inputs,
+            agg_receipt: snark_task.agg_receipt.clone(),
         };
         log::info!(
             "[snark_proof] rpc {}:{} start",
@@ -312,7 +306,6 @@ pub async fn snark_proof(
         let response = client.snark_proof(grpc_request).await;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
-                log::debug!("snark_proof response {:#?}", response);
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
                     let mut loop_count = 0;
                     loop {
@@ -336,6 +329,10 @@ pub async fn snark_proof(
                                             .unwrap();
                                         snark_task.state = TASK_STATE_SUCCESS;
                                         snark_task.trace.node_info = addrs;
+                                        snark_task.output = response
+                                            .get_ref()
+                                            .snark_proof_with_public_inputs
+                                            .clone();
                                         return Some(snark_task);
                                     }
                                 }

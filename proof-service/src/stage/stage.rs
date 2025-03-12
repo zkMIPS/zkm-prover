@@ -10,7 +10,6 @@ use crate::stage::{
 use crate::proto::stage_service::v1::Step;
 use crate::stage::tasks::generate_task::GenerateTask;
 use common::file;
-use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn get_timestamp() -> u64 {
@@ -40,9 +39,11 @@ macro_rules! on_task {
         {
             $dst.state = $src.state;
             if TASK_STATE_UNPROCESSED != $src.state {
-                log::debug!("on_task {:#?}", $dst);
                 $dst.trace.finish_ts = get_timestamp();
                 $src.trace.finish_ts = $dst.trace.finish_ts;
+
+                // Fill in the output of the source task.
+                $dst.output = $src.output.clone();
             }
             if TASK_STATE_FAILED == $src.state {
                 $stage.is_error = true;
@@ -102,13 +103,18 @@ impl Stage {
                 {
                     if self.generate_task.composite_proof {
                         self.step = Step::End;
-                    } else if self.prove_tasks.len() > 3 {
+                    } else {
                         self.gen_agg_tasks();
                         self.step = Step::InAgg;
-                    } else {
-                        self.gen_agg_all_task();
-                        self.step = Step::InAggAll;
                     }
+                    // TODO: we will deprecate the agg_all prover.
+                    //} else if self.prove_tasks.len() > 3 {
+                    //    self.gen_agg_tasks();
+                    //    self.step = Step::InAgg;
+                    //} else {
+                    //    self.gen_agg_all_task();
+                    //    self.step = Step::InAggAll;
+                    //}
                 }
             }
             Step::InAgg => {
@@ -191,12 +197,11 @@ impl Stage {
 
     fn gen_prove_task(&mut self) {
         //let prove_dir = self.generate_task.prove_path(true);
-        let files = file::new(&self.generate_task.seg_path(false))
-            .read_dir()
-            .unwrap();
+        log::info!("ProveTask: {:?}", self.generate_task);
+        let files = file::new(&self.generate_task.seg_path).read_dir().unwrap();
         // Read the segment and put them in queue.
         for file_name in files {
-            let result: Result<usize, <usize as FromStr>::Err> = file_name.parse();
+            let result = file_name.parse::<usize>();
             if let Ok(file_no) = result {
                 let prove_task = ProveTask {
                     task_id: uuid::Uuid::new_v4().to_string(), // FIXME: Do you need it?
@@ -204,12 +209,10 @@ impl Stage {
                     trace: Trace::default(),
                     base_dir: self.generate_task.base_dir.clone(),
                     file_no,
-                    segment: safe_read(&file_name),
+                    segment: safe_read(&format!("{}/{file_name}", self.generate_task.seg_path)),
                     program: self.generate_task.gen_program(),
-                    // FIXME: don't use path
-                    //receipt_path: format!("{}/receipt/{}", prove_dir.clone(), file_no),
-                    //receipts_input: self.generate_task.receipts_input.clone(),
-                    receipt_output: safe_read(&self.generate_task.receipts_path),
+                    // will be assigned after the root proving
+                    output: vec![],
                 };
                 self.prove_tasks.push(prove_task);
             }
@@ -248,6 +251,7 @@ impl Stage {
     }
 
     pub fn gen_agg_tasks(&mut self) {
+        // FIXME: we don't have to wait all the prove tasks done for the single GenerateTask. We should keep track of the agg_index in the Stage structure.
         let mut agg_index = 0;
         let mut result = Vec::new();
         let mut current_length = self.prove_tasks.len();
@@ -256,14 +260,12 @@ impl Stage {
             result.push(agg_task::AggTask::init_from_two_prove_task(
                 &(self.prove_tasks[i]),
                 &(self.prove_tasks[i + 1]),
-                //&self.generate_task.prove_path(false),
                 agg_index,
             ));
         }
         if current_length % 2 == 1 {
             result.push(agg_task::AggTask::init_from_single_prove_task(
                 &(self.prove_tasks[current_length - 1]),
-                //&self.generate_task.prove_path(false),
                 agg_index,
             ));
         }
@@ -277,7 +279,6 @@ impl Stage {
                 let agg_task = agg_task::AggTask::init_from_two_agg_task(
                     &result[i],
                     &result[i + 1],
-                    //&self.generate_task.prove_path(false),
                     agg_index,
                 );
                 self.agg_tasks.push(agg_task.clone());
@@ -291,13 +292,10 @@ impl Stage {
         }
         let last_agg_tasks = self.agg_tasks.len() - 1;
         self.agg_tasks[last_agg_tasks].is_final = true;
-        //self.agg_tasks[last_agg_tasks]
-        //    .output_dir
-        //    .clone_from(&self.generate_task.agg_path(false));
-        log::debug!("gen_agg_task {:#?}", self.agg_tasks);
     }
 
     pub fn get_agg_task(&mut self) -> Option<AggTask> {
+        let mut result: Option<AggTask> = None;
         for agg_task in &mut self.agg_tasks {
             if agg_task.left.is_some() || agg_task.right.is_some() {
                 continue;
@@ -305,16 +303,68 @@ impl Stage {
             if agg_task.state == TASK_STATE_UNPROCESSED || agg_task.state == TASK_STATE_FAILED {
                 agg_task.state = TASK_STATE_PROCESSING;
                 agg_task.trace.start_ts = get_timestamp();
-                return Some(agg_task.clone());
+                result = Some(agg_task.clone());
             }
         }
-        None
+        // Fill in the input1/2
+        match &mut result {
+            Some(agg_task) => {
+                let input1 = &mut agg_task.input1;
+                let input2 = &mut agg_task.input2;
+                vec![input1, input2].iter_mut().for_each(|input| {
+                    if input.is_agg {
+                        let tmp = self
+                            .agg_tasks
+                            .iter()
+                            .find(|x| x.task_id == input.computed_request_id)
+                            .unwrap();
+                        input.receipt_input = tmp.output.clone();
+                    } else {
+                        let tmp = self
+                            .prove_tasks
+                            .iter()
+                            .find(|x| x.task_id == input.computed_request_id)
+                            .unwrap();
+                        input.receipt_input = tmp.output.clone();
+                    }
+                })
+            }
+            _ => {}
+        };
+
+        result
     }
 
     pub fn on_agg_task(&mut self, agg_task: &mut AggTask) {
         for item_task in &mut self.agg_tasks {
             if item_task.task_id == agg_task.task_id && item_task.state == TASK_STATE_PROCESSING {
+                log::info!(
+                    "task_id: {}, is_final: {}, from_prove: {}, is_agg: {}/{}",
+                    agg_task.task_id,
+                    agg_task.is_final,
+                    agg_task.from_prove,
+                    agg_task.input1.is_agg,
+                    agg_task.input2.is_agg
+                );
+                log::info!(
+                    "on_agg_task:before dst {} src {}",
+                    item_task.output.len(),
+                    agg_task.output.len()
+                );
                 on_task!(agg_task, item_task, self);
+                log::info!(
+                    "task_id: {}, is_final: {}, from_prove: {}, is_agg: {}/{}",
+                    agg_task.task_id,
+                    agg_task.is_final,
+                    agg_task.from_prove,
+                    agg_task.input1.is_agg,
+                    agg_task.input2.is_agg
+                );
+                log::info!(
+                    "on_agg_task: dst {} src {}",
+                    item_task.output.len(),
+                    agg_task.output.len()
+                );
                 break;
             }
         }
@@ -341,7 +391,6 @@ impl Stage {
         self.agg_all_task
             .output_dir
             .clone_from(&self.generate_task.agg_path);
-        log::debug!("gen_agg_task {:#?}", self.agg_all_task);
     }
 
     pub fn get_agg_all_task(&mut self) -> Option<AggAllTask> {
@@ -361,10 +410,10 @@ impl Stage {
             .clone_from(&self.generate_task.proof_id.clone());
         self.snark_task
             .input_dir
-            .clone_from(&self.generate_task.agg_path(false));
+            .clone_from(&self.generate_task.agg_path);
         self.snark_task
             .output_path
-            .clone_from(&self.generate_task.snark_path(false));
+            .clone_from(&self.generate_task.snark_path);
         self.snark_task.task_id = uuid::Uuid::new_v4().to_string();
         self.snark_task.state = TASK_STATE_UNPROCESSED;
         log::debug!("gen_snark_task {:#?}", self.snark_task);

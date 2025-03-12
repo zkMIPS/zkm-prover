@@ -23,5 +23,9 @@ pub fn read_block_data(block_no: u64, block_path: &str) -> Vec<BlockFileItem> {
 }
 
 pub fn safe_read(path: &str) -> Vec<u8> {
-    std::fs::read(path).unwrap_or_default()
+    log::info!("read {}", path);
+    std::fs::read(path).unwrap_or_else(|_| {
+        log::error!("read: {path}, {:?}", backtrace::Backtrace::new());
+        panic!("Read {} failed", path);
+    })
 }

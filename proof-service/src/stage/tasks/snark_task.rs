@@ -12,5 +12,8 @@ pub struct SnarkTask {
     pub input_dir: String,
     pub output_path: String,
 
+    pub agg_receipt: Vec<u8>,
+
+    pub output: Vec<u8>, //snark_proof_with_public_inputs
     pub trace: Trace,
 }

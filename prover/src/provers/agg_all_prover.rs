@@ -30,8 +30,8 @@ impl AggAllProver {
     }
 }
 
-impl Prover<AggAllContext> for AggAllProver {
-    fn prove(&self, ctx: &mut AggAllContext) -> anyhow::Result<()> {
+impl Prover<AggAllContext, Vec<u8>> for AggAllProver {
+    fn prove(&self, ctx: &AggAllContext) -> anyhow::Result<(bool, Vec<u8>)> {
         type InnerParameters = DefaultParameters;
         type OuterParameters = Groth16WrapperParameters;
         type F = GoldilocksField;
@@ -46,7 +46,7 @@ impl Prover<AggAllContext> for AggAllProver {
         let _args = "".to_string();
 
         if proof_num < 1 {
-            return Ok(());
+            return Ok((true, vec![]));
         }
 
         let mut timing = TimingTree::new("agg_all load from file", log::Level::Info);
@@ -155,6 +155,6 @@ impl Prover<AggAllContext> for AggAllProver {
 
         timing.filter(Duration::from_millis(100)).print();
 
-        Ok(())
+        Ok((true, vec![]))
     }
 }

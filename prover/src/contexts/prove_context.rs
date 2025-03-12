@@ -5,7 +5,7 @@ pub struct ProveContext {
     pub block_no: Option<u64>,
     pub seg_size: u32,
     pub segment: Vec<u8>,
-    pub receipt_output: String,
+    //pub receipt_output: Vec<u8>,
     pub receipts_input: Vec<Vec<u8>>,
 }
 

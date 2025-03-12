@@ -4,6 +4,7 @@ use serde::Serialize;
 
 use crate::proto::includes::v1::AggregateInput;
 
+#[deprecated]
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AggAllTask {
     pub task_id: String,
@@ -15,21 +16,16 @@ pub struct AggAllTask {
     pub proof_id: String,
     pub receipt_dir: String,
     pub output_dir: String,
+
     pub trace: Trace,
+    pub output: Vec<u8>, // void
 }
 
-//#[derive(Debug, Default, Deserialize, Serialize, Clone)]
-//pub struct AggInput {
-//    pub receipt_input: Vec<u8>,
-//    pub is_agg: bool,
-//}
-//
-//impl AggInput {
 pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
+    assert!(!prove_task.output.is_empty());
     AggregateInput {
         // we put the receipt of prove_task, instead of the file path
-        //  receipt_path: prove_task.receipt_path.clone(),
-        receipt_input: prove_task.receipt_output.clone(),
+        receipt_input: prove_task.output.clone(),
         computed_request_id: prove_task.task_id.clone(),
         is_agg: false,
     }
@@ -38,7 +34,6 @@ pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AggTask {
-    //pub file_key: String,
     pub task_id: String,
     pub state: u32,
 
@@ -49,10 +44,10 @@ pub struct AggTask {
     pub input2: AggregateInput,
     pub is_final: bool,
     pub from_prove: bool,
-    pub output_receipt: Vec<u8>,
     pub agg_index: i32,
 
     pub trace: Trace,
+    pub output: Vec<u8>, // output_receipt: Vec<u8>,
 
     // depend
     pub left: Option<String>,
@@ -78,22 +73,21 @@ impl AggTask {
         false
     }
 
-    //pub fn set_out_path(&mut self, prove_dir: &str) {
-    //    self.output_receipt_path = format!("{}/receipt/{}", prove_dir, self.file_key);
-    //}
-
     pub fn to_agg_input(&self) -> AggregateInput {
+        // For the receipt_input, nothing we can do here when we create the calculation graph, so give it a default value
         AggregateInput {
-            receipt_input: self.output_receipt.clone(),
+            receipt_input: vec![],
             computed_request_id: self.task_id.clone(),
             is_agg: !self.from_prove,
         }
     }
 
+    // FIXME: if we have a single prove task, and try to aggegate its root proof, panic will raise
+    // So we just set up the state successful
     pub fn init_from_single_prove_task(prove_task: &ProveTask, agg_index: i32) -> AggTask {
+        let task_id = uuid::Uuid::new_v4().to_string();
         let agg_task = AggTask {
-            //file_key: format!("{}", prove_task.file_no),
-            task_id: uuid::Uuid::new_v4().to_string(),
+            task_id: task_id.clone(),
             block_no: prove_task.program.block_no,
             state: TASK_STATE_SUCCESS,
             seg_size: prove_task.program.seg_size,
@@ -102,19 +96,15 @@ impl AggTask {
             agg_index,
             ..Default::default()
         };
-        //agg_task.set_out_path(prove_dir);
         agg_task
     }
 
     pub fn init_from_two_prove_task(
         left: &ProveTask,
         right: &ProveTask,
-        //prove_dir: &str,
         agg_index: i32,
     ) -> AggTask {
         let agg_task = AggTask {
-            // file_key: format!("{}-{}", left.file_no, right.file_no),
-            //file_key: format!("agg{}", agg_index),
             task_id: uuid::Uuid::new_v4().to_string(),
             block_no: left.program.block_no,
             state: TASK_STATE_UNPROCESSED,
@@ -125,18 +115,11 @@ impl AggTask {
             agg_index,
             ..Default::default()
         };
-        //agg_task.set_out_path(prove_dir);
         agg_task
     }
 
-    pub fn init_from_two_agg_task(
-        left: &AggTask,
-        right: &AggTask,
-        //prove_dir: &str,
-        agg_index: i32,
-    ) -> AggTask {
+    pub fn init_from_two_agg_task(left: &AggTask, right: &AggTask, agg_index: i32) -> AggTask {
         let mut agg_task = AggTask {
-            //file_key: format!("agg{}", agg_index),
             task_id: uuid::Uuid::new_v4().to_string(),
             block_no: left.block_no,
             state: TASK_STATE_UNPROCESSED,
@@ -145,12 +128,7 @@ impl AggTask {
             input1: left.to_agg_input(),
             input2: right.to_agg_input(),
             agg_index,
-            is_final: false,
-            from_prove: false,
-            trace: Trace::default(),
-            output_receipt: vec![],
-            left: Some(left.task_id.clone()),
-            right: Some(right.task_id.clone()),
+            ..Default::default()
         };
         if !left.from_prove {
             agg_task.left = Some(left.task_id.clone());
@@ -158,7 +136,6 @@ impl AggTask {
         if !right.from_prove {
             agg_task.right = Some(right.task_id.clone());
         }
-        //agg_task.set_out_path(prove_dir);
         agg_task
     }
 }
@@ -190,7 +167,6 @@ mod tests {
         };
         let agg_task = crate::stage::tasks::AggTask::init_from_single_prove_task(&prove_task, 1);
         assert!(agg_task.state == TASK_STATE_SUCCESS);
-        //assert!(agg_task.file_key == format!("{}", prove_task.file_no));
     }
 
     #[test]
@@ -206,11 +182,9 @@ mod tests {
         let agg_task = crate::stage::tasks::AggTask::init_from_two_prove_task(
             &left_prove_task,
             &right_prove_task,
-            //    "/test",
             1,
         );
         assert!(agg_task.state == TASK_STATE_UNPROCESSED);
-        //assert!(agg_task.file_key == format!("agg{}", 1));
     }
 
     #[test]
@@ -226,11 +200,9 @@ mod tests {
         let agg_task = crate::stage::tasks::AggTask::init_from_two_agg_task(
             &left_agg_task,
             &right_agg_task,
-            //   "/test",
             1,
         );
         assert!(agg_task.state == TASK_STATE_UNPROCESSED);
-        //assert!(agg_task.file_key == format!("agg{}", 1));
         assert!(agg_task.left.is_some());
         assert!(agg_task.right.is_some());
     }

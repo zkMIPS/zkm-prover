@@ -30,78 +30,81 @@ impl Pipeline {
         }
     }
 
-    pub fn split(&self, split_context: &mut SplitContext) -> Result<u64, String> {
-        self.executor.split(split_context)
+    pub fn split(&self, split_context: &SplitContext) -> Result<(bool, u64), String> {
+        match self.executor.split(split_context) {
+            Ok(n) => Ok((true, n)),
+            Err(e) => Err(e.to_string()),
+        }
     }
 
     pub fn prove_root(
         &self,
-        prove_context: &mut ProveContext,
-    ) -> std::result::Result<bool, String> {
+        prove_context: &ProveContext,
+    ) -> std::result::Result<(bool, Vec<u8>), String> {
         let result = self.mutex.try_lock();
         match result {
             Ok(_) => match self.root_prover.prove(prove_context) {
-                Ok(()) => Ok(true),
+                Ok(receipt_output) => Ok(receipt_output),
                 Err(e) => {
                     log::error!("prove_root error {:#?}", e);
                     Err(e.to_string())
                 }
             },
-            Err(_e) => {
-                log::error!("prove_root busy");
-                Ok(false)
+            Err(e) => {
+                log::error!("prove_root busy: {:?}", e);
+                Ok((false, vec![]))
             }
         }
     }
 
     pub fn prove_aggregate(
         &mut self,
-        agg_context: &mut AggContext,
-    ) -> std::result::Result<bool, String> {
+        agg_context: &AggContext,
+    ) -> std::result::Result<(bool, Vec<u8>), String> {
         let result = self.mutex.try_lock();
         match result {
             Ok(_) => match self.agg_prover.prove(agg_context) {
-                Ok(()) => Ok(true),
+                Ok(agg_receipt_output) => Ok(agg_receipt_output),
                 Err(e) => {
                     log::error!("prove_aggregate error {:#?}", e);
                     Err(e.to_string())
                 }
             },
-            Err(_) => {
-                log::error!("prove_aggregate busy");
-                Ok(false)
+            Err(e) => {
+                log::error!("prove_aggregate busy: {:?}", e);
+                Ok((false, vec![]))
             }
         }
     }
 
     pub fn prove_snark(
         &mut self,
-        snark_context: &mut SnarkContext,
-    ) -> std::result::Result<bool, String> {
+        snark_context: &SnarkContext,
+    ) -> std::result::Result<(bool, Vec<u8>), String> {
         let result = self.mutex.try_lock();
         match result {
             Ok(_) => match self.snark_prover.prove(snark_context) {
-                Ok(()) => Ok(true),
+                Ok(output) => Ok(output),
                 Err(e) => {
                     log::error!("prove_snark error {:#?}", e);
                     Err(e.to_string())
                 }
             },
-            Err(_) => {
-                log::error!("prove_snark busy");
-                Ok(false)
+            Err(e) => {
+                log::error!("prove_snark busy: {:?}", e);
+                Ok((false, vec![]))
             }
         }
     }
 
     pub fn prove_aggregate_all(
         &mut self,
-        final_context: &mut AggAllContext,
-    ) -> std::result::Result<bool, String> {
+        final_context: &AggAllContext,
+    ) -> std::result::Result<(bool, Vec<u8>), String> {
         let result = self.mutex.try_lock();
         match result {
             Ok(_) => match self.agg_all_prover.prove(final_context) {
-                Ok(()) => Ok(true),
+                Ok(r) => Ok(r),
                 Err(e) => {
                     log::error!("prove_aggregate_all error {:#?}", e);
                     Err(e.to_string())
@@ -109,7 +112,7 @@ impl Pipeline {
             },
             Err(_) => {
                 log::error!("prove_aggregate_all busy");
-                Ok(false)
+                Ok((false, vec![]))
             }
         }
     }

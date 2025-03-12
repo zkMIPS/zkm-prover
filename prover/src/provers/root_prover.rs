@@ -14,8 +14,8 @@ use zkm_prover::generation::state::{AssumptionReceipts, Receipt};
 #[derive(Default)]
 pub struct RootProver {}
 
-impl Prover<ProveContext> for RootProver {
-    fn prove(&self, ctx: &mut ProveContext) -> anyhow::Result<()> {
+impl Prover<ProveContext, Vec<u8>> for RootProver {
+    fn prove(&self, ctx: &ProveContext) -> anyhow::Result<(bool, Vec<u8>)> {
         type F = GoldilocksField;
         const D: usize = 2;
         type C = PoseidonGoldilocksConfig;
@@ -23,8 +23,6 @@ impl Prover<ProveContext> for RootProver {
         //let basedir = ctx.base_dir.clone();
         let block_no = ctx.block_no.unwrap_or(0);
         let segment = ctx.segment.clone();
-        //let receipt_path = ctx.receipt_output.clone();
-        let file = String::from("");
 
         let mut receipts: AssumptionReceipts<F, C, D> = vec![];
         if !ctx.receipts_input.is_empty() {
@@ -48,13 +46,14 @@ impl Prover<ProveContext> for RootProver {
 
         timing = TimingTree::new("root_prove load input", log::Level::Info);
 
+        //let file = String::from("");
         //let seg_data = file::new(&seg_path).read()?;
+        // TODO: don't support block_data
         let seg_reader = std::io::Cursor::new(segment);
-        // FIXME: why do we need basedir?
-        let input = segment_kernel("", &block_no.to_string(), &file, seg_reader);
+        let input = segment_kernel("", &block_no.to_string(), "", seg_reader);
         timing.filter(Duration::from_millis(100)).print();
 
-        timing = TimingTree::new("root_prove root", log::Level::Info);
+        timing = TimingTree::new("root_prove prove", log::Level::Info);
         let receipt = all_circuits.prove_root_with_assumption(
             &all_stark,
             &input,
@@ -65,14 +64,12 @@ impl Prover<ProveContext> for RootProver {
         all_circuits.verify_root(receipt.clone())?;
         timing.filter(Duration::from_millis(100)).print();
 
-        timing = TimingTree::new("root_prove write result", log::Level::Info);
+        //timing = TimingTree::new("root_prove write result", log::Level::Info);
 
         //// write receipt write file
         //let json_string = serde_json::to_string(&receipt)?;
         //let _ = file::new(&receipt_path).write(json_string.as_bytes())?;
-        timing.filter(Duration::from_millis(100)).print();
-        ctx.receipt_output = serde_json::to_string(&receipt)?;
-
-        Ok(())
+        //timing.filter(Duration::from_millis(100)).print();
+        Ok((true, serde_json::to_vec(&receipt)?))
     }
 }

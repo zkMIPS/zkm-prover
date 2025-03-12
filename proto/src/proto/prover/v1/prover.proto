@@ -101,7 +101,8 @@ message ProveRequest {
 message ProveResponse {
     string proof_id = 1;
     string computed_request_id = 2;
-    Result result = 3;
+    bytes output_receipt = 3;
+    Result result = 4;
 }
 
 message AggregateRequest {
@@ -112,15 +113,16 @@ message AggregateRequest {
     uint32 seg_size = 6;
     includes.v1.AggregateInput input1 = 7;
     includes.v1.AggregateInput input2 = 8;
-    bytes agg_receipt = 9;
+    //bytes agg_receipt = 9;
     bool is_final = 11;
-    //string output_dir = 12;
+    // string output_dir = 12;
 }
 
 message AggregateResponse {
     string proof_id = 1;
     string computed_request_id = 2;
-    Result result = 3;
+    bytes agg_receipt = 3;
+    Result result = 4;
 }
 
 message AggregateAllRequest {
@@ -149,11 +151,12 @@ message SnarkProofRequest {
     bytes proof_with_public_inputs = 5;
     bytes block_public_inputs = 6;
     includes.v1.ProverVersion version = 7;
+    bytes agg_receipt = 8;
 }
 
 message SnarkProofResponse {
     string proof_id = 1;
     string computed_request_id = 2;
-    bytes proof_with_public_inputs = 3;
+    bytes snark_proof_with_public_inputs = 3;
     Result result = 4;
 }

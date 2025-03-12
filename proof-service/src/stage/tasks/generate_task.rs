@@ -26,28 +26,6 @@ pub struct GenerateTask {
 }
 
 impl GenerateTask {
-    // FIXME: skip if creating and dir exists
-    #[inline(always)]
-    fn _create(&self, creating: bool, item: &str) -> String {
-        let _path = format!("{}/{}", self.base_dir, item);
-        if creating {
-            common::file::new(&_path)
-                .create_dir_all()
-                .expect("create {prove_path} failed");
-        }
-        _path
-    }
-    pub fn agg_path(&self, creating: bool) -> String {
-        self._create(creating, "aggregate")
-    }
-    pub fn snark_path(&self, creating: bool) -> String {
-        self._create(creating, "final")
-    }
-
-    pub fn seg_path(&self, creating: bool) -> String {
-        self._create(creating, "segment")
-    }
-
     // load the segement from file_no
     pub fn gen_program(&self) -> Program {
         if self.program.is_some() {
