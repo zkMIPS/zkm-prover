@@ -1,10 +1,10 @@
 use crate::proto::prover_service::v1::{
-    get_status_response, prover_service_server::ProverService, AggregateAllRequest,
-    AggregateAllResponse, AggregateRequest, AggregateResponse, GetStatusRequest, GetStatusResponse,
-    GetTaskResultRequest, GetTaskResultResponse, ProveRequest, ProveResponse, Result, ResultCode,
-    SnarkProofRequest, SnarkProofResponse, SplitElfRequest, SplitElfResponse,
+    get_status_response, prover_service_server::ProverService, AggregateRequest, AggregateResponse,
+    GetStatusRequest, GetStatusResponse, GetTaskResultRequest, GetTaskResultResponse, ProveRequest,
+    ProveResponse, Result, ResultCode, SnarkProofRequest, SnarkProofResponse, SplitElfRequest,
+    SplitElfResponse,
 };
-use prover::contexts::{AggAllContext, AggContext, ProveContext, SnarkContext};
+use prover::contexts::{AggContext, ProveContext, SnarkContext};
 use prover::executor::SplitContext;
 use prover::pipeline::Pipeline;
 
@@ -278,50 +278,6 @@ impl ProverService for ProverServiceSVC {
             let elapsed = end.duration_since(start);
             log::info!(
                 "[aggregate] {}:{} code:{} elapsed:{} end",
-                request.get_ref().proof_id,
-                request.get_ref().computed_request_id,
-                response.result.as_ref().unwrap().code,
-                elapsed.as_secs()
-            );
-            Ok(Response::new(response))
-        })
-        .await
-    }
-
-    async fn aggregate_all(
-        &self,
-        request: Request<AggregateAllRequest>,
-    ) -> tonic::Result<Response<AggregateAllResponse>, Status> {
-        metrics::record_metrics("prover::aggregate", || async {
-            log::info!(
-                "[aggregate_all] {}:{} start",
-                request.get_ref().proof_id,
-                request.get_ref().computed_request_id,
-            );
-            let start = Instant::now();
-            let final_context = AggAllContext::new(
-                request.get_ref().seg_size,
-                request.get_ref().proof_num,
-                &request.get_ref().receipt_dir,
-                &request.get_ref().output_dir,
-            );
-
-            let pipeline = self.pipeline.clone();
-            let agg_all_func = move || {
-                let s_ctx: AggAllContext = final_context;
-                pipeline.lock().unwrap().prove_aggregate_all(&s_ctx)
-            };
-            let result = run_back_task(agg_all_func).await;
-            let mut response = AggregateAllResponse {
-                proof_id: request.get_ref().proof_id.clone(),
-                computed_request_id: request.get_ref().computed_request_id.clone(),
-                ..Default::default()
-            };
-            on_done!(result, response);
-            let end = Instant::now();
-            let elapsed = end.duration_since(start);
-            log::info!(
-                "[aggregate_all] {}:{} code:{} elapsed:{} end",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
                 response.result.as_ref().unwrap().code,

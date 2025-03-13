@@ -48,12 +48,11 @@ For each ProverNodes, it begins to serve after registering to the Stage, and pro
 | split_elf       | Disk, IO            | Split the ELF program into multiple segments, dump the segment into disk |  
 | prove           | Memory, GPU         | Prove the batches                                                        |
 | aggregate       | Memory, GPU         | Aggregate the two batch proofs                                           |
-| aggregate_all   | Memory, GPU         | Aggregate the multiple batch proofs                                      |
 | snark_proof     | Memory, CPU or GPU  | Generate the SNARK proof of the stark verifier on large field            |
 | get_status      | Memory, CPU         | Query the prover's status, Idle or Computing                             | 
 | get_task_result | Memory, CPU         | Query the task status, returning 200 or else.                            | 
 
-A ProverNode can be an instance to run `prove`, `aggregate`, `aggregate_all` or `snark_proof`. Consider that, the `snark_proof` can not utilize the GPU accelerator,
+A ProverNode can be an instance to run `prove`, `aggregate`, or `snark_proof`. Consider that, the `snark_proof` can not utilize the GPU accelerator,
 it's necessary to schedule different instance onto different machine by its resource requirement to realize hardware affinity for better machine utilization.
 
 Especially, `split_elf` reads the ELF from the disk, which is written by the `Stage`'s `GenerateTask`, this means its corresponding `ProverNode` should be able to access the `Stage`'s disk. Currently, the shared filesystems, like AWS S3 or NFS, are employed to make it possible. 

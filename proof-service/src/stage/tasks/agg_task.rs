@@ -3,24 +3,6 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::proto::includes::v1::AggregateInput;
-
-#[deprecated]
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct AggAllTask {
-    pub task_id: String,
-    pub state: u32,
-    pub block_no: Option<u64>,
-    pub seg_size: u32,
-    pub segment: Vec<u8>,
-    pub proof_num: u32,
-    pub proof_id: String,
-    pub receipt_dir: String,
-    pub output_dir: String,
-
-    pub trace: Trace,
-    pub output: Vec<u8>, // void
-}
-
 pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
     assert!(!prove_task.output.is_empty());
     AggregateInput {
@@ -173,10 +155,12 @@ mod tests {
     fn test_init_from_two_prove_task() {
         let left_prove_task = ProveTask {
             file_no: 1,
+            output: vec![1, 2, 3],
             ..Default::default()
         };
         let right_prove_task = ProveTask {
             file_no: 2,
+            output: vec![3, 4, 5],
             ..Default::default()
         };
         let agg_task = crate::stage::tasks::AggTask::init_from_two_prove_task(

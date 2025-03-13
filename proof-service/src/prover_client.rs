@@ -1,14 +1,12 @@
-use crate::proto::includes::v1::AggregateInput;
 use crate::proto::prover_service::v1::{
-    prover_service_client::ProverServiceClient, AggregateAllRequest, AggregateRequest,
-    GetTaskResultRequest, GetTaskResultResponse, ProveRequest, ResultCode, SnarkProofRequest,
-    SplitElfRequest,
+    prover_service_client::ProverServiceClient, AggregateRequest, GetTaskResultRequest,
+    GetTaskResultResponse, ProveRequest, ResultCode, SnarkProofRequest, SplitElfRequest,
 };
 use common::file;
 use common::tls::Config as TlsConfig;
 
 use crate::stage::tasks::{
-    AggAllTask, AggTask, ProveTask, SnarkTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
+    AggTask, ProveTask, SnarkTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
     TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, TASK_TIMEOUT,
 };
 use tonic::Request;
@@ -190,51 +188,6 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(agg_task)
 }
-
-pub async fn aggregate_all(
-    mut agg_all_task: AggAllTask,
-    tls_config: Option<TlsConfig>,
-) -> Option<AggAllTask> {
-    agg_all_task.state = TASK_STATE_UNPROCESSED;
-    let client = get_idle_client(tls_config).await;
-    if let Some((addrs, mut client)) = client {
-        let request = AggregateAllRequest {
-            proof_id: agg_all_task.proof_id.clone(),
-            computed_request_id: agg_all_task.task_id.clone(),
-            seg_size: agg_all_task.seg_size,
-            block_no: agg_all_task.block_no,
-            segment: agg_all_task.segment.clone(),
-            proof_num: agg_all_task.proof_num,
-            receipt_dir: agg_all_task.receipt_dir.clone(),
-            output_dir: agg_all_task.output_dir.clone(),
-        };
-        log::info!(
-            "[aggregate_all] rpc {}:{} start",
-            request.proof_id,
-            request.computed_request_id
-        );
-        let mut grpc_request = Request::new(request);
-        grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
-        let response = client.aggregate_all(grpc_request).await;
-        if let Ok(response) = response {
-            if let Some(response_result) = response.get_ref().result.as_ref() {
-                agg_all_task.state = result_code_to_state(response_result.code);
-                agg_all_task.trace.node_info = addrs;
-                log::info!(
-                    "[aggregate_all] rpc {}:{}  code:{:?} message:{:?}",
-                    response.get_ref().proof_id,
-                    response.get_ref().computed_request_id,
-                    response_result.code,
-                    response_result.message,
-                );
-                return Some(agg_all_task);
-            }
-        }
-    }
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    Some(agg_all_task)
-}
-
 pub async fn snark_proof(
     mut snark_task: SnarkTask,
     tls_config: Option<TlsConfig>,

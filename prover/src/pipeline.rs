@@ -1,5 +1,5 @@
-use crate::contexts::{AggAllContext, AggContext, ProveContext, SnarkContext};
-use crate::provers::{AggAllProver, AggProver, Prover, RootProver, SnarkProver};
+use crate::contexts::{AggContext, ProveContext, SnarkContext};
+use crate::provers::{AggProver, Prover, RootProver, SnarkProver};
 
 use crate::executor::{Executor, SplitContext};
 use std::sync::Mutex;
@@ -10,7 +10,6 @@ pub struct Pipeline {
     executor: Executor,
     root_prover: RootProver,
     agg_prover: AggProver,
-    agg_all_prover: AggAllProver,
     snark_prover: SnarkProver,
 }
 
@@ -21,7 +20,6 @@ impl Pipeline {
             executor: Executor::default(),
             root_prover: RootProver::default(),
             agg_prover: AggProver::default(),
-            agg_all_prover: AggAllProver::default(),
             snark_prover: SnarkProver::new(keys_input_dir, &format!("{}/output", base_dir)),
         }
     }
@@ -88,26 +86,6 @@ impl Pipeline {
             },
             Err(e) => {
                 log::error!("prove_snark busy: {:?}", e);
-                Ok((false, vec![]))
-            }
-        }
-    }
-
-    pub fn prove_aggregate_all(
-        &mut self,
-        final_context: &AggAllContext,
-    ) -> std::result::Result<(bool, Vec<u8>), String> {
-        let result = self.mutex.try_lock();
-        match result {
-            Ok(_) => match self.agg_all_prover.prove(final_context) {
-                Ok(r) => Ok(r),
-                Err(e) => {
-                    log::error!("prove_aggregate_all error {:#?}", e);
-                    Err(e.to_string())
-                }
-            },
-            Err(_) => {
-                log::error!("prove_aggregate_all busy");
                 Ok((false, vec![]))
             }
         }

@@ -29,7 +29,6 @@ service ProverService {
     rpc SplitElf(SplitElfRequest) returns (SplitElfResponse) {}
     rpc Prove(ProveRequest) returns (ProveResponse) {}
     rpc Aggregate(AggregateRequest) returns (AggregateResponse) {}
-    rpc AggregateAll(AggregateAllRequest) returns (AggregateAllResponse) {}
     rpc SnarkProof(SnarkProofRequest) returns (SnarkProofResponse) {}
 }
 
@@ -123,24 +122,6 @@ message AggregateResponse {
     string computed_request_id = 2;
     bytes agg_receipt = 3;
     Result result = 4;
-}
-
-message AggregateAllRequest {
-    string proof_id = 1;
-    string computed_request_id = 2;
-    //string seg_path = 4;
-    bytes segment = 4;
-    optional uint64 block_no = 5;
-    uint32 seg_size = 6;
-    uint32 proof_num = 7;
-    string receipt_dir = 8;
-    string output_dir = 10;
-}
-
-message AggregateAllResponse {
-    string proof_id = 1;
-    string computed_request_id = 2;
-    Result result = 3;
 }
 
 message SnarkProofRequest {

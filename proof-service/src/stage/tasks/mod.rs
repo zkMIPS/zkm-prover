@@ -15,7 +15,6 @@ pub mod prove_task;
 pub use prove_task::ProveTask;
 
 pub mod agg_task;
-pub use agg_task::AggAllTask;
 pub use agg_task::AggTask;
 
 pub mod generate_task;
@@ -33,7 +32,6 @@ pub enum Task {
     Split(SplitTask),
     Prove(ProveTask),
     Agg(AggTask),
-    AggAll(AggAllTask),
     Snark(SnarkTask),
 }
 

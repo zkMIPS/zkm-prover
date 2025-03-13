@@ -5,8 +5,8 @@ use crate::stage::{
     stage::get_timestamp,
     stage::Stage,
     tasks::{
-        Task, TASK_ITYPE_AGG, TASK_ITYPE_AGGALL, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE,
-        TASK_ITYPE_SPLIT, TASK_STATE_FAILED, TASK_STATE_SUCCESS,
+        Task, TASK_ITYPE_AGG, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT,
+        TASK_STATE_FAILED, TASK_STATE_SUCCESS,
     },
     GenerateTask,
 };
@@ -96,21 +96,6 @@ async fn run_stage_task(
                                 });
                             }
                         }
-                        Step::InAggAll => {
-                            let agg_all_task = stage.get_agg_all_task();
-                            if let Some(agg_all_task) = agg_all_task {
-                                let tx = tx.clone();
-                                let tls_config = tls_config.clone();
-                                tokio::spawn(async move {
-                                    let response =
-                                        prover_client::aggregate_all(agg_all_task, tls_config)
-                                            .await;
-                                    if let Some(agg_all_task) = response {
-                                        let _ = tx.send(Task::AggAll(agg_all_task)).await;
-                                    }
-                                });
-                            }
-                        }
                         Step::InSnark => {
                             let snark_task = stage.get_snark_task();
                             if let Some(snark_task) = snark_task {
@@ -142,10 +127,6 @@ async fn run_stage_task(
                                     Task::Agg(mut data) => {
                                         stage.on_agg_task(&mut data);
                                         save_task!(data, db, TASK_ITYPE_AGG);
-                                    },
-                                    Task::AggAll(mut data) => {
-                                        stage.on_agg_all_task(&mut data);
-                                        save_task!(data, db, TASK_ITYPE_AGGALL);
                                     },
                                     Task::Snark(mut data) => {
                                         stage.on_snark_task(&mut data);

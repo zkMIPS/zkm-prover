@@ -1,12 +1,6 @@
 use crate::contexts::SnarkContext;
 use crate::provers::Prover;
-use plonky2::field::goldilocks_field::GoldilocksField;
-use plonky2::plonk::config::PoseidonGoldilocksConfig;
-use std::path::Path;
 use zkm_recursion::as_groth16;
-
-use plonky2x::backend::circuit::Groth16WrapperParameters;
-use plonky2x::prelude::DefaultParameters;
 
 #[derive(Default)]
 pub struct SnarkProver {
@@ -25,12 +19,6 @@ impl SnarkProver {
 
 impl Prover<SnarkContext, Vec<u8>> for SnarkProver {
     fn prove(&self, ctx: &SnarkContext) -> anyhow::Result<(bool, Vec<u8>)> {
-        type InnerParameters = DefaultParameters;
-        type OuterParameters = Groth16WrapperParameters;
-        type F = GoldilocksField;
-        const D: usize = 2;
-        type C = PoseidonGoldilocksConfig;
-
         //let input_dir = format!("{}/{}", self.input_dir, ctx.proof_id);
         let output_dir = format!("{}/{}", self.output_dir, ctx.proof_id);
         std::fs::create_dir_all(&output_dir)?;

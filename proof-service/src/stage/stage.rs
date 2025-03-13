@@ -2,7 +2,7 @@ use crate::stage::{
     safe_read,
     tasks::{
         agg_task::{self, AggTask},
-        {AggAllTask, ProveTask, SnarkTask, SplitTask}, {Trace, TASK_STATE_PROCESSING},
+        {ProveTask, SnarkTask, SplitTask}, {Trace, TASK_STATE_PROCESSING},
         {TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED},
     },
 };
@@ -24,7 +24,6 @@ pub struct Stage {
     pub split_task: SplitTask,
     pub prove_tasks: Vec<ProveTask>,
     pub agg_tasks: Vec<AggTask>,
-    pub agg_all_task: AggAllTask,
     pub snark_task: SnarkTask,
     pub is_error: bool,
     pub errmsg: String,
@@ -72,7 +71,6 @@ impl Stage {
             split_task: SplitTask::default(),
             prove_tasks: Vec::new(),
             agg_tasks: Vec::new(),
-            agg_all_task: AggAllTask::default(),
             snark_task: SnarkTask::default(),
             is_error: false,
             errmsg: "".to_string(),
@@ -124,12 +122,6 @@ impl Stage {
                     .iter()
                     .all(|task| task.state == TASK_STATE_SUCCESS)
                 {
-                    self.gen_snark_task();
-                    self.step = Step::InSnark;
-                }
-            }
-            Step::InAggAll => {
-                if self.agg_all_task.state == TASK_STATE_SUCCESS {
                     self.gen_snark_task();
                     self.step = Step::InSnark;
                 }
@@ -362,32 +354,6 @@ impl Stage {
         }
     }
 
-    pub fn gen_agg_all_task(&mut self) {
-        assert!(self.agg_all_task.state == TASK_STATE_INITIAL);
-        self.agg_all_task.task_id = uuid::Uuid::new_v4().to_string();
-        self.agg_all_task.state = TASK_STATE_UNPROCESSED;
-        self.agg_all_task.block_no = self.generate_task.block_no;
-        self.agg_all_task.seg_size = self.generate_task.seg_size;
-        self.agg_all_task
-            .proof_id
-            .clone_from(&self.generate_task.proof_id.clone());
-        self.agg_all_task.proof_num = self.prove_tasks.len() as u32;
-        self.agg_all_task.receipt_dir = format!("{}/receipt", self.generate_task.prove_path);
-        self.agg_all_task
-            .output_dir
-            .clone_from(&self.generate_task.agg_path);
-    }
-
-    pub fn get_agg_all_task(&mut self) -> Option<AggAllTask> {
-        let src = &mut self.agg_all_task;
-        get_task!(src);
-    }
-
-    pub fn on_agg_all_task(&mut self, agg_all_task: &mut AggAllTask) {
-        let dst = &mut self.agg_all_task;
-        on_task!(agg_all_task, dst, self);
-    }
-
     pub fn gen_snark_task(&mut self) {
         assert!(self.snark_task.state == TASK_STATE_INITIAL);
         self.snark_task
@@ -457,11 +423,6 @@ impl Debug for Stage {
             })
             .collect::<Vec<String>>()
             .join(" \r\n");
-        let agg_all_cost = format!(
-            "agg_all_id: {} cost: {} sec",
-            self.agg_all_task.task_id,
-            self.agg_all_task.trace.duration(),
-        );
         let snark_cost = format!(
             "snark_id: {} cost: {} sec",
             self.snark_task.task_id,
@@ -470,13 +431,8 @@ impl Debug for Stage {
 
         write!(
             f,
-            "proof_id: {}\r\n {}\r\n {}\r\n {}\r\n {}\r\n {}\r\n",
-            self.generate_task.proof_id,
-            split_cost,
-            root_prove_cost,
-            agg_cost,
-            agg_all_cost,
-            snark_cost
+            "proof_id: {}\r\n {}\r\n {}\r\n {}\r\n {}\r\n",
+            self.generate_task.proof_id, split_cost, root_prove_cost, agg_cost, snark_cost
         )
     }
 }
@@ -492,6 +448,7 @@ mod tests {
             };
             for i in 0..n {
                 stage.prove_tasks.push(ProveTask {
+                    output: vec![1, 2, 3],
                     file_no: i,
                     ..Default::default()
                 })

@@ -22,7 +22,7 @@ impl Prover<AggContext, Vec<u8>> for AggProver {
         let is_agg1 = ctx.is_agg_1;
         let is_agg2 = ctx.is_agg_2;
 
-        let mut timing = TimingTree::new("agg init all_circuits", log::Level::Info);
+        let timing = TimingTree::new("agg init all_circuits", log::Level::Info);
         let all_circuits = &*crate::provers::instance().lock().unwrap();
         timing.filter(Duration::from_millis(100)).print();
 
