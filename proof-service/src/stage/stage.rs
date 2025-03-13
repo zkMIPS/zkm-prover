@@ -305,34 +305,31 @@ impl Stage {
             }
         }
         // Fill in the input1/2
-        match &mut result {
-            Some(agg_task) => {
-                let input1 = &mut agg_task.input1;
-                let input2 = &mut agg_task.input2;
-                vec![input1, input2].iter_mut().for_each(|input| {
-                    if input.is_agg {
-                        let tmp = self
-                            .agg_tasks
-                            .iter()
-                            .find(|x| x.task_id == input.computed_request_id)
-                            .unwrap();
-                        input.receipt_input = tmp.output.clone();
-                    } else {
-                        let tmp = self
-                            .prove_tasks
-                            .iter()
-                            .find(|x| x.task_id == input.computed_request_id)
-                            .unwrap();
-                        input.receipt_input = tmp.output.clone();
-                    }
-                });
-                log::info!(
-                    "to_agg_task: {:?}, {:?}",
-                    agg_task.input1.receipt_input.len(),
-                    agg_task.input2.receipt_input.len()
-                );
-            }
-            _ => {}
+        if let Some(agg_task) = &mut result {
+            let input1 = &mut agg_task.input1;
+            let input2 = &mut agg_task.input2;
+            [input1, input2].iter_mut().for_each(|input| {
+                if input.is_agg {
+                    let tmp = self
+                        .agg_tasks
+                        .iter()
+                        .find(|x| x.task_id == input.computed_request_id)
+                        .unwrap();
+                    input.receipt_input = tmp.output.clone();
+                } else {
+                    let tmp = self
+                        .prove_tasks
+                        .iter()
+                        .find(|x| x.task_id == input.computed_request_id)
+                        .unwrap();
+                    input.receipt_input = tmp.output.clone();
+                }
+            });
+            log::info!(
+                "to_agg_task: {:?}, {:?}",
+                agg_task.input1.receipt_input.len(),
+                agg_task.input2.receipt_input.len()
+            );
         };
         log::info!("get_aag_task:yes? {:?}", result.is_some());
         result
@@ -369,7 +366,7 @@ impl Stage {
         self.snark_task.state = TASK_STATE_UNPROCESSED;
         // fill in the input receipts
         for agg_task in &self.agg_tasks {
-            if agg_task.is_final == true {
+            if agg_task.is_final {
                 self.snark_task.agg_receipt = agg_task.output.clone();
             }
         }

@@ -29,7 +29,7 @@ impl Prover<SnarkContext, Vec<u8>> for SnarkProver {
             output_dir
         );
 
-        assert!(ctx.agg_receipt.len() > 0);
+        assert!(!ctx.agg_receipt.is_empty());
         // wrap stark
         let all_circuits = &*crate::provers::instance().lock().unwrap();
         let agg_receipt = serde_json::from_slice(&ctx.agg_receipt)?;
@@ -37,7 +37,7 @@ impl Prover<SnarkContext, Vec<u8>> for SnarkProver {
 
         as_groth16(&self.input_dir, &self.input_dir, &output_dir)?;
 
-        let snark_proof_with_public_inputs = std::fs::read(&format!(
+        let snark_proof_with_public_inputs = std::fs::read(format!(
             "{}/snark_proof_with_public_inputs.json",
             output_dir
         ))?;

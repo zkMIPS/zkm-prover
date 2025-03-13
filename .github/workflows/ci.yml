@@ -54,7 +54,7 @@ jobs:
         run: cargo test --release --verbose
       - name: Cargo test zkm-prover
         run: cargo test --release -- --nocapture
-        working-directory: ./zkm-prover
+        working-directory: ./
 
   fmt:
     name: Rustfmt

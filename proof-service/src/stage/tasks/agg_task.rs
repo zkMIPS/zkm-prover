@@ -68,7 +68,7 @@ impl AggTask {
     // So we just set up the state successful
     pub fn init_from_single_prove_task(prove_task: &ProveTask, agg_index: i32) -> AggTask {
         let task_id = uuid::Uuid::new_v4().to_string();
-        let agg_task = AggTask {
+        AggTask {
             task_id: task_id.clone(),
             block_no: prove_task.program.block_no,
             state: TASK_STATE_SUCCESS,
@@ -77,8 +77,7 @@ impl AggTask {
             from_prove: true,
             agg_index,
             ..Default::default()
-        };
-        agg_task
+        }
     }
 
     pub fn init_from_two_prove_task(
@@ -86,7 +85,7 @@ impl AggTask {
         right: &ProveTask,
         agg_index: i32,
     ) -> AggTask {
-        let agg_task = AggTask {
+        AggTask {
             task_id: uuid::Uuid::new_v4().to_string(),
             block_no: left.program.block_no,
             state: TASK_STATE_UNPROCESSED,
@@ -96,8 +95,7 @@ impl AggTask {
             input2: from_prove_task(right),
             agg_index,
             ..Default::default()
-        };
-        agg_task
+        }
     }
 
     pub fn init_from_two_agg_task(left: &AggTask, right: &AggTask, agg_index: i32) -> AggTask {

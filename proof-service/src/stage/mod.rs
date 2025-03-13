@@ -1,3 +1,4 @@
+#[allow(clippy::module_inception)]
 pub mod stage;
 pub mod stage_service;
 mod stage_worker;

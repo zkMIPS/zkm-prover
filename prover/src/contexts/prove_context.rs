@@ -21,7 +21,6 @@ impl ProveContext {
             seg_size,
             segment: segment.to_owned(),
             receipts_input: receipts_input.to_owned(),
-            ..Default::default()
         }
     }
 }

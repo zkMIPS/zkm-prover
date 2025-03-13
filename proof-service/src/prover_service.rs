@@ -39,7 +39,7 @@ async fn run_back_task<
         };
 
         log::error!("Task panicked: {}", panic_message);
-        Err(panic_message.into()) // Convert into a boxed error
+        Err(panic_message) // Convert into a boxed error
     })
 }
 
@@ -301,11 +301,9 @@ impl ProverService for ProverServiceSVC {
             let start = Instant::now();
 
             let snark_context = SnarkContext {
-                version: request.get_ref().version.into(),
+                version: request.get_ref().version,
                 proof_id: request.get_ref().proof_id.clone(),
-                proving_key_path: self
-                    .config
-                    .get_proving_key_path(request.get_ref().version.into()),
+                proving_key_path: self.config.get_proving_key_path(request.get_ref().version),
                 agg_receipt: request.get_ref().agg_receipt.clone(),
             };
 
