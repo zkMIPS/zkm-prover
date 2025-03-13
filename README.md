@@ -100,6 +100,9 @@ base_dir = "/tmp/zkm/test_proof"
 proving_key_paths = ["/tmp/zkm/proving.key"]
 ```
 
+Refer to sample [sha2](https://github.com/zkMIPS/zkm/blob/main/recursion/src/lib.rs#L165) to generate the proving key and verifying key.
+
+
 Start
 ```
 export RUST_LOG=info; nohup ./target/release/proof-service --config ./proof-service/config/config.toml > prover.out &
@@ -127,3 +130,9 @@ Start
 ```
 export RUST_LOG=info; nohup ./target/release/proof-service --stage --config ./proof-service/config/stage.toml > stage.out &
 ```
+
+## Features
+
+[x] - Stage Checkpoint
+[  ] - Task Checkpoint
+[  ] - Task Scheduler
