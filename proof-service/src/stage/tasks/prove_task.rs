@@ -9,10 +9,11 @@ pub struct ProveTask {
     pub base_dir: String,
 
     pub file_no: usize,
+    pub done: bool,
 
     pub segment: Vec<u8>,
     pub program: Program,
 
-    pub output: Vec<u8>, // output_receipt
+    pub output: Vec<Vec<u8>>, // output_receipt
     pub trace: Trace,
 }

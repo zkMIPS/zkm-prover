@@ -14,6 +14,7 @@ use tonic::{Request, Response, Status};
 use crate::config;
 use common::file;
 
+#[cfg(feature = "prover")]
 use prover::provers;
 
 use std::io::Write;
@@ -26,6 +27,7 @@ use crate::metrics;
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
+use crate::proto::includes::v1::ProverVersion;
 
 lazy_static! {
     static ref GLOBAL_TASKMAP: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());
@@ -45,7 +47,7 @@ impl StageServiceSVC {
                     config.cert_path.as_ref().unwrap(),
                     config.key_path.as_ref().unwrap(),
                 )
-                .await?,
+                    .await?,
             )
         } else {
             None
@@ -147,7 +149,7 @@ impl StageService for StageServiceSVC {
             }
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn generate_proof(
@@ -158,6 +160,7 @@ impl StageService for StageServiceSVC {
             log::info!("[generate_proof] {} start", request.get_ref().proof_id);
 
             // check seg_size
+            #[cfg(feature = "prover")]
             if !request.get_ref().composite_proof
                 && !provers::valid_seg_size(request.get_ref().seg_size as usize)
             {
@@ -331,7 +334,15 @@ impl StageService for StageServiceSVC {
                 .map_err(|e| Status::internal(e.to_string()))?;
             let snark_path = format!("{}/proof_with_public_inputs.json", snark_dir);
 
+            let prover_version = if cfg!(feature = "prover") {
+                ProverVersion::Zkm
+            } else if cfg!(feature = "prover_v2") {
+                ProverVersion::Zkm2
+            } else {
+                return Err(Status::internal("ProverVersion error"));
+            };
             let generate_task = GenerateTask::new(
+                prover_version,
                 &request.get_ref().proof_id,
                 &dir_path,
                 &elf_path,
@@ -400,6 +411,6 @@ impl StageService for StageServiceSVC {
             log::info!("[generate_proof] {} end", request.get_ref().proof_id);
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 }

@@ -2,7 +2,14 @@
 members = [
     "prover",
     "common",
-    "proof-service", "prover_v2",
+    "proof-service",
+    "prover_v2",
 ]
 
 resolver = "2"
+
+# TODO: remove this patch once published
+[patch."https://github.com/zkMIPS/zkm.git"]
+zkm-prover = { path = "../zkm/prover" }
+zkm-emulator = { path = "../zkm/emulator" }
+zkm-recursion = { path = "../zkm/recursion" }

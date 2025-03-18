@@ -3,11 +3,11 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::proto::includes::v1::AggregateInput;
-pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
-    assert!(!prove_task.output.is_empty());
+pub fn from_prove_task(prove_task: &ProveTask, index: usize) -> AggregateInput {
+    assert!(prove_task.output.len() > index);
     AggregateInput {
         // we put the receipt of prove_task, instead of the file path
-        receipt_input: prove_task.output.clone(),
+        receipt_input: prove_task.output[index].clone(),
         computed_request_id: prove_task.task_id.clone(),
         is_agg: false,
     }
@@ -79,6 +79,7 @@ impl AggTask {
             ..Default::default()
         }
     }
+
 
     pub fn init_from_two_prove_task(
         left: &ProveTask,

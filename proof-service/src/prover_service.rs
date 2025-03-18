@@ -1,18 +1,28 @@
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
+use tonic::{Request, Response, Status};
+
+#[cfg(feature = "prover")]
+use prover::{
+    contexts::{AggContext, ProveContext, SnarkContext},
+    executor::SplitContext,
+    pipeline::Pipeline,
+};
+#[cfg(feature = "prover_v2")]
+use prover_v2::{
+    contexts::{agg_context::AggContext, prove_context::ProveContext, snark_context::SnarkContext},
+    executor::SplitContext,
+    pipeline::Pipeline,
+};
+
+use crate::proto::includes::v1::ProverVersion;
+use crate::{config, metrics};
 use crate::proto::prover_service::v1::{
     get_status_response, prover_service_server::ProverService, AggregateRequest, AggregateResponse,
     GetStatusRequest, GetStatusResponse, GetTaskResultRequest, GetTaskResultResponse, ProveRequest,
     ProveResponse, Result, ResultCode, SnarkProofRequest, SnarkProofResponse, SplitElfRequest,
     SplitElfResponse,
 };
-use prover::contexts::{AggContext, ProveContext, SnarkContext};
-use prover::executor::SplitContext;
-use prover::pipeline::Pipeline;
-
-use std::time::Instant;
-use tonic::{Request, Response, Status};
-
-use crate::proto::includes::v1::ProverVersion;
-use crate::{config, metrics};
 
 async fn run_back_task<
     T: Send + 'static,
@@ -43,17 +53,26 @@ async fn run_back_task<
     })
 }
 
-use std::sync::{Arc, Mutex};
+
 #[derive(Default)]
 pub struct ProverServiceSVC {
     pub config: config::RuntimeConfig,
+    #[cfg(feature = "prover")]
+    pipeline: Arc<Mutex<Pipeline>>,
+    #[cfg(feature = "prover_v2")]
     pipeline: Arc<Mutex<Pipeline>>,
 }
 impl ProverServiceSVC {
     pub fn new(config: config::RuntimeConfig) -> Self {
+        #[cfg(feature = "prover")]
         let pipeline = Arc::new(Mutex::new(Pipeline::new(
             &config.base_dir,
             &config.get_proving_key_path(ProverVersion::Zkm.into()),
+        )));
+        #[cfg(feature = "prover_v2")]
+        let pipeline = Arc::new(Mutex::new(Pipeline::new(
+            &config.base_dir,
+            &config.get_proving_key_path(ProverVersion::Zkm2.into()),
         )));
         Self { config, pipeline }
     }
@@ -106,7 +125,7 @@ impl ProverService for ProverServiceSVC {
             }
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn get_task_result(
@@ -118,7 +137,7 @@ impl ProverService for ProverServiceSVC {
             let response = GetTaskResultResponse::default();
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn split_elf(
@@ -171,7 +190,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn prove(
@@ -186,13 +205,21 @@ impl ProverService for ProverServiceSVC {
                 //request.get_ref().seg_path,
             );
             let start = Instant::now();
-
+            #[cfg(feature = "prover")]
             let prove_context = ProveContext::new(
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
                 &request.get_ref().segment,
                 &request.get_ref().receipts_input,
             );
+            #[cfg(feature = "prover_v2")]
+            let prove_context = ProveContext {
+                proof_id: request.get_ref().proof_id.clone(),
+                index: request.get_ref().index,
+                done: request.get_ref().done,
+                elf: request.get_ref().elf.clone(),
+                segment: request.get_ref().segment.clone(),
+            };
 
             let pipeline = self.pipeline.clone();
             let prove_func = move || {
@@ -204,7 +231,12 @@ impl ProverService for ProverServiceSVC {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
                 output_receipt: match &result {
-                    Ok((_, x)) => x.clone(),
+                    Ok((_, x)) => {
+                        #[cfg(feature = "prover")]
+                        { vec![x.clone()] }
+                        #[cfg(feature = "prover_v2")]
+                        { x.clone() }
+                    }
                     _ => vec![],
                 },
                 ..Default::default()
@@ -221,7 +253,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn aggregate(
@@ -247,16 +279,27 @@ impl ProverService for ProverServiceSVC {
                     .computed_request_id,
             );
             let start = Instant::now();
-            let input1 = request.get_ref().input1.clone().expect("need input1");
-            let input2 = request.get_ref().input2.clone().expect("need input2");
-            let agg_context = AggContext::new(
-                request.get_ref().seg_size,
-                &input1.receipt_input,
-                &input2.receipt_input,
-                input1.is_agg,
-                input2.is_agg,
-                request.get_ref().is_final,
-            );
+            #[cfg(feature = "prover")]
+            let agg_context = {
+                let input1 = request.get_ref().input1.clone().expect("need input1");
+                let input2 = request.get_ref().input2.clone().expect("need input2");
+                AggContext::new(
+                    request.get_ref().seg_size,
+                    &input1.receipt_input,
+                    &input2.receipt_input,
+                    input1.is_agg,
+                    input2.is_agg,
+                    request.get_ref().is_final,
+                )
+            };
+            #[cfg(feature = "prover_v2")]
+            let agg_context = AggContext {
+                index: request.get_ref().index as usize,
+                zkm_circuit_witness: request.get_ref().zkm2_circuit_witness.clone(),
+                is_agg_1: false,
+                is_agg_2: false,
+                is_final: false,
+            };
 
             let pipeline = self.pipeline.clone();
             let agg_func = move || {
@@ -285,7 +328,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn snark_proof(
@@ -303,7 +346,7 @@ impl ProverService for ProverServiceSVC {
             let snark_context = SnarkContext {
                 version: request.get_ref().version,
                 proof_id: request.get_ref().proof_id.clone(),
-                proving_key_path: self.config.get_proving_key_path(request.get_ref().version),
+                // proving_key_path: self.config.get_proving_key_path(request.get_ref().version),
                 agg_receipt: request.get_ref().agg_receipt.clone(),
             };
 
@@ -334,6 +377,11 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
+}
+
+#[test]
+fn test_service() {
+    println!("test_service");
 }

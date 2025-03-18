@@ -1,4 +1,12 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if cfg!(all(feature = "prover", feature = "prover_v2")) {
+        panic!("Cannot enable both prover and prover_v2 features!");
+    }
+
+    if cfg!(not(any(feature = "prover", feature = "prover_v2"))) {
+        panic!("Either prover or prover_v2 must be enabled!");
+    }
+
     tonic_build::configure()
         .protoc_arg("--experimental_allow_proto3_optional")
         .type_attribute(
