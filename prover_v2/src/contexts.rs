@@ -57,11 +57,14 @@ pub struct ProveContext {
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct AggContext {
-    pub index: usize,
-    pub zkm_circuit_witness: Vec<u8>,
-    pub is_agg_1: bool,
-    pub is_agg_2: bool,
-    pub is_final: bool,
+    // for leaf layer proof
+    pub vk: Vec<u8>,
+    // proofs for leaf layer, proofs and vks for other layers
+    pub proofs: Vec<Vec<u8>>,
+    pub is_complete: bool,
+    // for leaf layer proof
+    pub is_first_shard: bool,
+    pub is_leaf_layer: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]

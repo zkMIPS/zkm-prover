@@ -1,18 +1,18 @@
-use crate::stage::tasks::{ProveTask, Trace, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED};
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{
+    Deserialize, Serialize,
+};
 
 use crate::proto::includes::v1::AggregateInput;
-pub fn from_prove_task(prove_task: &ProveTask, index: usize) -> AggregateInput {
-    assert!(prove_task.output.len() > index);
+use crate::stage::tasks::{ProveTask, Trace, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED};
+
+pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
     AggregateInput {
         // we put the receipt of prove_task, instead of the file path
-        receipt_input: prove_task.output[index].clone(),
+        receipt_input: prove_task.output[0].clone(),
         computed_request_id: prove_task.task_id.clone(),
         is_agg: false,
     }
 }
-//}
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AggTask {
@@ -22,9 +22,12 @@ pub struct AggTask {
     pub block_no: Option<u64>,
     pub seg_size: u32,
     pub proof_id: String,
-    pub input1: AggregateInput,
-    pub input2: AggregateInput,
+    // vk for zkm2 core proof
+    pub vk: Vec<u8>,
+    pub inputs: Vec<AggregateInput>,
     pub is_final: bool,
+    pub is_first_shard: bool,
+    pub is_leaf_layer: bool,
     pub from_prove: bool,
     pub agg_index: i32,
 
@@ -32,23 +35,19 @@ pub struct AggTask {
     pub output: Vec<u8>, // output_receipt: Vec<u8>,
 
     // depend
-    pub left: Option<String>,
-    pub right: Option<String>,
+    // TODO: default value may be dangerous
+    pub childs: Vec<Option<String>>,
 }
 
 impl AggTask {
     pub fn clear_child_task(&mut self, task_id: &str) -> bool {
         if self.state == TASK_STATE_UNPROCESSED {
-            if let Some(left) = &self.left {
-                if *left == task_id {
-                    self.left = None;
-                    return true;
-                }
-            }
-            if let Some(right) = &self.right {
-                if *right == task_id {
-                    self.right = None;
-                    return true;
+            for child in &mut self.childs {
+                if let Some(t) = child {
+                    if *t == task_id {
+                        *child = None;
+                        return true;
+                    }
                 }
             }
         }
@@ -64,6 +63,58 @@ impl AggTask {
         }
     }
 
+    pub fn init_from_prove_tasks(
+        vk: &Vec<u8>,
+        prove_tasks: &Vec<ProveTask>,
+        agg_index: i32,
+        is_final: bool,
+        is_first_shard: bool,
+    ) -> AggTask {
+        AggTask {
+            task_id: uuid::Uuid::new_v4().to_string(),
+            block_no: prove_tasks[0].program.block_no,
+            state: TASK_STATE_UNPROCESSED,
+            seg_size: prove_tasks[0].program.seg_size,
+            proof_id: prove_tasks[0].program.proof_id.clone(),
+            vk: vk.clone(),
+            inputs: prove_tasks.iter().map(from_prove_task).collect(),
+            is_final,
+            is_first_shard,
+            is_leaf_layer: true,
+            from_prove: true,
+            agg_index,
+            childs: vec![None; prove_tasks.len()],
+            ..Default::default()
+        }
+    }
+
+    pub fn init_from_agg_tasks(
+        agg_tasks: &Vec<AggTask>,
+        agg_index: i32,
+        is_final: bool,
+    ) -> AggTask {
+        let mut agg_task = AggTask {
+            task_id: uuid::Uuid::new_v4().to_string(),
+            block_no: agg_tasks[0].block_no,
+            state: TASK_STATE_UNPROCESSED,
+            seg_size: agg_tasks[0].seg_size,
+            proof_id: agg_tasks[0].proof_id.clone(),
+            inputs: agg_tasks.iter().map(|t| t.to_agg_input()).collect(),
+            is_final,
+            is_leaf_layer: false,
+            from_prove: false,
+            agg_index,
+            childs: vec![None; agg_tasks.len()],
+            ..Default::default()
+        };
+        for (raw_agg_task, child) in agg_tasks.iter().zip(agg_task.childs.iter_mut()) {
+            if !raw_agg_task.from_prove {
+                *child = Some(raw_agg_task.task_id.clone());
+            }
+        }
+        agg_task
+    }
+
     // FIXME: if we have a single prove task, and try to aggegate its root proof, panic will raise
     // So we just set up the state successful
     pub fn init_from_single_prove_task(prove_task: &ProveTask, agg_index: i32) -> AggTask {
@@ -74,13 +125,15 @@ impl AggTask {
             state: TASK_STATE_SUCCESS,
             seg_size: prove_task.program.seg_size,
             proof_id: prove_task.program.proof_id.clone(),
+            inputs: vec![from_prove_task(prove_task)],
             from_prove: true,
             agg_index,
+            childs: vec![None],
             ..Default::default()
         }
     }
 
-
+    // TODO: merge init_from_single_prove_task and init_from_two_prove_task
     pub fn init_from_two_prove_task(
         left: &ProveTask,
         right: &ProveTask,
@@ -92,9 +145,10 @@ impl AggTask {
             state: TASK_STATE_UNPROCESSED,
             seg_size: left.program.seg_size,
             proof_id: left.program.proof_id.clone(),
-            input1: from_prove_task(left, 0),
-            input2: from_prove_task(right, 0),
+            inputs: vec![from_prove_task(left), from_prove_task(right)],
+            from_prove: true,
             agg_index,
+            childs: vec![None, None],
             ..Default::default()
         }
     }
@@ -106,16 +160,16 @@ impl AggTask {
             state: TASK_STATE_UNPROCESSED,
             seg_size: left.seg_size,
             proof_id: left.proof_id.clone(),
-            input1: left.to_agg_input(),
-            input2: right.to_agg_input(),
+            inputs: vec![left.to_agg_input(), right.to_agg_input()],
             agg_index,
+            childs: vec![None, None],
             ..Default::default()
         };
         if !left.from_prove {
-            agg_task.left = Some(left.task_id.clone());
+            agg_task.childs[0] = Some(left.task_id.clone());
         }
         if !right.from_prove {
-            agg_task.right = Some(right.task_id.clone());
+            agg_task.childs[1] = Some(right.task_id.clone());
         }
         agg_task
     }

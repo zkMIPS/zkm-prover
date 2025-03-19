@@ -23,6 +23,7 @@ zkm2-stark = { path = "../../zkm2/crates/stark" }
 zkm2-prover = { path = "../../zkm2/crates/prover" }
 zkm2-recursion-compiler = { path = "../../zkm2/crates/recursion/compiler" }
 zkm2-recursion-core = { path = "../../zkm2/crates/recursion/core" }
+zkm2-recursion-circuit = { path = "../../zkm2/crates/recursion/circuit" }
 zkm2-sdk = { path = "../../zkm2/crates/sdk" }
 
 p3-field = { git = "https://github.com/zkMIPS/Plonky3" }

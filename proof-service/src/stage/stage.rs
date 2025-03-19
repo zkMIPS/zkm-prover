@@ -244,6 +244,7 @@ impl Stage {
         }
     }
 
+    #[cfg(feature = "prover")]
     pub fn gen_agg_tasks(&mut self) {
         // FIXME: we don't have to wait all the prove tasks done for the single GenerateTask. We should keep track of the agg_index in the Stage structure.
         let mut agg_index = 0;
@@ -288,16 +289,71 @@ impl Stage {
         self.agg_tasks[last_agg_tasks].is_final = true;
     }
 
+    #[cfg(feature = "prover_v2")]
+    pub fn gen_agg_tasks(&mut self) {
+        // FIXME: we don't have to wait all the prove tasks done for the single GenerateTask. We should keep track of the agg_index in the Stage structure.
+
+        // The batch size for reducing two layers of recursion.
+        let batch_size = 2;
+        // The batch size for reducing the first layer of recursion.
+        let first_layer_batch_size = 1;
+
+        let mut agg_index = 0;
+        let mut result = Vec::new();
+        // process the first layer
+        let is_complete = self.prove_tasks.len() == 1 && self.prove_tasks[0].output.len() == 1;
+        let prove_tasks: Vec<ProveTask> = self
+            .prove_tasks
+            .iter()
+            .flat_map(|t| {
+                t.output.iter().map(move |o| {
+                    let mut tt = t.clone();
+                    tt.output = vec![o.clone()];
+                    tt
+                })
+            })
+            .collect();
+        let vk = file::new(&format!("{}/vk.bin", self.generate_task.base_dir))
+            .read()
+            .expect("read vk");
+        for (batch_index, batch) in prove_tasks.chunks(first_layer_batch_size).enumerate() {
+            let agg_task = AggTask::init_from_prove_tasks(
+                &vk,
+                &batch.to_vec(),
+                agg_index,
+                is_complete,
+                batch_index == 0,
+            );
+            result.push(agg_task);
+            agg_index += 1;
+        }
+
+        self.agg_tasks.append(&mut result.clone());
+
+        let mut current_length = result.len();
+        while current_length > 1 {
+            let mut new_result = Vec::new();
+            for batch in result.chunks(batch_size) {
+                let agg_task = AggTask::init_from_agg_tasks(&batch.to_vec(), agg_index, false);
+                self.agg_tasks.push(agg_task.clone());
+                new_result.push(agg_task);
+            }
+
+            result = new_result;
+            current_length = result.len();
+        }
+
+        if let Some(last) = self.agg_tasks.last_mut() {
+            last.is_final = true;
+        }
+    }
+
     pub fn get_agg_task(&mut self) -> Option<AggTask> {
         let mut result: Option<AggTask> = None;
         log::info!("get_aag_task: {:?}", self.agg_tasks.len());
         for agg_task in &mut self.agg_tasks {
-            if agg_task.left.is_some() || agg_task.right.is_some() {
-                log::info!(
-                    "get_aag_task: left: {:?}, right: {:?}",
-                    agg_task.left.is_some(),
-                    agg_task.right.is_some()
-                );
+            if agg_task.childs.iter().any(|c| c.is_some()) {
+                log::info!("Skipping agg_task: childs: {:?}", agg_task.childs);
                 continue;
             }
             if agg_task.state == TASK_STATE_UNPROCESSED || agg_task.state == TASK_STATE_FAILED {
@@ -307,11 +363,10 @@ impl Stage {
                 break;
             }
         }
-        // Fill in the input1/2
+        // Fill in the inputs
         if let Some(agg_task) = &mut result {
-            let input1 = &mut agg_task.input1;
-            let input2 = &mut agg_task.input2;
-            [input1, input2].iter_mut().for_each(|input| {
+            agg_task.inputs.iter_mut().for_each(|input| {
+                // supposed to be filled in the gen_agg_task if !input.is_agg
                 if input.is_agg {
                     let tmp = self
                         .agg_tasks
@@ -319,20 +374,8 @@ impl Stage {
                         .find(|x| x.task_id == input.computed_request_id)
                         .unwrap();
                     input.receipt_input = tmp.output.clone();
-                } else {
-                    let tmp = self
-                        .prove_tasks
-                        .iter()
-                        .find(|x| x.task_id == input.computed_request_id)
-                        .unwrap();
-                    input.receipt_input = tmp.output[0].clone();
                 }
             });
-            log::info!(
-                "to_agg_task: {:?}, {:?}",
-                agg_task.input1.receipt_input.len(),
-                agg_task.input2.receipt_input.len()
-            );
         };
         log::info!("get_aag_task:yes? {:?}", result.is_some());
         result
@@ -355,7 +398,7 @@ impl Stage {
     }
 
     pub fn gen_snark_task(&mut self) {
-        assert!(self.snark_task.state == TASK_STATE_INITIAL);
+        assert_eq!(self.snark_task.state, TASK_STATE_INITIAL);
         self.snark_task
             .proof_id
             .clone_from(&self.generate_task.proof_id.clone());
