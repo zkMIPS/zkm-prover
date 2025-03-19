@@ -2,6 +2,14 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tonic::{Request, Response, Status};
 
+use crate::proto::includes::v1::ProverVersion;
+use crate::proto::prover_service::v1::{
+    get_status_response, prover_service_server::ProverService, AggregateRequest, AggregateResponse,
+    GetStatusRequest, GetStatusResponse, GetTaskResultRequest, GetTaskResultResponse, ProveRequest,
+    ProveResponse, Result, ResultCode, SnarkProofRequest, SnarkProofResponse, SplitElfRequest,
+    SplitElfResponse,
+};
+use crate::{config, metrics};
 #[cfg(feature = "prover")]
 use prover::{
     contexts::{AggContext, ProveContext, SnarkContext},
@@ -10,18 +18,8 @@ use prover::{
 };
 #[cfg(feature = "prover_v2")]
 use prover_v2::{
-    contexts::{
-        AggContext, ProveContext, SnarkContext, SplitContext,
-    },
+    contexts::{AggContext, ProveContext, SnarkContext, SplitContext},
     pipeline::Pipeline,
-};
-use crate::proto::includes::v1::ProverVersion;
-use crate::{config, metrics};
-use crate::proto::prover_service::v1::{
-    get_status_response, prover_service_server::ProverService, AggregateRequest, AggregateResponse,
-    GetStatusRequest, GetStatusResponse, GetTaskResultRequest, GetTaskResultResponse, ProveRequest,
-    ProveResponse, Result, ResultCode, SnarkProofRequest, SnarkProofResponse, SplitElfRequest,
-    SplitElfResponse,
 };
 
 async fn run_back_task<
@@ -52,7 +50,6 @@ async fn run_back_task<
         Err(panic_message) // Convert into a boxed error
     })
 }
-
 
 #[derive(Default)]
 pub struct ProverServiceSVC {
@@ -233,9 +230,13 @@ impl ProverService for ProverServiceSVC {
                 output_receipt: match &result {
                     Ok((_, x)) => {
                         #[cfg(feature = "prover")]
-                        { vec![x.clone()] }
+                        {
+                            vec![x.clone()]
+                        }
                         #[cfg(feature = "prover_v2")]
-                        { x.clone() }
+                        {
+                            x.clone()
+                        }
                     }
                     _ => vec![],
                 },
@@ -262,43 +263,31 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<AggregateResponse>, Status> {
         metrics::record_metrics("prover::aggregate", || async {
             log::info!(
-                "[aggregate] {}:{} {}+{} start",
+                "[aggregate] {}:{} {} inputs start",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
-                request
-                    .get_ref()
-                    .input1
-                    .clone()
-                    .expect("need input1")
-                    .computed_request_id,
-                request
-                    .get_ref()
-                    .input2
-                    .clone()
-                    .expect("need input2")
-                    .computed_request_id,
+                request.get_ref().inputs.len()
             );
             let start = Instant::now();
             #[cfg(feature = "prover")]
             let agg_context = {
-                let input1 = request.get_ref().input1.clone().expect("need input1");
-                let input2 = request.get_ref().input2.clone().expect("need input2");
+                let inputs = request.get_ref().inputs.clone();
                 AggContext::new(
                     request.get_ref().seg_size,
-                    &input1.receipt_input,
-                    &input2.receipt_input,
-                    input1.is_agg,
-                    input2.is_agg,
+                    &inputs[0].receipt_input,
+                    &inputs[1].receipt_input,
+                    inputs[0].is_agg,
+                    inputs[1].is_agg,
                     request.get_ref().is_final,
                 )
             };
             #[cfg(feature = "prover_v2")]
             let agg_context = AggContext {
-                index: request.get_ref().index as usize,
-                zkm_circuit_witness: request.get_ref().zkm2_circuit_witness.clone(),
-                is_agg_1: false,
-                is_agg_2: false,
-                is_final: false,
+                vk: request.get_ref().vk.clone(),
+                proofs: request.get_ref().inputs.iter().map(|input| input.receipt_input.clone()).collect(),
+                is_complete: request.get_ref().is_final,
+                is_first_shard: request.get_ref().is_first_shard,
+                is_leaf_layer: request.get_ref().is_leaf_layer,
             };
 
             let pipeline = self.pipeline.clone();

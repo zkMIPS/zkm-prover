@@ -1,8 +1,7 @@
 use zkm2_core_executor::ZKMReduceProof;
 use zkm2_prover::build::Witnessable;
-use zkm2_prover::{
-    InnerSC, ZKMCircuitWitness, ZKMProver, ZKMRecursionProverError, ZKMVerifyingKey,
-};
+use zkm2_prover::{CoreSC, InnerSC, ZKMCircuitWitness, ZKMProver, ZKMRecursionProverError, ZKMVerifyingKey};
+use zkm2_recursion_circuit::machine::{ZKMCompressWitnessValues, ZKMRecursionWitnessValues};
 use zkm2_recursion_compiler::config::InnerConfig;
 use zkm2_recursion_core::Runtime;
 use zkm2_stark::{Challenge, MachineProver, ShardProof, StarkGenericConfig, Val, ZKMCoreOpts, ZKMProverOpts};
@@ -15,11 +14,29 @@ pub struct AggProver {}
 impl AggProver {
     pub fn prove(&self, ctx: &AggContext) -> anyhow::Result<Vec<u8>> {
         let network_prove = NetworkProve::new();
+        let input = if ctx.is_leaf_layer {
+            let shard_proofs = ctx.proofs.iter().map(|proof| bincode::deserialize(proof).unwrap()).collect();
+            let vk = bincode::deserialize(&ctx.vk)?;
+            ZKMCircuitWitness::Core(ZKMRecursionWitnessValues {
+                vk,
+                shard_proofs,
+                is_complete: ctx.is_complete,
+                is_first_shard: ctx.is_first_shard,
+                vk_root: network_prove.prover.vk_root,
+            })
+        } else {
+            let reduced_proofs: Vec<ZKMReduceProof<_>> = ctx.proofs.iter().map(|vk_and_proof| {
+                bincode::deserialize(vk_and_proof).unwrap()
+            }).collect();
 
-        let input: ZKMCircuitWitness = bincode::deserialize(&ctx.zkm_circuit_witness)?;
+            ZKMCircuitWitness::Compress(ZKMCompressWitnessValues {
+                vks_and_proofs: reduced_proofs.into_iter().map(|proof| (proof.vk, proof.proof)).collect(),
+                is_complete: ctx.is_complete,
+            })
+        };
+
         let reduced_proof = self.compress(
             &network_prove.prover,
-            ctx.index,
             input,
             network_prove.opts.recursion_opts,
         )?;
@@ -30,7 +47,6 @@ impl AggProver {
     fn compress(
         &self,
         prover: &ZKMProver,
-        _index: usize,
         input: ZKMCircuitWitness,
         recursion_opts: ZKMCoreOpts,
     ) -> anyhow::Result<ZKMReduceProof<InnerSC>> {

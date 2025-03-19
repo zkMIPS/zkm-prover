@@ -25,9 +25,9 @@ use std::str::FromStr;
 use crate::database;
 use crate::metrics;
 
+use crate::proto::includes::v1::ProverVersion;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
-use crate::proto::includes::v1::ProverVersion;
 
 lazy_static! {
     static ref GLOBAL_TASKMAP: Mutex<HashMap<String, i32>> = Mutex::new(HashMap::new());
@@ -47,7 +47,7 @@ impl StageServiceSVC {
                     config.cert_path.as_ref().unwrap(),
                     config.key_path.as_ref().unwrap(),
                 )
-                    .await?,
+                .await?,
             )
         } else {
             None
@@ -149,7 +149,7 @@ impl StageService for StageServiceSVC {
             }
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn generate_proof(
@@ -411,6 +411,6 @@ impl StageService for StageServiceSVC {
             log::info!("[generate_proof] {} end", request.get_ref().proof_id);
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 }

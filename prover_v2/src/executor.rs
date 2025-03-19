@@ -23,16 +23,17 @@ pub struct Executor {}
 impl Executor {
     pub fn split(&self, ctx: &SplitContext) -> anyhow::Result<u64> {
         let elf_path = ctx.elf_path.clone();
-        let block_no = ctx.block_no.unwrap_or(0);
+        // let block_no = ctx.block_no.unwrap_or(0);
         let seg_path = ctx.seg_path.clone();
 
         tracing::info!("split {} load elf file", elf_path);
         let elf = file::new(&elf_path).read()?;
-        let block_path = get_block_path(&ctx.base_dir, &block_no.to_string(), "");
-        let input_path = format!("{}input", block_path.trim_end_matches('/'));
-        let input_data = file::new(&input_path).read()?;
+        // let block_path = get_block_path(&ctx.base_dir, &block_no.to_string(), "");
+        // let input_path = format!("{}/input", block_path.trim_end_matches('/'));
+        let input_data = file::new(&ctx.private_input_path).read()?;
 
         let mut network_prove = NetworkProve::new();
+        // TODO: add more input
         network_prove.stdin.write(&input_data);
 
         let program = network_prove

@@ -150,26 +150,17 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             computed_request_id: agg_task.task_id.clone(),
             block_no: agg_task.block_no,
             seg_size: agg_task.seg_size,
-            input1: Some(agg_task.input1.clone()),
-            input2: Some(agg_task.input2.clone()),
+            vk: agg_task.vk.clone(),
+            inputs: agg_task.inputs.clone(),
             is_final: agg_task.is_final,
-            index: agg_task.agg_index as u32,
-            zkm2_circuit_witness: vec![],
+            is_first_shard: agg_task.is_first_shard,
+            is_leaf_layer: agg_task.is_leaf_layer,
         };
         log::info!(
-            "[aggregate] rpc {}:{} {}+{} start",
+            "[aggregate] rpc {}:{} {} inputs start",
             request.proof_id,
             request.computed_request_id,
-            request
-                .input1
-                .clone()
-                .expect("need input1")
-                .computed_request_id,
-            request
-                .input2
-                .clone()
-                .expect("need input2")
-                .computed_request_id,
+            request.inputs.len()
         );
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
