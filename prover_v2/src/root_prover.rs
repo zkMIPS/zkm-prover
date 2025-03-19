@@ -13,7 +13,7 @@ use zkm2_stark::{
 };
 
 use crate::NetworkProve;
-use crate::contexts::prove_context::ProveContext;
+use crate::contexts::ProveContext;
 use crate::utils::concurrency::DistributedLock;
 
 #[derive(Default)]

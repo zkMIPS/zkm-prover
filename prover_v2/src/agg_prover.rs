@@ -6,7 +6,7 @@ use zkm2_prover::{
 use zkm2_recursion_compiler::config::InnerConfig;
 use zkm2_recursion_core::Runtime;
 use zkm2_stark::{Challenge, MachineProver, ShardProof, StarkGenericConfig, Val, ZKMCoreOpts, ZKMProverOpts};
-use crate::contexts::agg_context::AggContext;
+use crate::contexts::AggContext;
 use crate::NetworkProve;
 
 #[derive(Default)]

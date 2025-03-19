@@ -4,7 +4,7 @@ use zkm2_core_machine::io::ZKMStdin;
 use zkm2_prover::{Groth16Bn254Proof, InnerSC, ZKMProver, ZKMRecursionProverError};
 use zkm2_sdk::{ZKMProof, ZKMProofWithPublicValues};
 use zkm2_stark::ZKMProverOpts;
-use crate::contexts::snark_context::SnarkContext;
+use crate::contexts::SnarkContext;
 use crate::NetworkProve;
 
 #[derive(Default)]

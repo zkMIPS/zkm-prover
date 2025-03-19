@@ -10,7 +10,6 @@ pub mod agg_prover;
 pub mod executor;
 pub mod root_prover;
 pub mod snark_prover;
-// TODO: move contexts/* here
 pub mod contexts;
 
 pub mod utils;

@@ -325,7 +325,7 @@ impl Stage {
                         .iter()
                         .find(|x| x.task_id == input.computed_request_id)
                         .unwrap();
-                    input.receipt_input = tmp.output.clone();
+                    input.receipt_input = tmp.output[0].clone();
                 }
             });
             log::info!(

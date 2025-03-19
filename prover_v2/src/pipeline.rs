@@ -1,10 +1,10 @@
 use std::sync::Mutex;
 
 use crate::agg_prover::AggProver;
-use crate::contexts::agg_context::AggContext;
-use crate::contexts::executor_context::SplitContext;
-use crate::contexts::prove_context::ProveContext;
-use crate::contexts::snark_context::SnarkContext;
+use crate::contexts::AggContext;
+use crate::contexts::SplitContext;
+use crate::contexts::ProveContext;
+use crate::contexts::SnarkContext;
 use crate::executor::Executor;
 use crate::root_prover::RootProver;
 use crate::snark_prover::SnarkProver;

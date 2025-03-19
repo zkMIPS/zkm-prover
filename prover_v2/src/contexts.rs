@@ -43,3 +43,32 @@ impl SplitContext {
         }
     }
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct ProveContext {
+    pub proof_id: String,
+    // pub block_no: Option<u64>,
+    pub index: usize,
+    pub done: bool,
+    pub elf: Vec<u8>,
+    pub segment: Vec<u8>,
+    // pub receipts_input: Vec<Vec<u8>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct AggContext {
+    pub index: usize,
+    pub zkm_circuit_witness: Vec<u8>,
+    pub is_agg_1: bool,
+    pub is_agg_2: bool,
+    pub is_final: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct SnarkContext {
+    pub version: i32,
+    pub proof_id: String,
+    // pub proving_key_path: String,
+
+    pub agg_receipt: Vec<u8>,
+}
