@@ -14,7 +14,7 @@ use zkm2_stark::{
 };
 
 use crate::NetworkProve;
-pub use crate::contexts::executor_context::SplitContext;
+pub use crate::contexts::SplitContext;
 use crate::utils::get_block_path;
 use common::file;
 

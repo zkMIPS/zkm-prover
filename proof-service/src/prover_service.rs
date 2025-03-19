@@ -10,11 +10,11 @@ use prover::{
 };
 #[cfg(feature = "prover_v2")]
 use prover_v2::{
-    contexts::{agg_context::AggContext, prove_context::ProveContext, snark_context::SnarkContext},
-    executor::SplitContext,
+    contexts::{
+        AggContext, ProveContext, SnarkContext, SplitContext,
+    },
     pipeline::Pipeline,
 };
-
 use crate::proto::includes::v1::ProverVersion;
 use crate::{config, metrics};
 use crate::proto::prover_service::v1::{
@@ -215,7 +215,7 @@ impl ProverService for ProverServiceSVC {
             #[cfg(feature = "prover_v2")]
             let prove_context = ProveContext {
                 proof_id: request.get_ref().proof_id.clone(),
-                index: request.get_ref().index,
+                index: request.get_ref().index as usize,
                 done: request.get_ref().done,
                 elf: request.get_ref().elf.clone(),
                 segment: request.get_ref().segment.clone(),

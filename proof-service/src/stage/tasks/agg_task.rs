@@ -92,8 +92,8 @@ impl AggTask {
             state: TASK_STATE_UNPROCESSED,
             seg_size: left.program.seg_size,
             proof_id: left.program.proof_id.clone(),
-            input1: from_prove_task(left),
-            input2: from_prove_task(right),
+            input1: from_prove_task(left, 0),
+            input2: from_prove_task(right, 0),
             agg_index,
             ..Default::default()
         }
