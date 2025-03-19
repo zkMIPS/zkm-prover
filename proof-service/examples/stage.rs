@@ -49,10 +49,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let elf_path = env::var("ELF_PATH").unwrap_or("/tmp/zkm/test/hello_world".to_string());
     let output_dir = env::var("OUTPUT_DIR").unwrap_or("/tmp/zkm/test".to_string());
     let block_path = env::var("BLOCK_PATH").unwrap_or("".to_string());
-    let block_no = env::var("BLOCK_NO").unwrap_or("0".to_string());
-    let block_no = block_no.parse::<_>().unwrap_or(0);
-    let seg_size = env::var("SEG_SIZE").unwrap_or("131072".to_string());
-    let seg_size = seg_size.parse::<_>().unwrap_or(131072);
+    let block_no: u64 = env::var("BLOCK_NO").unwrap_or("0".to_string()).parse().unwrap_or(0);
+    let seg_size: u32 = env::var("SEG_SIZE").unwrap_or("131072".to_string()).parse().unwrap_or(131072);
     let args = env::var("ARGS").unwrap_or("".to_string());
     let public_input_path = env::var("PUBLIC_INPUT_PATH").unwrap_or("".to_string());
     let private_input_path = env::var("PRIVATE_INPUT_PATH").unwrap_or("".to_string());
@@ -67,6 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ssl_config = if ca_cert_path.is_empty() {
         None
     } else {
+        // TODO: should check the file before create the tls config
         Some(Config::new(&ca_cert_path, &cert_path, &key_path).await?)
     };
 
