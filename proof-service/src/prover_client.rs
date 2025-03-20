@@ -109,6 +109,9 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             block_no: prove_task.program.block_no,
             seg_size: prove_task.program.seg_size,
             receipts_input: prove_task.program.receipts.clone(),
+            index: prove_task.file_no as u32,
+            done: prove_task.done,
+            elf: prove_task.program.elf_data.clone(),
         };
         log::info!(
             "[prove] rpc {}:{}start",
@@ -150,6 +153,8 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             input1: Some(agg_task.input1.clone()),
             input2: Some(agg_task.input2.clone()),
             is_final: agg_task.is_final,
+            index: agg_task.agg_index as u32,
+            zkm2_circuit_witness: vec![],
         };
         log::info!(
             "[aggregate] rpc {}:{} {}+{} start",

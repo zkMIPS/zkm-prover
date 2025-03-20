@@ -201,6 +201,7 @@ impl Stage {
                     trace: Trace::default(),
                     base_dir: self.generate_task.base_dir.clone(),
                     file_no,
+                    done: false,
                     segment: safe_read(&format!("{}/{file_name}", self.generate_task.seg_path)),
                     program: self.generate_task.gen_program(),
                     // will be assigned after the root proving
@@ -210,6 +211,8 @@ impl Stage {
             }
         }
         self.prove_tasks.sort_by_key(|p| p.file_no);
+        // todo: double check
+        self.prove_tasks.last_mut().map(|p| p.done = true);
 
         if self.prove_tasks.len() < 2 {
             self.is_error = true;
@@ -257,7 +260,7 @@ impl Stage {
         if current_length % 2 == 1 {
             result.push(agg_task::AggTask::init_from_single_prove_task(
                 &(self.prove_tasks[current_length - 1]),
-                agg_index,
+                agg_index + 1,
             ));
         }
         self.agg_tasks.append(&mut result.clone());
@@ -445,7 +448,7 @@ mod tests {
             };
             for i in 0..n {
                 stage.prove_tasks.push(ProveTask {
-                    output: vec![1, 2, 3],
+                    output: vec![vec![1, 2, 3]],
                     file_no: i,
                     ..Default::default()
                 })
