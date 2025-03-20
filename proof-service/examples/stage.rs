@@ -105,8 +105,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //};
 
     let proof_id = uuid::Uuid::new_v4().to_string();
+    log::info!("request: {:?}", proof_id);
     let mut request = GenerateProofRequest {
-        proof_id: proof_id.clone(),
+        proof_id,
         elf_data,
         block_data,
         block_no: Some(block_no),
@@ -117,7 +118,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
     sign_ecdsa(&mut request, &private_key).await;
-    log::info!("request: {:?}", proof_id);
     let start = Instant::now();
     let endpoint = match ssl_config {
         Some(config) => {
