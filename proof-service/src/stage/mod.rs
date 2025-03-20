@@ -27,6 +27,7 @@ pub fn safe_read(path: &str) -> Vec<u8> {
     log::info!("read {}", path);
     std::fs::read(path).unwrap_or_else(|_| {
         log::error!("read: {path}, {:?}", backtrace::Backtrace::new());
-        panic!("Read {} failed", path);
+        // panic!("Read {} failed", path);
+        vec![]
     })
 }

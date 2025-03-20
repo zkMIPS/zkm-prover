@@ -111,7 +111,6 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             receipts_input: prove_task.program.receipts.clone(),
             index: prove_task.file_no as u32,
             done: prove_task.done,
-            elf: prove_task.program.elf_data.clone(),
         };
         log::info!(
             "[prove] rpc {}:{}start",

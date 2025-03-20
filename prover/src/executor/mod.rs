@@ -14,6 +14,7 @@ pub struct SplitContext {
     pub seg_path: String,
     pub public_input_path: String,
     pub private_input_path: String,
+    // public_values_stream
     pub output_path: String,
     pub args: String,
     pub receipt_inputs_path: String,

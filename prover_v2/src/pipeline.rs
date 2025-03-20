@@ -1,10 +1,7 @@
 use std::sync::Mutex;
 
 use crate::agg_prover::AggProver;
-use crate::contexts::AggContext;
-use crate::contexts::SplitContext;
-use crate::contexts::ProveContext;
-use crate::contexts::SnarkContext;
+use crate::contexts::{AggContext, ProveContext, SnarkContext, SplitContext};
 use crate::executor::Executor;
 use crate::root_prover::RootProver;
 use crate::snark_prover::SnarkProver;
@@ -30,12 +27,17 @@ impl Pipeline {
     }
 
     pub fn split(&self, split_context: &SplitContext) -> Result<(bool, u64), String> {
-        self.executor.split(split_context).map(|n| (true, n)).map_err(|e| e.to_string())
+        self.executor
+            .split(split_context)
+            .map(|n| (true, n))
+            .map_err(|e| e.to_string())
     }
 
-    pub fn prove_root(&self, prove_context: &ProveContext) -> Result<(bool, Vec<Vec<u8>>), String> {
+    pub fn prove_root(&self, prove_context: &ProveContext) -> Result<(bool, Vec<u8>), String> {
         match self.mutex.try_lock() {
-            Ok(_) => self.root_prover.prove(prove_context)
+            Ok(_) => self
+                .root_prover
+                .prove(prove_context)
                 .map(|receipt_output| (true, receipt_output))
                 .map_err(|e| {
                     tracing::error!("prove_root error {:#?}", e);
@@ -48,12 +50,11 @@ impl Pipeline {
         }
     }
 
-    pub fn prove_aggregate(
-        &mut self,
-        agg_context: &AggContext,
-    ) -> Result<(bool, Vec<u8>), String> {
+    pub fn prove_aggregate(&mut self, agg_context: &AggContext) -> Result<(bool, Vec<u8>), String> {
         match self.mutex.try_lock() {
-            Ok(_) => self.agg_prover.prove(agg_context)
+            Ok(_) => self
+                .agg_prover
+                .prove(agg_context)
                 .map(|agg_receipt_output| (true, agg_receipt_output))
                 .map_err(|e| {
                     tracing::error!("prove_aggregate error {:#?}", e);
@@ -66,16 +67,12 @@ impl Pipeline {
         }
     }
 
-    pub fn prove_snark(
-        &mut self,
-        snark_context: &SnarkContext,
-    ) -> Result<(bool, Vec<u8>), String> {
+    pub fn prove_snark(&mut self, snark_context: &SnarkContext) -> Result<(bool, Vec<u8>), String> {
         match self.mutex.try_lock() {
-            Ok(_) => self.snark_prover.prove(snark_context)
-                .map_err(|e| {
-                    tracing::error!("prove_snark error {:#?}", e);
-                    e.to_string()
-                }),
+            Ok(_) => self.snark_prover.prove(snark_context).map_err(|e| {
+                tracing::error!("prove_snark error {:#?}", e);
+                e.to_string()
+            }),
             Err(e) => {
                 tracing::error!("prove_snark busy: {:?}", e);
                 Ok((false, vec![]))

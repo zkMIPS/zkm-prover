@@ -97,13 +97,12 @@ message ProveRequest {
   repeated bytes receipts_input = 8;
   uint32 index = 9;
   bool done = 10;
-  bytes elf = 11;
 }
 
 message ProveResponse {
   string proof_id = 1;
   string computed_request_id = 2;
-  repeated bytes output_receipt = 3;
+  bytes output_receipt = 3;
   Result result = 4;
 }
 

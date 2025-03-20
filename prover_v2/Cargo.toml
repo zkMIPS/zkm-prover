@@ -17,19 +17,21 @@ tracing-forest = { version = "0.1.6", default-features = false }
 bincode = "1.3.3"
 anyhow = "1.0.97"
 
-zkm2-core-machine = { path = "../../zkm2/crates/core/machine" }
-zkm2-core-executor = { path = "../../zkm2/crates/core/executor" }
-zkm2-stark = { path = "../../zkm2/crates/stark" }
-zkm2-prover = { path = "../../zkm2/crates/prover" }
-zkm2-recursion-compiler = { path = "../../zkm2/crates/recursion/compiler" }
-zkm2-recursion-core = { path = "../../zkm2/crates/recursion/core" }
-zkm2-recursion-circuit = { path = "../../zkm2/crates/recursion/circuit" }
-zkm2-sdk = { path = "../../zkm2/crates/sdk" }
+zkm2-core-machine = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
+zkm2-core-executor = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
+zkm2-stark = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
+zkm2-prover = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
+zkm2-recursion-compiler = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
+zkm2-recursion-core = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
+zkm2-recursion-circuit = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
+zkm2-sdk = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
 
 p3-field = { git = "https://github.com/zkMIPS/Plonky3" }
 p3-maybe-rayon = { git = "https://github.com/zkMIPS/Plonky3" }
+p3-matrix = { git = "https://github.com/zkMIPS/Plonky3" }
 
 common = { path = "../common" }
+tempfile = "3.18.0"
 
 [features]
 debug = []

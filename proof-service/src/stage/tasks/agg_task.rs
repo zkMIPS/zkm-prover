@@ -1,14 +1,12 @@
-use serde::{
-    Deserialize, Serialize,
-};
+use serde::{Deserialize, Serialize};
 
 use crate::proto::includes::v1::AggregateInput;
-use crate::stage::tasks::{ProveTask, Trace, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED};
+use crate::stage::tasks::{ProveTask, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, Trace};
 
 pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
     AggregateInput {
         // we put the receipt of prove_task, instead of the file path
-        receipt_input: prove_task.output[0].clone(),
+        receipt_input: prove_task.output.clone(),
         computed_request_id: prove_task.task_id.clone(),
         is_agg: false,
     }
@@ -81,9 +79,7 @@ impl AggTask {
             is_final,
             is_first_shard,
             is_leaf_layer: true,
-            from_prove: true,
             agg_index,
-            childs: vec![None; prove_tasks.len()],
             ..Default::default()
         }
     }
@@ -102,7 +98,6 @@ impl AggTask {
             inputs: agg_tasks.iter().map(|t| t.to_agg_input()).collect(),
             is_final,
             is_leaf_layer: false,
-            from_prove: false,
             agg_index,
             childs: vec![None; agg_tasks.len()],
             ..Default::default()
@@ -128,7 +123,6 @@ impl AggTask {
             inputs: vec![from_prove_task(prove_task)],
             from_prove: true,
             agg_index,
-            childs: vec![None],
             ..Default::default()
         }
     }
@@ -146,9 +140,7 @@ impl AggTask {
             seg_size: left.program.seg_size,
             proof_id: left.program.proof_id.clone(),
             inputs: vec![from_prove_task(left), from_prove_task(right)],
-            from_prove: true,
             agg_index,
-            childs: vec![None, None],
             ..Default::default()
         }
     }
@@ -184,14 +176,13 @@ mod tests {
         let right_task_id = "test_id_2";
         let mut agg_task = AggTask {
             state: TASK_STATE_UNPROCESSED,
-            left: Some(left_task_id.to_string()),
-            right: Some(right_task_id.to_string()),
+            childs: vec![Some(left_task_id.to_string()), Some(right_task_id.to_string())],
             ..Default::default()
         };
         agg_task.clear_child_task(left_task_id);
         agg_task.clear_child_task(right_task_id);
-        assert!(agg_task.left.is_none());
-        assert!(agg_task.right.is_none());
+        assert!(agg_task.childs[0].is_none());
+        assert!(agg_task.childs[1].is_none());
     }
 
     #[test]
@@ -201,7 +192,7 @@ mod tests {
             ..Default::default()
         };
         let agg_task = crate::stage::tasks::AggTask::init_from_single_prove_task(&prove_task, 1);
-        assert!(agg_task.state == TASK_STATE_SUCCESS);
+        assert_eq!(agg_task.state, TASK_STATE_SUCCESS);
     }
 
     #[test]
@@ -221,7 +212,7 @@ mod tests {
             &right_prove_task,
             1,
         );
-        assert!(agg_task.state == TASK_STATE_UNPROCESSED);
+        assert_eq!(agg_task.state, TASK_STATE_UNPROCESSED);
     }
 
     #[test]
@@ -239,8 +230,8 @@ mod tests {
             &right_agg_task,
             1,
         );
-        assert!(agg_task.state == TASK_STATE_UNPROCESSED);
-        assert!(agg_task.left.is_some());
-        assert!(agg_task.right.is_some());
+        assert_eq!(agg_task.state, TASK_STATE_UNPROCESSED);
+        assert!(agg_task.childs[0].is_some());
+        assert!(agg_task.childs[1].is_some());
     }
 }

@@ -7,13 +7,13 @@ use zkm2_sdk::Prover;
 use zkm2_stark::{ZKMCoreOpts, ZKMProverOpts};
 
 pub mod agg_prover;
+pub mod contexts;
 pub mod executor;
 pub mod root_prover;
 pub mod snark_prover;
-pub mod contexts;
 
-pub mod utils;
 pub mod pipeline;
+pub mod utils;
 
 pub struct NetworkProve<'a, C: ZKMProverComponents = DefaultProverComponents> {
     // pub struct NetworkProve<'a> {
@@ -25,6 +25,7 @@ pub struct NetworkProve<'a, C: ZKMProverComponents = DefaultProverComponents> {
     pub timeout: Option<Duration>,
 }
 
+// TODO: create from config file
 impl<'a> NetworkProve<'a> {
     pub fn new() -> Self {
         Self {

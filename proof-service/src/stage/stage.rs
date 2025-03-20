@@ -301,22 +301,11 @@ impl Stage {
         let mut agg_index = 0;
         let mut result = Vec::new();
         // process the first layer
-        let is_complete = self.prove_tasks.len() == 1 && self.prove_tasks[0].output.len() == 1;
-        let prove_tasks: Vec<ProveTask> = self
-            .prove_tasks
-            .iter()
-            .flat_map(|t| {
-                t.output.iter().map(move |o| {
-                    let mut tt = t.clone();
-                    tt.output = vec![o.clone()];
-                    tt
-                })
-            })
-            .collect();
+        let is_complete = self.prove_tasks.len() == 1;
         let vk = file::new(&format!("{}/vk.bin", self.generate_task.base_dir))
             .read()
             .expect("read vk");
-        for (batch_index, batch) in prove_tasks.chunks(first_layer_batch_size).enumerate() {
+        for (batch_index, batch) in self.prove_tasks.chunks(first_layer_batch_size).enumerate() {
             let agg_task = AggTask::init_from_prove_tasks(
                 &vk,
                 &batch.to_vec(),
@@ -425,7 +414,7 @@ impl Stage {
 
     pub fn get_snark_task(&mut self) -> Option<SnarkTask> {
         let src = &mut self.snark_task;
-        log::info!("get_snark_task: {:?} {:?}", src.proof_id, src.task_id);
+        log::info!("get_snark_task: {:?}:{:?}", src.proof_id, src.task_id);
         get_task!(src);
     }
 
@@ -491,7 +480,7 @@ mod tests {
             };
             for i in 0..n {
                 stage.prove_tasks.push(ProveTask {
-                    output: vec![vec![1, 2, 3]],
+                    output: vec![1, 2, 3],
                     file_no: i,
                     ..Default::default()
                 })
@@ -501,8 +490,8 @@ mod tests {
                 println!(
                     "agg: left:{} right:{} final:{}",
                     //element.file_key,
-                    element.input1.is_agg,
-                    element.input2.is_agg,
+                    element.inputs[0].is_agg,
+                    element.inputs[1].is_agg,
                     element.is_final,
                 );
             });

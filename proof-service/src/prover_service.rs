@@ -122,7 +122,7 @@ impl ProverService for ProverServiceSVC {
             }
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn get_task_result(
@@ -134,7 +134,7 @@ impl ProverService for ProverServiceSVC {
             let response = GetTaskResultResponse::default();
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn split_elf(
@@ -187,7 +187,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn prove(
@@ -214,7 +214,6 @@ impl ProverService for ProverServiceSVC {
                 proof_id: request.get_ref().proof_id.clone(),
                 index: request.get_ref().index as usize,
                 done: request.get_ref().done,
-                elf: request.get_ref().elf.clone(),
                 segment: request.get_ref().segment.clone(),
             };
 
@@ -228,16 +227,7 @@ impl ProverService for ProverServiceSVC {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
                 output_receipt: match &result {
-                    Ok((_, x)) => {
-                        #[cfg(feature = "prover")]
-                        {
-                            vec![x.clone()]
-                        }
-                        #[cfg(feature = "prover_v2")]
-                        {
-                            x.clone()
-                        }
-                    }
+                    Ok((_, x)) => x.clone(),
                     _ => vec![],
                 },
                 ..Default::default()
@@ -254,7 +244,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn aggregate(
@@ -284,7 +274,12 @@ impl ProverService for ProverServiceSVC {
             #[cfg(feature = "prover_v2")]
             let agg_context = AggContext {
                 vk: request.get_ref().vk.clone(),
-                proofs: request.get_ref().inputs.iter().map(|input| input.receipt_input.clone()).collect(),
+                proofs: request
+                    .get_ref()
+                    .inputs
+                    .iter()
+                    .map(|input| input.receipt_input.clone())
+                    .collect(),
                 is_complete: request.get_ref().is_final,
                 is_first_shard: request.get_ref().is_first_shard,
                 is_leaf_layer: request.get_ref().is_leaf_layer,
@@ -317,7 +312,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn snark_proof(
@@ -366,7 +361,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 }
 

@@ -4,8 +4,9 @@ use zkm2_core_machine::io::ZKMStdin;
 use zkm2_prover::{Groth16Bn254Proof, InnerSC, ZKMProver, ZKMRecursionProverError};
 use zkm2_sdk::{ZKMProof, ZKMProofWithPublicValues};
 use zkm2_stark::ZKMProverOpts;
-use crate::contexts::SnarkContext;
+
 use crate::NetworkProve;
+use crate::contexts::SnarkContext;
 
 #[derive(Default)]
 pub struct SnarkProver {
@@ -21,34 +22,36 @@ impl SnarkProver {
         }
     }
     pub fn prove(&self, ctx: &SnarkContext) -> anyhow::Result<(bool, Vec<u8>)> {
-        let zkm_proof_with_public_values: ZKMProofWithPublicValues =
-            bincode::deserialize(&ctx.agg_receipt)?;
+        let reduced_proof: ZKMReduceProof<InnerSC> = bincode::deserialize(&ctx.agg_receipt)?;
         let network_prove = NetworkProve::new();
 
-        let gnark_proof_with_pis = self.prove_groth16(
-            &network_prove.prover,
-            zkm_proof_with_public_values,
-            network_prove.opts,
+        let gnark_proof =
+            self.prove_groth16(&network_prove.prover, reduced_proof, network_prove.opts)?;
+
+        let output_dir = format!("{}/{}", self.output_dir, ctx.proof_id);
+        std::fs::create_dir_all(&output_dir)?;
+
+        let json_output = serde_json::to_string_pretty(&gnark_proof)?;
+        std::fs::write(
+            &format!("{}/gnark_proof_with_pis.json", output_dir),
+            json_output,
         )?;
 
-        Ok((true, bincode::serialize(&gnark_proof_with_pis)?))
+        tracing::info!(
+            "snark prove: input_dir {:?}, output_dir: {:?}, gnark_proof file: gnark_proof_with_pis.json",
+            self.input_dir,
+            output_dir
+        );
+
+        Ok((true, bincode::serialize(&gnark_proof)?))
     }
 
     fn prove_groth16(
         &self,
         prover: &ZKMProver,
-        zkm_proof_with_public_values: ZKMProofWithPublicValues,
+        reduced_proof: ZKMReduceProof<InnerSC>,
         opts: ZKMProverOpts,
-    ) -> Result<ZKMProofWithPublicValues, ZKMRecursionProverError> {
-        let reduced_proof =
-            if let ZKMProof::Compressed(reduced_proof) = zkm_proof_with_public_values.proof {
-                *reduced_proof
-            } else {
-                return Err(ZKMRecursionProverError::RuntimeError(
-                    "invalid input proof".into(),
-                ));
-            };
-
+    ) -> Result<ZKMProof, ZKMRecursionProverError> {
         let compress_proof = prover.shrink(reduced_proof, opts)?;
         let outer_proof = prover.wrap_bn254(compress_proof, opts)?;
 
@@ -62,14 +65,8 @@ impl SnarkProver {
             todo!("impl production artifacts");
             // try_install_circuit_artifacts("groth16")
         };
-
         let proof = prover.wrap_groth16_bn254(outer_proof, &groth16_bn254_artifacts);
 
-        Ok(ZKMProofWithPublicValues {
-            proof: ZKMProof::Groth16(proof),
-            stdin: zkm_proof_with_public_values.stdin,
-            public_values: zkm_proof_with_public_values.public_values,
-            zkm2_version: zkm_proof_with_public_values.zkm2_version,
-        })
+        Ok(ZKMProof::Groth16(proof))
     }
 }

@@ -14,6 +14,6 @@ pub struct ProveTask {
     pub segment: Vec<u8>,
     pub program: Program,
 
-    pub output: Vec<Vec<u8>>, // output_receipt
+    pub output: Vec<u8>, // output_receipt
     pub trace: Trace,
 }
