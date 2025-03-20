@@ -184,20 +184,20 @@ mod tests {
         let right_task_id = "test_id_2";
         let mut agg_task = AggTask {
             state: TASK_STATE_UNPROCESSED,
-            left: Some(left_task_id.to_string()),
-            right: Some(right_task_id.to_string()),
+            childs: vec![Some(left_task_id.to_string()),Some(right_task_id.to_string())],
             ..Default::default()
         };
         agg_task.clear_child_task(left_task_id);
         agg_task.clear_child_task(right_task_id);
-        assert!(agg_task.left.is_none());
-        assert!(agg_task.right.is_none());
+        assert!(agg_task.childs[0].is_none());
+        assert!(agg_task.childs[1].is_none());
     }
 
     #[test]
     fn test_init_from_single_prove_task() {
         let prove_task = ProveTask {
             file_no: 1,
+            output: vec![vec![1,2,3]],
             ..Default::default()
         };
         let agg_task = crate::stage::tasks::AggTask::init_from_single_prove_task(&prove_task, 1);
@@ -208,12 +208,12 @@ mod tests {
     fn test_init_from_two_prove_task() {
         let left_prove_task = ProveTask {
             file_no: 1,
-            output: vec![1, 2, 3],
+            output: vec![vec![1, 2, 3]],
             ..Default::default()
         };
         let right_prove_task = ProveTask {
             file_no: 2,
-            output: vec![3, 4, 5],
+            output: vec![vec![3, 4, 5]],
             ..Default::default()
         };
         let agg_task = crate::stage::tasks::AggTask::init_from_two_prove_task(
@@ -240,7 +240,7 @@ mod tests {
             1,
         );
         assert!(agg_task.state == TASK_STATE_UNPROCESSED);
-        assert!(agg_task.left.is_some());
-        assert!(agg_task.right.is_some());
+        assert!(agg_task.childs[0].is_some());
+        assert!(agg_task.childs[1].is_some());
     }
 }

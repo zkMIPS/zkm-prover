@@ -1,6 +1,8 @@
 use crate::contexts::SnarkContext;
 use crate::provers::Prover;
 use zkm_recursion::as_groth16;
+use std::time::Duration;
+use plonky2::util::timing::TimingTree;
 
 #[derive(Default)]
 pub struct SnarkProver {
@@ -33,9 +35,14 @@ impl Prover<SnarkContext, Vec<u8>> for SnarkProver {
         // wrap stark
         let all_circuits = &*crate::provers::instance().lock().unwrap();
         let agg_receipt = serde_json::from_slice(&ctx.agg_receipt)?;
+        let mut timing = TimingTree::new("snark prover wrap_stark_bn254", log::Level::Info);
         zkm_recursion::wrap_stark_bn254(all_circuits, agg_receipt, &self.input_dir)?;
+        
+        timing.filter(Duration::from_millis(100)).print();
 
+        timing = TimingTree::new("snark prover as_groth16", log::Level::Info);
         as_groth16(&self.input_dir, &self.input_dir, &output_dir)?;
+        timing.filter(Duration::from_millis(100)).print();
 
         let snark_proof_with_public_inputs = std::fs::read(format!(
             "{}/snark_proof_with_public_inputs.json",

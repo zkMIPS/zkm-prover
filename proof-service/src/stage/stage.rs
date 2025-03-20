@@ -350,7 +350,7 @@ impl Stage {
 
     pub fn get_agg_task(&mut self) -> Option<AggTask> {
         let mut result: Option<AggTask> = None;
-        log::info!("get_aag_task: {:?}", self.agg_tasks.len());
+        log::info!("get_agg_task: {:?}", self.agg_tasks.len());
         for agg_task in &mut self.agg_tasks {
             if agg_task.childs.iter().any(|c| c.is_some()) {
                 log::info!("Skipping agg_task: childs: {:?}", agg_task.childs);
@@ -377,7 +377,7 @@ impl Stage {
                 }
             });
         };
-        log::info!("get_aag_task:yes? {:?}", result.is_some());
+        log::info!("get_agg_task:yes? {:?}", result.is_some());
         result
     }
 
@@ -498,11 +498,16 @@ mod tests {
             }
             stage.gen_agg_tasks();
             stage.agg_tasks.iter().for_each(|element| {
+                let is_agg2 = if element.inputs.len() == 1 {
+                   false 
+                } else {
+                    element.inputs[1].is_agg
+                };
                 println!(
                     "agg: left:{} right:{} final:{}",
                     //element.file_key,
-                    element.input1.is_agg,
-                    element.input2.is_agg,
+                    element.inputs[0].is_agg,
+                    is_agg2,
                     element.is_final,
                 );
             });

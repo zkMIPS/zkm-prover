@@ -107,7 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proof_id = uuid::Uuid::new_v4().to_string();
     log::info!("request: {:?}", proof_id);
     let mut request = GenerateProofRequest {
-        proof_id,
+        proof_id: proof_id.clone(),
         elf_data,
         block_data,
         block_no: Some(block_no),
