@@ -4,9 +4,7 @@ pub use root_prover::RootProver;
 mod agg_prover;
 pub use agg_prover::AggProver;
 
-mod agg_all_prover;
 mod snark_prover;
-pub use agg_all_prover::AggAllProver;
 pub use snark_prover::SnarkProver;
 
 use anyhow::Result;
