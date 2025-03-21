@@ -1,10 +1,8 @@
 use super::Prover;
 use crate::contexts::AggContext;
-use plonky2::field::goldilocks_field::GoldilocksField;
-use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::util::timing::TimingTree;
 use std::time::Duration;
-
+use super::{F, C, D};
 use zkm_prover::generation::state::Receipt;
 
 #[derive(Default)]
@@ -12,10 +10,6 @@ pub struct AggProver {}
 
 impl Prover<AggContext, Vec<u8>> for AggProver {
     fn prove(&self, ctx: &AggContext) -> anyhow::Result<(bool, Vec<u8>)> {
-        type F = GoldilocksField;
-        const D: usize = 2;
-        type C = PoseidonGoldilocksConfig;
-
         let receipt_path1 = ctx.receipt_path1.clone();
         let receipt_path2 = ctx.receipt_path2.clone();
         //let agg_receipt_path = ctx.agg_receipt_path.clone();

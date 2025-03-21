@@ -47,7 +47,7 @@ impl StageServiceSVC {
                     config.cert_path.as_ref().unwrap(),
                     config.key_path.as_ref().unwrap(),
                 )
-                .await?,
+                    .await?,
             )
         } else {
             None
@@ -149,7 +149,7 @@ impl StageService for StageServiceSVC {
             }
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn generate_proof(
@@ -314,9 +314,6 @@ impl StageService for StageServiceSVC {
                 .map_err(|e| Status::internal(e.to_string()))?;
 
             let prove_path = format!("{}/prove", dir_path);
-            file::new(&prove_path)
-                .create_dir_all()
-                .map_err(|e| Status::internal(e.to_string()))?;
 
             let prove_receipt_path = format!("{}/receipt", prove_path);
             file::new(&prove_receipt_path)
@@ -324,10 +321,6 @@ impl StageService for StageServiceSVC {
                 .map_err(|e| Status::internal(e.to_string()))?;
 
             let agg_path = format!("{}/aggregate", dir_path);
-            file::new(&agg_path)
-                .create_dir_all()
-                .map_err(|e| Status::internal(e.to_string()))?;
-
             let snark_dir = format!("{}/snark", dir_path);
             file::new(&snark_dir)
                 .create_dir_all()
@@ -411,6 +404,6 @@ impl StageService for StageServiceSVC {
             log::info!("[generate_proof] {} end", request.get_ref().proof_id);
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 }

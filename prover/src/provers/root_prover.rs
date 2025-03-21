@@ -1,25 +1,18 @@
 use super::Prover;
 use crate::contexts::ProveContext;
 use std::time::Duration;
-
-use plonky2::field::goldilocks_field::GoldilocksField;
-use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::util::timing::TimingTree;
-
 use zkm_prover::all_stark::AllStark;
 use zkm_prover::config::StarkConfig;
 use zkm_prover::cpu::kernel::assembler::segment_kernel;
 use zkm_prover::generation::state::{AssumptionReceipts, Receipt};
+use super::{F, C, D};
 
 #[derive(Default)]
 pub struct RootProver {}
 
 impl Prover<ProveContext, Vec<u8>> for RootProver {
     fn prove(&self, ctx: &ProveContext) -> anyhow::Result<(bool, Vec<u8>)> {
-        type F = GoldilocksField;
-        const D: usize = 2;
-        type C = PoseidonGoldilocksConfig;
-
         //let basedir = ctx.base_dir.clone();
         let block_no = ctx.block_no.unwrap_or(0);
         let segment = ctx.segment.clone();

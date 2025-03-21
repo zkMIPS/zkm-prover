@@ -1,6 +1,6 @@
 addr = "0.0.0.0:50001"
 metrics_addr = "0.0.0.0:50011"
-database_url = "mysql://stage:123456@localhost:3306/zkm"
+database_url = "mysql://stage:123456@localhost:13306/zkm"
 # Must be: $zkm url, $zkm2 url
 proving_key_paths = ["/tmp/input/"]
 prover_addrs = []

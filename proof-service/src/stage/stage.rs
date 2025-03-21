@@ -339,7 +339,6 @@ impl Stage {
 
     pub fn get_agg_task(&mut self) -> Option<AggTask> {
         let mut result: Option<AggTask> = None;
-        log::info!("get_aag_task: {:?}", self.agg_tasks.len());
         for agg_task in &mut self.agg_tasks {
             if agg_task.childs.iter().any(|c| c.is_some()) {
                 log::info!("Skipping agg_task: childs: {:?}", agg_task.childs);
@@ -366,7 +365,7 @@ impl Stage {
                 }
             });
         };
-        log::info!("get_aag_task:yes? {:?}", result.is_some());
+        log::info!("get_agg_task:yes? {:?}", result.is_some());
         result
     }
 
@@ -414,7 +413,7 @@ impl Stage {
 
     pub fn get_snark_task(&mut self) -> Option<SnarkTask> {
         let src = &mut self.snark_task;
-        log::info!("get_snark_task: {:?}:{:?}", src.proof_id, src.task_id);
+        log::info!("get_snark_task: {:?}:{:?} => status:{}", src.proof_id, src.task_id, src.state);
         get_task!(src);
     }
 

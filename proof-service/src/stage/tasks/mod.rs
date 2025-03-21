@@ -25,7 +25,6 @@ pub use snark_task::SnarkTask;
 pub const TASK_ITYPE_SPLIT: i32 = 1;
 pub const TASK_ITYPE_PROVE: i32 = 2;
 pub const TASK_ITYPE_AGG: i32 = 3;
-pub const TASK_ITYPE_AGGALL: i32 = 4;
 pub const TASK_ITYPE_FINAL: i32 = 5;
 
 pub enum Task {
