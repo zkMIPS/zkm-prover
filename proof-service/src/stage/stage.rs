@@ -6,7 +6,10 @@ use crate::stage::{
         {TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED},
     },
 };
-use std::fmt::{Debug, Formatter};
+use std::{
+    fmt::{Debug, Formatter},
+    io::Write,
+};
 
 use crate::proto::stage_service::v1::Step;
 use crate::stage::tasks::generate_task::GenerateTask;
@@ -189,14 +192,14 @@ impl Stage {
 
     fn gen_prove_task(&mut self) {
         //let prove_dir = self.generate_task.prove_path(true);
-        log::info!("ProveTask: {:?}", self.generate_task);
         let files = file::new(&self.generate_task.seg_path).read_dir().unwrap();
         // Read the segment and put them in queue.
         for file_name in files {
             let result = file_name.parse::<usize>();
             if let Ok(file_no) = result {
                 let prove_task = ProveTask {
-                    task_id: uuid::Uuid::new_v4().to_string(), // FIXME: Do you need it?
+                    task_id: uuid::Uuid::new_v4().to_string(),
+                    proof_id: self.generate_task.proof_id.clone(),
                     state: TASK_STATE_UNPROCESSED,
                     trace: Trace::default(),
                     base_dir: self.generate_task.base_dir.clone(),
@@ -413,12 +416,22 @@ impl Stage {
 
     pub fn get_snark_task(&mut self) -> Option<SnarkTask> {
         let src = &mut self.snark_task;
-        log::info!("get_snark_task: {:?}:{:?} => status:{}", src.proof_id, src.task_id, src.state);
+        log::info!(
+            "get_snark_task: proof_id:task_id: {:?}:{:?} => status:{}",
+            src.proof_id,
+            src.task_id,
+            src.state
+        );
         get_task!(src);
     }
 
     pub fn on_snark_task(&mut self, snark_task: &mut SnarkTask) {
         let dst = &mut self.snark_task;
+        // write snark proof to disk
+        // TODO: handle the result gracefully
+        let mut f = std::fs::File::create(&self.generate_task.snark_path)
+            .expect(&format!("can not open {}", &self.generate_task.snark_path));
+        f.write_all(&snark_task.output).unwrap();
         on_task!(snark_task, dst, self);
     }
 }

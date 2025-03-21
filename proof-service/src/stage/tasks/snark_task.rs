@@ -12,8 +12,10 @@ pub struct SnarkTask {
     pub input_dir: String,
     pub output_path: String,
 
+    #[serde(skip_serializing, skip_deserializing)]
     pub agg_receipt: Vec<u8>,
 
+    #[serde(skip_serializing, skip_deserializing)]
     pub output: Vec<u8>, //snark_proof_with_public_inputs
     pub trace: Trace,
 }

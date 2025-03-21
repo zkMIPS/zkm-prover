@@ -1,8 +1,8 @@
 use super::Prover;
+use super::{C, D, F};
 use crate::contexts::AggContext;
 use plonky2::util::timing::TimingTree;
 use std::time::Duration;
-use super::{F, C, D};
 use zkm_prover::generation::state::Receipt;
 
 #[derive(Default)]

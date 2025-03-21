@@ -21,19 +21,30 @@ use crate::proto::stage_service::{self, v1::Step};
 
 macro_rules! save_task {
     ($task:ident, $db_pool:ident, $type:expr) => {
+        log::info!(
+            "save task: {:?}:{:?} {:?} {}",
+            $task.proof_id,
+            $task.task_id,
+            $type,
+            $task.state
+        );
         if $task.state == TASK_STATE_FAILED || $task.state == TASK_STATE_SUCCESS {
+            log::info!("begin to save task");
+            // TODO: should remove the content from database, store it by FS.
             let content = serde_json::to_string(&$task).unwrap();
             let prove_task = database::ProveTask {
                 id: $task.task_id,
                 itype: $type,
-                //proof_id: $task.proof_id,
+                proof_id: $task.proof_id,
                 status: $task.state as i32,
                 node_info: $task.trace.node_info.clone(),
                 content: Some(content),
                 time_cost: ($task.trace.duration()) as i64,
                 ..Default::default()
             };
-            let _ = $db_pool.insert_prove_task(&prove_task).await;
+            if let Err(e) = $db_pool.insert_prove_task(&prove_task).await {
+                log::error!("save task error: {:?}", e)
+            }
         }
     };
 }
@@ -170,7 +181,9 @@ async fn run_stage_task(
                         _ => stage_service::v1::Status::InternalError,
                     };
                     let status = get_status();
-                    let _ = db.update_stage_task(&task.id, status.into(), "").await;
+                    db.update_stage_task(&task.id, status.into(), "")
+                        .await
+                        .unwrap();
                 } else {
                     let result = if generte_context.execute_only || generte_context.composite_proof
                     {
@@ -178,13 +191,13 @@ async fn run_stage_task(
                     } else {
                         file::new(&generte_context.snark_path).read().unwrap()
                     };
-                    let _ = db
-                        .update_stage_task(
-                            &task.id,
-                            stage_service::v1::Status::Success.into(),
-                            &String::from_utf8(result).expect("Invalid UTF-8 bytes"),
-                        )
-                        .await;
+                    db.update_stage_task(
+                        &task.id,
+                        stage_service::v1::Status::Success.into(),
+                        &String::from_utf8(result).expect("Invalid UTF-8 bytes"),
+                    )
+                    .await
+                    .unwrap();
                     log::info!("[stage] finished {:?} ", stage);
                 }
             }

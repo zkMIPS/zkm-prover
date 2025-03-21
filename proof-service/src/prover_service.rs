@@ -110,10 +110,6 @@ impl ProverService for ProverServiceSVC {
         metrics::record_metrics("prover::get_status", || async {
             // log::info!("{:#?}", request);
             let mut response = GetStatusResponse::default();
-            if self.pipeline.lock().is_err() {
-                response.status = get_status_response::Status::Computing.into();
-                return Ok(Response::new(response));
-            }
             let success = self.pipeline.lock().unwrap().get_status();
             if success {
                 response.status = get_status_response::Status::Idle.into();

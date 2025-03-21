@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::proto::includes::v1::AggregateInput;
-use crate::stage::tasks::{ProveTask, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED, Trace};
+use crate::stage::tasks::{ProveTask, Trace, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED};
 
 pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
     AggregateInput {
@@ -16,12 +16,13 @@ pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
 pub struct AggTask {
     pub task_id: String,
     pub state: u32,
+    pub proof_id: String,
 
     pub block_no: Option<u64>,
     pub seg_size: u32,
-    pub proof_id: String,
     // vk for zkm2 core proof
     pub vk: Vec<u8>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub inputs: Vec<AggregateInput>,
     pub is_final: bool,
     pub is_first_shard: bool,
@@ -30,6 +31,8 @@ pub struct AggTask {
     pub agg_index: i32,
 
     pub trace: Trace,
+
+    #[serde(skip_serializing, skip_deserializing)]
     pub output: Vec<u8>, // output_receipt: Vec<u8>,
 
     // depend
@@ -176,7 +179,10 @@ mod tests {
         let right_task_id = "test_id_2";
         let mut agg_task = AggTask {
             state: TASK_STATE_UNPROCESSED,
-            childs: vec![Some(left_task_id.to_string()), Some(right_task_id.to_string())],
+            childs: vec![
+                Some(left_task_id.to_string()),
+                Some(right_task_id.to_string()),
+            ],
             ..Default::default()
         };
         agg_task.clear_child_task(left_task_id);
