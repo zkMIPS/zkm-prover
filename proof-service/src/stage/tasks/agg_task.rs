@@ -116,14 +116,14 @@ impl AggTask {
     // FIXME: if we have a single prove task, and try to aggegate its root proof, panic will raise
     // So we just set up the state successful
     pub fn init_from_single_prove_task(prove_task: &ProveTask, agg_index: i32) -> AggTask {
-        let task_id = uuid::Uuid::new_v4().to_string();
+        // let task_id = uuid::Uuid::new_v4().to_string();
         AggTask {
-            task_id: task_id.clone(),
+            task_id: prove_task.task_id.clone(),
             block_no: prove_task.program.block_no,
             state: TASK_STATE_SUCCESS,
             seg_size: prove_task.program.seg_size,
             proof_id: prove_task.program.proof_id.clone(),
-            inputs: vec![from_prove_task(prove_task)],
+            // inputs: vec![from_prove_task(prove_task)],
             from_prove: true,
             agg_index,
             ..Default::default()

@@ -357,10 +357,16 @@ impl Stage {
         // Fill in the inputs
         if let Some(agg_task) = &mut result {
             agg_task.inputs.iter_mut().for_each(|input| {
-                // supposed to be filled in the gen_agg_task if !input.is_agg
                 if input.is_agg {
                     let tmp = self
                         .agg_tasks
+                        .iter()
+                        .find(|x| x.task_id == input.computed_request_id)
+                        .unwrap();
+                    input.receipt_input = tmp.output.clone();
+                } else {
+                    let tmp = self
+                        .prove_tasks
                         .iter()
                         .find(|x| x.task_id == input.computed_request_id)
                         .unwrap();
