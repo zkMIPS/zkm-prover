@@ -21,7 +21,7 @@ pub struct GenerateTask {
     pub composite_proof: bool,
     pub receipt_inputs_path: String,
     pub receipts_path: String,
-
+    #[serde(skip_serializing, skip_deserializing)]
     pub program: Option<Program>,
 }
 
