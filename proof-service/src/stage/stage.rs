@@ -473,11 +473,10 @@ impl Debug for Stage {
 mod tests {
     use super::*;
     #[test]
+    #[cfg(feature = "prover")]
     fn test_gen_agg_tasks() {
         for n in 12..20 {
-            let mut stage = Stage {
-                ..Default::default()
-            };
+            let mut stage = Stage::default();
             for i in 0..n {
                 stage.prove_tasks.push(ProveTask {
                     output: vec![1, 2, 3],
@@ -487,12 +486,11 @@ mod tests {
             }
             stage.gen_agg_tasks();
             stage.agg_tasks.iter().for_each(|element| {
+                let left = element.inputs.get(0).map_or(false, |input| input.is_agg);
+                let right = element.inputs.get(1).map_or(false, |input| input.is_agg);
                 println!(
                     "agg: left:{} right:{} final:{}",
-                    //element.file_key,
-                    element.inputs[0].is_agg,
-                    element.inputs[1].is_agg,
-                    element.is_final,
+                    left, right, element.is_final,
                 );
             });
             assert!(stage.agg_tasks.len() <= n);
