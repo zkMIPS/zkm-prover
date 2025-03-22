@@ -7,7 +7,7 @@ pub struct SplitContext {
     pub block_no: Option<u64>,
     pub seg_size: u32,
     pub seg_path: String,
-    // output public input
+    // TODO: remove
     pub public_input_path: String,
     pub private_input_path: String,
     pub output_path: String,

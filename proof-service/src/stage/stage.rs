@@ -2,8 +2,9 @@ use crate::stage::{
     safe_read,
     tasks::{
         agg_task::{self, AggTask},
-        {ProveTask, SnarkTask, SplitTask}, {Trace, TASK_STATE_PROCESSING},
+        {ProveTask, SnarkTask, SplitTask},
         {TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED},
+        {TASK_STATE_PROCESSING, Trace},
     },
 };
 use std::{
@@ -93,6 +94,11 @@ impl Stage {
                         self.step = Step::End;
                     } else {
                         self.gen_prove_task();
+                        log::info!(
+                            "proof_id {} generate {} prove_tasks",
+                            self.generate_task.proof_id,
+                            self.prove_tasks.len()
+                        );
                         self.step = Step::InProve;
                     }
                 }

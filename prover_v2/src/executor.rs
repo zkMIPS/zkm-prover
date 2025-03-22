@@ -60,7 +60,7 @@ impl Executor {
         file::new(&format!("{}/vk.bin", ctx.base_dir)).write(&vk_bytes)?;
 
         let context = network_prove.context_builder.build();
-        let total_steps = self.split_with_context::<_, _>(
+        let (total_steps, public_values_stream) = self.split_with_context::<_, _>(
             &network_prove.prover.core_prover,
             ctx,
             program,
@@ -69,6 +69,8 @@ impl Executor {
             context,
             network_prove.prover.core_shape_config.as_ref(),
         )?;
+        // write public_values_stream to output_path
+        file::new(&ctx.output_path).write(&public_values_stream)?;
 
         Ok(total_steps)
     }
@@ -83,7 +85,7 @@ impl Executor {
         opts: ZKMCoreOpts,
         context: ZKMContext,
         shape_config: Option<&CoreShapeConfig<SC::Val>>,
-    ) -> anyhow::Result<u64>
+    ) -> anyhow::Result<(u64, Vec<u8>)>
     where
         SC::Val: PrimeField32,
         SC::Challenger: 'static + Clone + Send,
@@ -303,7 +305,7 @@ impl Executor {
             }
             // Wait until the checkpoint generator handle has fully finished.
             let public_values_stream = checkpoint_generator_handle.join().unwrap().unwrap();
-            file::new(&ctx.public_input_path).write(&public_values_stream)?;
+            // file::new(&ctx.public_input_path).write(&public_values_stream)?;                    // write public_values_stream
 
             // Wait until the records and traces have been fully generated for phase 2.
             p2_record_and_trace_gen_handles
@@ -353,7 +355,7 @@ impl Executor {
                 (cycles as f64 / (split_time * 1000.0) as f64),
             );
 
-            Ok(cycles)
+            Ok((cycles, public_values_stream))
         })
     }
 }
