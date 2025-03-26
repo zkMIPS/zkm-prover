@@ -91,7 +91,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let private_input_stream = args[1].as_bytes().to_vec();
 
     let public_input_stream: Vec<u8> = bincode::serialize(&public_input_stream).unwrap();
-    let private_input_stream: Vec<u8> = bincode::serialize(&private_input_stream).unwrap();
+    // support multiple private inputs, each of which is serialized through bincode
+    let private_input_stream: Vec<Vec<u8>> = vec![bincode::serialize(&private_input_stream).unwrap()];
 
     //let public_input_stream = if public_input_path.is_empty() {
     //    vec![]

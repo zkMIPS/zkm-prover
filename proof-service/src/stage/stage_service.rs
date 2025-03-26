@@ -269,8 +269,11 @@ impl StageService for StageServiceSVC {
                 "".to_string()
             } else {
                 let private_input_stream_path = format!("{}/{}", input_stream_dir, "private_input");
+                let mut buf = Vec::new();
+                bincode::serialize_into(&mut buf, &request.get_ref().private_input_stream)
+                    .expect("serialization private_input failed");
                 file::new(&private_input_stream_path)
-                    .write(&request.get_ref().private_input_stream)
+                    .write(&buf)
                     .map_err(|e| Status::internal(e.to_string()))?;
                 private_input_stream_path
             };

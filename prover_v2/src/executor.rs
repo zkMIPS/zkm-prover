@@ -37,19 +37,22 @@ use crate::utils::get_block_path;
 pub struct Executor {}
 impl Executor {
     pub fn split(&self, ctx: &SplitContext) -> anyhow::Result<u64> {
-        let elf_path = ctx.elf_path.clone();
-        // let block_no = ctx.block_no.unwrap_or(0);
-        // let seg_path = ctx.seg_path.clone();
+        let mut network_prove = NetworkProve::new_with_segment_size(ctx.seg_size);
+        if !ctx.private_input_path.is_empty() {
+            let data = file::new(&ctx.private_input_path)
+                .read()
+                .expect("read private_input_path failed");
+            let private_inputs = bincode::deserialize::<Vec<Vec<u8>>>(&data)
+                .expect("deserialize private_inputs failed");
+            for private_input in private_inputs.into_iter() {
+                network_prove.stdin.write_vec(private_input);
+                tracing::info!("split set private_input data {}", data.len());
+            }
+        }
 
+        let elf_path = ctx.elf_path.clone();
         tracing::info!("split {} load elf file", elf_path);
         let elf = file::new(&elf_path).read()?;
-        // let block_path = get_block_path(&ctx.base_dir, &block_no.to_string(), "");
-        // let input_path = format!("{}/input", block_path.trim_end_matches('/'));
-        let input_data = file::new(&ctx.private_input_path).read()?;
-
-        let mut network_prove = NetworkProve::new_with_segment_size(ctx.seg_size);
-        // TODO: add more input
-        network_prove.stdin.write(&input_data);
 
         let program = network_prove
             .prover
