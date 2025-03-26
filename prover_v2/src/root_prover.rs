@@ -11,7 +11,7 @@ impl RootProver {
     pub fn prove(&self, ctx: &ProveContext) -> anyhow::Result<Vec<u8>> {
         let mut record: ExecutionRecord = bincode::deserialize(&ctx.segment)?;
 
-        let mut network_prove = NetworkProve::new();
+        let mut network_prove = NetworkProve::new_with_segment_size(ctx.seg_size);
         let opts = network_prove.opts.core_opts;
         let prover = network_prove.prover.core_prover;
         let (pk, _) = prover.machine().setup(&record.program);

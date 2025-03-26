@@ -47,7 +47,7 @@ impl Executor {
         // let input_path = format!("{}/input", block_path.trim_end_matches('/'));
         let input_data = file::new(&ctx.private_input_path).read()?;
 
-        let mut network_prove = NetworkProve::new();
+        let mut network_prove = NetworkProve::new_with_segment_size(ctx.seg_size);
         // TODO: add more input
         network_prove.stdin.write(&input_data);
 

@@ -5,5 +5,5 @@ database_url = "mysql://stage:123456@localhost:13306/zkm"
 proving_key_paths = ["/tmp/input/"]
 prover_addrs = []
 base_dir = "/tmp/zkm/test/test_proof"
-fileserver_url = "/tmp/zkm/fileserver/"
+fileserver_url = "/tmp/zkm/fileserver"
 fileserver_addr = "0.0.0.0:40001"

@@ -16,10 +16,8 @@ pub mod pipeline;
 pub mod utils;
 
 pub struct NetworkProve<'a, C: ZKMProverComponents = DefaultProverComponents> {
-    // pub struct NetworkProve<'a> {
     pub prover: ZKMProver<C>,
     pub context_builder: ZKMContextBuilder<'a>,
-    // pub pk: &'a ZKMProvingKey,
     pub stdin: ZKMStdin,
     pub opts: ZKMProverOpts,
     pub timeout: Option<Duration>,
@@ -33,6 +31,21 @@ impl<'a> NetworkProve<'a> {
             context_builder: Default::default(),
             stdin: ZKMStdin::new(),
             opts: Default::default(),
+            timeout: None,
+        }
+    }
+
+    pub fn new_with_segment_size(segment_size: u32) -> Self {
+        let mut opts = ZKMProverOpts::default();
+        if segment_size > 0 {
+            opts.core_opts.shard_size = segment_size as usize;
+        }
+
+        Self {
+            prover: ZKMProver::new(),
+            context_builder: Default::default(),
+            stdin: ZKMStdin::new(),
+            opts,
             timeout: None,
         }
     }

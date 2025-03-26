@@ -211,6 +211,7 @@ impl ProverService for ProverServiceSVC {
                 index: request.get_ref().index as usize,
                 done: request.get_ref().done,
                 segment: request.get_ref().segment.clone(),
+                seg_size: request.get_ref().seg_size,
             };
 
             let pipeline = self.pipeline.clone();

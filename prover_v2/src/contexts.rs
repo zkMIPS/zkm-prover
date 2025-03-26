@@ -53,6 +53,7 @@ pub struct ProveContext {
     // pub elf: Vec<u8>,
     // execution record
     pub segment: Vec<u8>,
+    pub seg_size: u32,
     // pub receipts_input: Vec<Vec<u8>>,
 }
 
