@@ -49,10 +49,4 @@ default = []
 prover = ["dep:prover"]
 prover_v2 = ["dep:prover_v2"]
 
-gpu = []
-prover_gpu = ["dep:plonky2", "prover/gpu"]
-#prover_v2_gpu = ["dep:plonky3", "prover_v2/gpu"]
-
-[feature_dependencies]
-prover_gpu = ["prover", "gpu"]
-#prover_v2_gpu = ["prover_v2", "gpu"]
+gpu = ["dep:plonky2", "prover/gpu"]
