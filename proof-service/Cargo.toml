@@ -9,6 +9,8 @@ edition = "2021"
 prover = { path = "../prover", optional = true }
 prover_v2 = { path = "../prover_v2", optional = true }
 
+plonky2 = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev", optional = true }
+
 common = { path = "../common" }
 
 bincode = "1.3.3"
@@ -46,3 +48,11 @@ tonic-build = "0.8.0"
 default = []
 prover = ["dep:prover"]
 prover_v2 = ["dep:prover_v2"]
+
+gpu = []
+prover_gpu = ["dep:plonky2", "prover/gpu"]
+#prover_v2_gpu = ["dep:plonky3", "prover_v2/gpu"]
+
+[feature_dependencies]
+prover_gpu = ["prover", "gpu"]
+#prover_v2_gpu = ["prover_v2", "gpu"]

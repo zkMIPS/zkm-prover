@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &runtime_config.cert_path.clone().unwrap(),
             &runtime_config.key_path.clone().unwrap(),
         )
-        .await?;
+            .await?;
         let mut server_tls_config = ServerTlsConfig::new();
         if let Some(ca_cert) = tls_config.ca_cert {
             server_tls_config = server_tls_config.client_ca_root(ca_cert);
@@ -67,6 +67,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .add_service(StageServiceServer::new(stage))
             .serve(addr)
     } else {
+        #[cfg(all(feature = "prover", feature = "gpu"))]
+        {
+            plonky2::create_ctx(13, 13);
+            plonky2::init_globalmem(134217728);
+            prover::init_stark_op_stream_simple();
+        }
         let prover = ProverServiceSVC::new(runtime_config.clone());
         server
             .add_service(ProverServiceServer::new(prover))
@@ -113,6 +119,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         res = metrics_server => res?,
         res = file_server => res?,
     }
+
+    #[cfg(all(feature = "prover", feature = "gpu"))]
+    if !args.stage {
+        plonky2::destroy_ctx();
+    }
+
     Ok(())
 }
 
