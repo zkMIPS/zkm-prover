@@ -111,6 +111,7 @@ impl ProverService for ProverServiceSVC {
             // log::info!("{:#?}", request);
             let mut response = GetStatusResponse::default();
             let success = self.pipeline.lock().unwrap().get_status();
+            log::info!("node {:?}: lock pipeline {:?}", self.config.addr, success);
             if success {
                 response.status = get_status_response::Status::Idle.into();
             } else {
@@ -360,9 +361,4 @@ impl ProverService for ProverServiceSVC {
         })
         .await
     }
-}
-
-#[test]
-fn test_service() {
-    println!("test_service");
 }

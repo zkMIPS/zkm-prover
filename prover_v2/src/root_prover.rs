@@ -1,8 +1,8 @@
 use zkm2_core_executor::ExecutionRecord;
 use zkm2_stark::{MachineProver, MachineProvingKey, StarkGenericConfig};
 
-use crate::NetworkProve;
 use crate::contexts::ProveContext;
+use crate::NetworkProve;
 
 #[derive(Default)]
 pub struct RootProver {}

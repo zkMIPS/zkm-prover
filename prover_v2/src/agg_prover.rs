@@ -1,5 +1,5 @@
-use crate::NetworkProve;
 use crate::contexts::AggContext;
+use crate::NetworkProve;
 use zkm2_core_executor::ZKMReduceProof;
 use zkm2_prover::build::Witnessable;
 use zkm2_prover::{

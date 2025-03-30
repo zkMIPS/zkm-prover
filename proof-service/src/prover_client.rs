@@ -16,7 +16,7 @@ use tonic::transport::Channel;
 
 pub fn get_nodes() -> Vec<ProverNode> {
     let nodes_lock = crate::prover_node::instance();
-    let nodes_data = nodes_lock.lock().unwrap();
+    let mut nodes_data = nodes_lock.lock().unwrap();
     nodes_data.get_nodes()
 }
 
@@ -24,8 +24,11 @@ pub async fn get_idle_client(
     tls_config: Option<TlsConfig>,
 ) -> Option<(String, ProverServiceClient<Channel>)> {
     let nodes: Vec<ProverNode> = get_nodes();
+    log::info!("{} nodes in total", nodes.len());
     for mut node in nodes {
+        log::info!("query node addr {}", node.addr);
         let client = node.is_active(tls_config.clone()).await;
+        log::info!("client busy? {:?}", client.is_none());
         if let Some(client) = client {
             return Some((node.addr.clone(), client));
         }

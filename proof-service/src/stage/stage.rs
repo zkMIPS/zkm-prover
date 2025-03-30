@@ -1,21 +1,20 @@
+use std::{
+    fmt::{Debug, Formatter},
+    io::Write,
+    time::{SystemTime, UNIX_EPOCH},
+};
+use common::file;
+
+use crate::proto::stage_service::v1::Step;
 use crate::stage::{
     safe_read,
     tasks::{
         agg_task::{self, AggTask},
-        {ProveTask, SnarkTask, SplitTask},
-        {TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED},
-        {TASK_STATE_PROCESSING, Trace},
+        generate_task::GenerateTask,
+        ProveTask, SnarkTask, SplitTask, Trace, TASK_STATE_FAILED, TASK_STATE_INITIAL,
+        TASK_STATE_PROCESSING, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED,
     },
 };
-use std::{
-    fmt::{Debug, Formatter},
-    io::Write,
-};
-
-use crate::proto::stage_service::v1::Step;
-use crate::stage::tasks::generate_task::GenerateTask;
-use common::file;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn get_timestamp() -> u64 {
     let now = SystemTime::now();

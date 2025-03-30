@@ -4,8 +4,8 @@ use zkm2_prover::{InnerSC, ZKMProver, ZKMRecursionProverError};
 use zkm2_sdk::ZKMProof;
 use zkm2_stark::ZKMProverOpts;
 
-use crate::NetworkProve;
 use crate::contexts::SnarkContext;
+use crate::NetworkProve;
 
 // It seems we don't need `output_dir`.
 #[derive(Default)]

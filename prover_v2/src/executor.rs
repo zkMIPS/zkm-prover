@@ -13,25 +13,25 @@ use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
 use tracing_subscriber::fmt::format;
 use zkm2_core_executor::{
-    ExecutionRecord, ExecutionReport, ExecutionState, Executor as Runtime, Program, ZKMContext,
     events::{format_table_line, sorted_table_lines},
+    ExecutionRecord, ExecutionReport, ExecutionState, Executor as Runtime, Program, ZKMContext,
 };
 use zkm2_core_machine::{
-    CoreShapeConfig, CostEstimator, MipsAir,
     io::ZKMStdin,
-    utils::{ZKMCoreProverError, concurrency::TurnBasedSync, trace_checkpoint},
+    utils::{concurrency::TurnBasedSync, trace_checkpoint, ZKMCoreProverError},
+    CoreShapeConfig, CostEstimator, MipsAir,
 };
-use zkm2_prover::ZKMProver;
 use zkm2_prover::components::{DefaultProverComponents, ZKMProverComponents};
+use zkm2_prover::ZKMProver;
 use zkm2_sdk::ProverClient;
 use zkm2_stark::{
     Com, MachineProver, MachineProvingKey, MachineRecord, OpeningProof, PcsProverData,
     PublicValues, StarkGenericConfig, Val, ZKMCoreOpts,
 };
 
-use crate::NetworkProve;
 pub use crate::contexts::SplitContext;
 use crate::utils::get_block_path;
+use crate::NetworkProve;
 
 #[derive(Default)]
 pub struct Executor {}

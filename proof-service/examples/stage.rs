@@ -90,8 +90,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let public_input_stream: Vec<u8> = hex::decode(args[0]).unwrap();
     let private_input_stream = args[1].as_bytes().to_vec();
 
-    // let public_input_stream: Vec<u8> = bincode::serialize(&public_input_stream).unwrap();
-    // let private_input_stream: Vec<u8> = bincode::serialize(&private_input_stream).unwrap();
+    // It depends on whether the guest program uses io::read() or io::read_vec().
+    // If it’s the former, then `bincode::serialize` is used; otherwise, it’s not.
+    // In `sha2-rust` example, the guest program uses io::read().
+    let public_input_stream: Vec<u8> = bincode::serialize(&public_input_stream).unwrap();
+    let private_input_stream: Vec<u8> = bincode::serialize(&private_input_stream).unwrap();
 
     //let public_input_stream = if public_input_path.is_empty() {
     //    vec![]

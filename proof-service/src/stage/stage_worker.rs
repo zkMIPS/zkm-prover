@@ -81,7 +81,13 @@ async fn run_stage_task(
                         }
                         Step::InProve => {
                             let prove_task = stage.get_prove_task();
+                            log::info!("Step::InProve prove_task {:?}", prove_task.is_some());
                             if let Some(prove_task) = prove_task {
+                                log::info!(
+                                    "proof id:task id {}:{}",
+                                    prove_task.proof_id,
+                                    prove_task.task_id
+                                );
                                 let tx = tx.clone();
                                 let tls_config = tls_config.clone();
                                 tokio::spawn(async move {
@@ -196,8 +202,8 @@ async fn run_stage_task(
                         stage_service::v1::Status::Success.into(),
                         &String::from_utf8(result).expect("Invalid UTF-8 bytes"),
                     )
-                    .await
-                    .unwrap();
+                        .await
+                        .unwrap();
                     log::info!("[stage] finished {:?} ", stage);
                 }
             }

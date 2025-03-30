@@ -39,8 +39,11 @@ impl ProverNode {
     ) -> Option<ProverServiceClient<Channel>> {
         let mut client = self.get_client();
         match client {
-            Some(_) => {}
+            Some(_) => {
+                log::info!("Client {} already connected", self.addr);
+            }
             None => {
+                log::info!("Connecting to {}", self.addr);
                 let uri = format!("grpc://{}", self.addr).parse::<Uri>().unwrap();
                 let mut endpoint = tonic::transport::Channel::builder(uri)
                     .connect_timeout(Duration::from_secs(5))
@@ -58,6 +61,7 @@ impl ProverNode {
                 }
                 let client_init = endpoint.connect().await;
                 if let Ok(client_init) = client_init {
+                    log::info!("Connected to {}", self.addr);
                     self.set_client(Some(client_init.clone()));
                     client = Some(client_init.clone());
                 }
@@ -65,11 +69,13 @@ impl ProverNode {
         }
 
         if let Some(client) = client {
+            log::info!("Getting client {} status", self.addr);
             let mut client = ProverServiceClient::<Channel>::new(client);
             let request = GetStatusRequest {};
             let response = client.get_status(Request::new(request)).await;
             if let Ok(response) = response {
                 let status = response.get_ref().status;
+                log::info!("client {} status {}", self.addr, status);
                 if get_status_response::Status::from_i32(status)
                     == Some(get_status_response::Status::Idle)
                     || get_status_response::Status::from_i32(status)
@@ -78,6 +84,7 @@ impl ProverNode {
                     return Some(client);
                 }
             } else {
+                log::info!("client {} status None", self.addr);
                 self.set_client(None);
             }
         }
@@ -108,7 +115,8 @@ impl ProverNodes {
         self.prover_nodes.push(node);
     }
 
-    pub fn get_nodes(&self) -> Vec<ProverNode> {
+    pub fn get_nodes(&mut self) -> Vec<ProverNode> {
+        self.prover_nodes.rotate_left(1);
         self.prover_nodes.clone()
     }
 

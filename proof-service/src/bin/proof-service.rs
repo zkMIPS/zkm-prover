@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &runtime_config.cert_path.clone().unwrap(),
             &runtime_config.key_path.clone().unwrap(),
         )
-            .await?;
+        .await?;
         let mut server_tls_config = ServerTlsConfig::new();
         if let Some(ca_cert) = tls_config.ca_cert {
             server_tls_config = server_tls_config.client_ca_root(ca_cert);
@@ -98,15 +98,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     metrics::init_registry();
     let metrics_server = hyper::Server::bind(&metrics_addr).serve(make_svc);
 
-    let file_server = tokio::spawn(async move {
-        if let Err(e) = start_file_server(&runtime_config.fileserver_addr).await {
-            eprintln!("Error running HTTP server: {}", e);
-        }
-    });
+    // let file_server = tokio::spawn(async move {
+    //     if let Err(e) = start_file_server(&runtime_config.fileserver_addr).await {
+    //         eprintln!("Error running HTTP server: {}", e);
+    //     }
+    // });
 
     tokio::pin!(grpc_server);
     tokio::pin!(metrics_server);
-    tokio::pin!(file_server);
+    // tokio::pin!(file_server);
 
     log::info!(
         "Starting stage/prover:{} on {}",
@@ -117,7 +117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::select! {
         res = grpc_server => res?,
         res = metrics_server => res?,
-        res = file_server => res?,
+        // res = file_server => res?,
     }
 
     #[cfg(all(feature = "prover", feature = "gpu"))]

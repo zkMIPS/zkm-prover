@@ -5,7 +5,9 @@ pub mod provers;
 
 #[cfg(feature = "gpu")]
 pub fn init_stark_op_stream_simple() {
-    use plonky2::field::abstract_field::{get_ops_stream, get_ops_stream_simple, AbstractFieldForVec, SimpleOpsNode};
+    use plonky2::field::abstract_field::{
+        get_ops_stream, get_ops_stream_simple, AbstractFieldForVec, SimpleOpsNode,
+    };
     let ops_vec_1: Option<Vec<SimpleOpsNode>> = {
         let file_path = "/mnt_zkm/app/mytest_get_opstreams/log_simplify_arithmetic.txt";
         match get_ops_stream_simple(file_path) {
