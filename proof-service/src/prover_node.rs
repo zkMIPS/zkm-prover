@@ -116,7 +116,6 @@ impl ProverNodes {
     }
 
     pub fn get_nodes(&mut self) -> Vec<ProverNode> {
-        self.prover_nodes.rotate_left(7);
         self.prover_nodes.clone()
     }
 
@@ -125,6 +124,8 @@ impl ProverNodes {
     }
 
     pub fn get_snark_nodes(&self) -> Vec<ProverNode> {
-        self.snark_nodes.clone()
+        // self.snark_nodes.clone()
+        // we use the first node as the snark node
+        vec![self.prover_nodes[0].clone()]
     }
 }

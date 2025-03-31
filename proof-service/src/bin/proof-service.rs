@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &runtime_config.cert_path.clone().unwrap(),
             &runtime_config.key_path.clone().unwrap(),
         )
-        .await?;
+            .await?;
         let mut server_tls_config = ServerTlsConfig::new();
         if let Some(ca_cert) = tls_config.ca_cert {
             server_tls_config = server_tls_config.client_ca_root(ca_cert);

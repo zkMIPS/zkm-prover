@@ -13,6 +13,9 @@ use tonic::Request;
 use crate::prover_node::ProverNode;
 use std::time::Duration;
 use tonic::transport::Channel;
+use rand::SeedableRng;
+use rand::seq::SliceRandom;
+use rand::rngs::StdRng;
 
 pub fn get_nodes() -> Vec<ProverNode> {
     let nodes_lock = crate::prover_node::instance();
@@ -22,13 +25,19 @@ pub fn get_nodes() -> Vec<ProverNode> {
 
 pub async fn get_idle_client(
     tls_config: Option<TlsConfig>,
+    is_snark: bool,
 ) -> Option<(String, ProverServiceClient<Channel>)> {
-    let nodes: Vec<ProverNode> = get_nodes();
-    log::info!("{} nodes in total", nodes.len());
+    let mut nodes: Vec<ProverNode> = if is_snark {
+        get_snark_nodes()
+    } else {
+        get_nodes()
+    };
+    let mut rng = StdRng::from_entropy();
+    nodes.shuffle(&mut rng);
+
     for mut node in nodes {
-        log::info!("query node addr {}", node.addr);
         let client = node.is_active(tls_config.clone()).await;
-        log::info!("client busy? {:?}", client.is_none());
+        log::info!("client {} busy? {:?}", node.addr, client.is_none());
         if let Some(client) = client {
             return Some((node.addr.clone(), client));
         }
@@ -55,7 +64,7 @@ pub fn result_code_to_state(code: i32) -> u32 {
 
 pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> Option<SplitTask> {
     split_task.state = TASK_STATE_UNPROCESSED;
-    let client = get_idle_client(tls_config).await;
+    let client = get_idle_client(tls_config, false).await;
     if let Some((addrs, mut client)) = client {
         let request = SplitElfRequest {
             proof_id: split_task.proof_id.clone(),
@@ -102,7 +111,7 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
 
 pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> Option<ProveTask> {
     prove_task.state = TASK_STATE_UNPROCESSED;
-    let client = get_idle_client(tls_config).await;
+    let client = get_idle_client(tls_config, false).await;
     if let Some((addrs, mut client)) = client {
         let request = ProveRequest {
             proof_id: prove_task.program.proof_id.clone(),
@@ -115,7 +124,8 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             done: prove_task.done,
         };
         log::info!(
-            "[prove] rpc {}:{}start",
+            "[prove] node {} rpc {}:{}start",
+            addrs,
             request.proof_id,
             request.computed_request_id,
         );
@@ -144,7 +154,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
 
 pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> Option<AggTask> {
     agg_task.state = TASK_STATE_UNPROCESSED;
-    let client = get_idle_client(tls_config).await;
+    let client = get_idle_client(tls_config, false).await;
     if let Some((addrs, mut client)) = client {
         let request = AggregateRequest {
             proof_id: agg_task.proof_id.clone(),
@@ -189,7 +199,7 @@ pub async fn snark_proof(
     mut snark_task: SnarkTask,
     tls_config: Option<TlsConfig>,
 ) -> Option<SnarkTask> {
-    let client = get_idle_client(tls_config).await;
+    let client = get_idle_client(tls_config, true).await;
     if let Some((addrs, mut client)) = client {
         let request = SnarkProofRequest {
             version: snark_task.version,

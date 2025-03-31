@@ -193,8 +193,7 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<ProveResponse>, Status> {
         metrics::record_metrics("prover::prove", || async {
             log::info!(
-                "[prove] node {}, {}:{} start",
-                self.config.addr,
+                "[prove] {}:{} start",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
                 //request.get_ref().seg_path,
