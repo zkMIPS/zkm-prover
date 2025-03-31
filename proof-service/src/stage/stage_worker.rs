@@ -21,15 +21,13 @@ use crate::proto::stage_service::{self, v1::Step};
 
 macro_rules! save_task {
     ($task:ident, $db_pool:ident, $type:expr) => {
-        log::info!(
-            "save task: {:?}:{:?} {:?} {}",
-            $task.proof_id,
-            $task.task_id,
-            $type,
-            $task.state
-        );
         if $task.state == TASK_STATE_FAILED || $task.state == TASK_STATE_SUCCESS {
-            log::info!("begin to save task");
+            log::info!("begin to save task: {:?}:{:?} type {:?} status {}",
+                $task.proof_id,
+                $task.task_id,
+                $type,
+                $task.state
+            );
             // TODO: should remove the content from database, store it by FS.
             let content = serde_json::to_string(&$task).unwrap();
             let prove_task = database::ProveTask {
@@ -81,7 +79,7 @@ async fn run_stage_task(
                         }
                         Step::InProve => {
                             let prove_task = stage.get_prove_task();
-                            log::info!("Step::InProve prove_task {:?}", prove_task.is_some());
+                            log::debug!("Step::InProve prove_task {:?}", prove_task.is_some());
                             if let Some(prove_task) = prove_task {
                                 let tx = tx.clone();
                                 let tls_config = tls_config.clone();
