@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use crate::proto::prover_service::v1::{
     prover_service_client::ProverServiceClient, AggregateRequest, GetTaskResultRequest,
     GetTaskResultResponse, ProveRequest, ResultCode, SnarkProofRequest, SplitElfRequest,
@@ -10,7 +11,7 @@ use crate::stage::tasks::{
 };
 use tonic::Request;
 
-use crate::prover_node::ProverNode;
+use crate::prover_node::{NodeStatus, ProverNode};
 use std::time::Duration;
 use tonic::transport::Channel;
 use rand::SeedableRng;
@@ -26,7 +27,7 @@ pub fn get_nodes() -> Vec<ProverNode> {
 pub async fn get_idle_client(
     tls_config: Option<TlsConfig>,
     is_snark: bool,
-) -> Option<(String, ProverServiceClient<Channel>)> {
+) -> Option<(String, ProverServiceClient<Channel>, Arc<Mutex<NodeStatus>>)> {
     let mut nodes: Vec<ProverNode> = if is_snark {
         get_snark_nodes()
     } else {
@@ -36,13 +37,23 @@ pub async fn get_idle_client(
     nodes.shuffle(&mut rng);
 
     for mut node in nodes {
-        let client = node.is_active(tls_config.clone()).await;
-        log::info!("client {} busy? {:?}", node.addr, client.is_none());
-        if let Some(client) = client {
-            return Some((node.addr.clone(), client));
+        let is_idle = {
+            let status = node.status.lock().unwrap();
+            *status == NodeStatus::Idle
+        };
+
+        if !is_idle {
+            continue;
+        }
+
+        if let Some(client) = node.is_active(tls_config.clone()).await {
+            let mut status = node.status.lock().unwrap();
+            *status = NodeStatus::Busy;
+
+            return Some((node.addr.clone(), client, node.status.clone()));
         }
     }
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    // tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     None
 }
 
@@ -65,7 +76,7 @@ pub fn result_code_to_state(code: i32) -> u32 {
 pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> Option<SplitTask> {
     split_task.state = TASK_STATE_UNPROCESSED;
     let client = get_idle_client(tls_config, false).await;
-    if let Some((addrs, mut client)) = client {
+    if let Some((addrs, mut client, node_status)) = client {
         let request = SplitElfRequest {
             proof_id: split_task.proof_id.clone(),
             computed_request_id: split_task.task_id.clone(),
@@ -88,6 +99,8 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.split_elf(grpc_request).await;
+        let mut status = node_status.lock().unwrap();
+        *status = NodeStatus::Idle;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 split_task.state = result_code_to_state(response_result.code);
@@ -112,7 +125,7 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
 pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> Option<ProveTask> {
     prove_task.state = TASK_STATE_UNPROCESSED;
     let client = get_idle_client(tls_config, false).await;
-    if let Some((addrs, mut client)) = client {
+    if let Some((addrs, mut client, node_status)) = client {
         let request = ProveRequest {
             proof_id: prove_task.program.proof_id.clone(),
             computed_request_id: prove_task.task_id.clone(),
@@ -132,6 +145,8 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.prove(grpc_request).await;
+        let mut status = node_status.lock().unwrap();
+        *status = NodeStatus::Idle;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 prove_task.state = result_code_to_state(response_result.code);
@@ -155,7 +170,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
 pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> Option<AggTask> {
     agg_task.state = TASK_STATE_UNPROCESSED;
     let client = get_idle_client(tls_config, false).await;
-    if let Some((addrs, mut client)) = client {
+    if let Some((addrs, mut client, node_status)) = client {
         let request = AggregateRequest {
             proof_id: agg_task.proof_id.clone(),
             computed_request_id: agg_task.task_id.clone(),
@@ -176,6 +191,8 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.aggregate(grpc_request).await;
+        let mut status = node_status.lock().unwrap();
+        *status = NodeStatus::Idle;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 agg_task.state = result_code_to_state(response_result.code);
@@ -200,7 +217,7 @@ pub async fn snark_proof(
     tls_config: Option<TlsConfig>,
 ) -> Option<SnarkTask> {
     let client = get_idle_client(tls_config, true).await;
-    if let Some((addrs, mut client)) = client {
+    if let Some((addrs, mut client, node_status)) = client {
         let request = SnarkProofRequest {
             version: snark_task.version,
             proof_id: snark_task.proof_id.clone(),
@@ -215,6 +232,8 @@ pub async fn snark_proof(
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.snark_proof(grpc_request).await;
+        let mut status = node_status.lock().unwrap();
+        *status = NodeStatus::Idle;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {

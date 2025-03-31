@@ -11,10 +11,17 @@ use tonic::transport::ClientTlsConfig;
 use tonic::transport::Uri;
 use tonic::Request;
 
+#[derive(Debug, PartialEq)]
+pub enum NodeStatus {
+    Idle,
+    Busy,
+}
+
 #[derive(Debug, Clone)]
 pub struct ProverNode {
     pub addr: String,
     pub client: Arc<Mutex<Option<tonic::transport::channel::Channel>>>,
+    pub status: Arc<Mutex<NodeStatus>>,
 }
 
 impl ProverNode {
@@ -22,6 +29,7 @@ impl ProverNode {
         ProverNode {
             addr: addr.to_string(),
             client: Arc::new(Mutex::new(None)),
+            status: Arc::new(Mutex::new(NodeStatus::Idle)),
         }
     }
 
@@ -70,23 +78,25 @@ impl ProverNode {
 
         if let Some(client) = client {
             log::info!("Getting client {} status", self.addr);
-            let mut client = ProverServiceClient::<Channel>::new(client);
-            let request = GetStatusRequest {};
-            let response = client.get_status(Request::new(request)).await;
-            if let Ok(response) = response {
-                let status = response.get_ref().status;
-                log::info!("client {} status {}", self.addr, status);
-                if get_status_response::Status::from_i32(status)
-                    == Some(get_status_response::Status::Idle)
-                    || get_status_response::Status::from_i32(status)
-                    == Some(get_status_response::Status::Unspecified)
-                {
-                    return Some(client);
-                }
-            } else {
-                log::info!("client {} status None", self.addr);
-                self.set_client(None);
-            }
+            let client = ProverServiceClient::<Channel>::new(client);
+
+            return Some(client);
+            // let request = GetStatusRequest {};
+            // let response = client.get_status(Request::new(request)).await;
+            // if let Ok(response) = response {
+            //     let status = response.get_ref().status;
+            //     log::info!("client {} status {}", self.addr, status);
+            //     if get_status_response::Status::from_i32(status)
+            //         == Some(get_status_response::Status::Idle)
+            //         || get_status_response::Status::from_i32(status)
+            //         == Some(get_status_response::Status::Unspecified)
+            //     {
+            //         return Some(client);
+            //     }
+            // } else {
+            //     log::info!("client {} status None", self.addr);
+            //     self.set_client(None);
+            // }
         }
         None
     }
