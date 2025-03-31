@@ -83,11 +83,6 @@ async fn run_stage_task(
                             let prove_task = stage.get_prove_task();
                             log::info!("Step::InProve prove_task {:?}", prove_task.is_some());
                             if let Some(prove_task) = prove_task {
-                                log::info!(
-                                    "proof id:task id {}:{}",
-                                    prove_task.proof_id,
-                                    prove_task.task_id
-                                );
                                 let tx = tx.clone();
                                 let tls_config = tls_config.clone();
                                 tokio::spawn(async move {

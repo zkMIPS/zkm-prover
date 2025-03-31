@@ -119,7 +119,7 @@ impl ProverService for ProverServiceSVC {
             }
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn get_task_result(
@@ -131,7 +131,7 @@ impl ProverService for ProverServiceSVC {
             let response = GetTaskResultResponse::default();
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn split_elf(
@@ -184,7 +184,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn prove(
@@ -193,7 +193,8 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<ProveResponse>, Status> {
         metrics::record_metrics("prover::prove", || async {
             log::info!(
-                "[prove] {}:{} start",
+                "[prove] node {}, {}:{} start",
+                self.config.addr,
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
                 //request.get_ref().seg_path,
@@ -216,6 +217,7 @@ impl ProverService for ProverServiceSVC {
             };
 
             let pipeline = self.pipeline.clone();
+            // todo: lock the pipeline
             let prove_func = move || {
                 let s_ctx: ProveContext = prove_context;
                 pipeline.lock().unwrap().prove_root(&s_ctx)
@@ -242,7 +244,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn aggregate(
@@ -310,7 +312,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn snark_proof(
@@ -359,6 +361,6 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 }

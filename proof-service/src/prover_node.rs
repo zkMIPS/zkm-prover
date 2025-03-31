@@ -79,7 +79,7 @@ impl ProverNode {
                 if get_status_response::Status::from_i32(status)
                     == Some(get_status_response::Status::Idle)
                     || get_status_response::Status::from_i32(status)
-                        == Some(get_status_response::Status::Unspecified)
+                    == Some(get_status_response::Status::Unspecified)
                 {
                     return Some(client);
                 }
@@ -116,7 +116,7 @@ impl ProverNodes {
     }
 
     pub fn get_nodes(&mut self) -> Vec<ProverNode> {
-        self.prover_nodes.rotate_left(1);
+        self.prover_nodes.rotate_left(7);
         self.prover_nodes.clone()
     }
 
