@@ -48,10 +48,10 @@ impl ProverNode {
         let mut client = self.get_client();
         match client {
             Some(_) => {
-                log::info!("Client {} already connected", self.addr);
+                log::debug!("Client {} already connected", self.addr);
             }
             None => {
-                log::info!("Connecting to {}", self.addr);
+                log::debug!("Connecting to {}", self.addr);
                 let uri = format!("grpc://{}", self.addr).parse::<Uri>().unwrap();
                 let mut endpoint = tonic::transport::Channel::builder(uri)
                     .connect_timeout(Duration::from_secs(5))
@@ -69,7 +69,7 @@ impl ProverNode {
                 }
                 let client_init = endpoint.connect().await;
                 if let Ok(client_init) = client_init {
-                    log::info!("Connected to {}", self.addr);
+                    log::debug!("Connected to {}", self.addr);
                     self.set_client(Some(client_init.clone()));
                     client = Some(client_init.clone());
                 }
