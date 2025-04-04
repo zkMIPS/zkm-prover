@@ -9,7 +9,7 @@ use crate::proto::stage_service::v1::Step;
 use crate::stage::{
     safe_read,
     tasks::{
-        agg_task::{self, AggTask},
+        agg_task::AggTask,
         generate_task::GenerateTask,
         ProveTask, SnarkTask, SplitTask, Trace, TASK_STATE_FAILED, TASK_STATE_INITIAL,
         TASK_STATE_PROCESSING, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED,
@@ -260,14 +260,14 @@ impl Stage {
         let mut current_length = self.prove_tasks.len();
         for i in (0..current_length - 1).step_by(2) {
             agg_index += 1;
-            result.push(agg_task::AggTask::init_from_two_prove_task(
+            result.push(AggTask::init_from_two_prove_task(
                 &(self.prove_tasks[i]),
                 &(self.prove_tasks[i + 1]),
                 agg_index,
             ));
         }
         if current_length % 2 == 1 {
-            result.push(agg_task::AggTask::init_from_single_prove_task(
+            result.push(AggTask::init_from_single_prove_task(
                 &(self.prove_tasks[current_length - 1]),
                 agg_index + 1,
             ));
@@ -279,7 +279,7 @@ impl Stage {
             let mut new_result = Vec::new();
             for i in (0..current_length - 1).step_by(2) {
                 agg_index += 1;
-                let agg_task = agg_task::AggTask::init_from_two_agg_task(
+                let agg_task = AggTask::init_from_two_agg_task(
                     &result[i],
                     &result[i + 1],
                     agg_index,

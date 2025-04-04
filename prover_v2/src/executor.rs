@@ -1,3 +1,4 @@
+use zkm2_core_machine::utils::trace_checkpoint;
 use common::file;
 use std::fs::File;
 use std::io::{self, Seek, Write};
@@ -18,8 +19,8 @@ use zkm2_core_executor::{
 };
 use zkm2_core_machine::{
     io::ZKMStdin,
-    utils::{concurrency::TurnBasedSync, trace_checkpoint, ZKMCoreProverError},
-    CoreShapeConfig, CostEstimator, MipsAir,
+    utils::{concurrency::TurnBasedSync, ZKMCoreProverError},
+    shape::CoreShapeConfig, MipsAir,
 };
 use zkm2_prover::components::{DefaultProverComponents, ZKMProverComponents};
 use zkm2_prover::ZKMProver;
@@ -49,7 +50,7 @@ impl Executor {
 
         let mut network_prove = NetworkProve::new_with_segment_size(ctx.seg_size);
         // TODO: add more input
-        network_prove.stdin.write(&input_data);
+        network_prove.stdin.write_vec(input_data);
 
         let program = network_prove
             .prover
@@ -96,11 +97,7 @@ impl Executor {
         // Setup the runtime.
         let mut runtime = Runtime::with_context(program.clone(), opts, context);
         runtime.maximal_shapes = shape_config.map(|config| {
-            config
-                .maximal_core_shapes()
-                .into_iter()
-                .map(|s| s.inner)
-                .collect()
+            config.maximal_core_shapes(opts.shard_size.ilog2() as usize).into_iter().collect()
         });
         runtime.write_vecs(&stdin.buffer);
         for proof in stdin.proofs.iter() {
@@ -186,13 +183,9 @@ impl Executor {
                                 // Trace the checkpoint and reconstruct the execution records.
                                 let (mut records, report) =
                                     tracing::debug_span!("trace checkpoint").in_scope(|| {
-                                        let mut reader = io::BufReader::new(&checkpoint);
-                                        let state: ExecutionState =
-                                            bincode::deserialize_from(&mut reader)
-                                                .expect("failed to deserialize state");
                                         trace_checkpoint::<SC>(
                                             program.clone(),
-                                            state,
+                                            &checkpoint,
                                             opts,
                                             shape_config,
                                         )
@@ -348,9 +341,8 @@ impl Executor {
             // Print the summary.
             let split_time = split_start.elapsed().as_secs_f64();
             tracing::info!(
-                "summary: cycles={}, gas={}, executor={}s, khz={:.2}",
+                "summary: cycles={}, executor={}s, khz={:.2}",
                 cycles,
-                report_aggregate.estimate_gas(),
                 split_time,
                 (cycles as f64 / (split_time * 1000.0) as f64),
             );
@@ -360,7 +352,3 @@ impl Executor {
     }
 }
 
-#[test]
-fn test_split_segments() {
-    println!("0");
-}

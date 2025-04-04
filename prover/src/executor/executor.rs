@@ -45,17 +45,18 @@ impl Executor {
                             .expect("read public_input_stream failed");
                         state.input_stream.push(data.clone());
                         log::info!("split set public_input data {}", data.len());
-
-                        // private_input_stream
-                        // FIXME: only one private input is allowed. need to support many.
-                        if !ctx.private_input_path.is_empty() {
-                            let data = file::new(&ctx.private_input_path)
-                                .read()
-                                .expect("read private_input_stream failed");
-                            state.input_stream.push(data.clone());
-                            log::info!("split set private_input data {}", data.len());
-                        }
                     }
+
+                    // private_input_stream
+                    // FIXME: only one private input is allowed. need to support many.
+                    if !ctx.private_input_path.is_empty() {
+                        let data = file::new(&ctx.private_input_path)
+                            .read()
+                            .expect("read private_input_stream failed");
+                        state.input_stream.push(data.clone());
+                        log::info!("split set private_input data {}", data.len());
+                    }
+
 
                     if !ctx.receipt_inputs_path.is_empty() {
                         let data = file::new(&ctx.receipt_inputs_path)

@@ -159,7 +159,15 @@ impl ProverService for ProverServiceSVC {
             );
 
             let pipeline = self.pipeline.clone();
-            let split_func = move || pipeline.lock().unwrap().split(&split_context);
+            let split_func = move || {
+                // todo: use try_lock?
+                let guard = pipeline.lock().unwrap_or_else(|e| {
+                    log::error!("Mutex poisoned, recovering");
+                    e.into_inner()
+                });
+
+                guard.split(&split_context)
+            };
             let result = run_back_task(split_func).await;
             let mut response = SplitElfResponse {
                 proof_id: request.get_ref().proof_id.clone(),
@@ -218,8 +226,12 @@ impl ProverService for ProverServiceSVC {
             let pipeline = self.pipeline.clone();
             // todo: lock the pipeline
             let prove_func = move || {
-                let s_ctx: ProveContext = prove_context;
-                pipeline.lock().unwrap().prove_root(&s_ctx)
+                let guard = pipeline.lock().unwrap_or_else(|e| {
+                    log::error!("Mutex poisoned, recovering");
+                    e.into_inner()
+                });
+
+                guard.prove_root(&prove_context)
             };
             let result = run_back_task(prove_func).await;
             let mut response = ProveResponse {
@@ -286,8 +298,11 @@ impl ProverService for ProverServiceSVC {
 
             let pipeline = self.pipeline.clone();
             let agg_func = move || {
-                let agg_ctx = agg_context;
-                pipeline.lock().unwrap().prove_aggregate(&agg_ctx)
+                let ppl = pipeline.lock().unwrap_or_else(|e| {
+                    log::error!("Mutex poisoned, recovering");
+                    e.into_inner()
+                });
+                ppl.prove_aggregate(&agg_context)
             };
             let result = run_back_task(agg_func).await;
             let mut response = AggregateResponse {
@@ -335,8 +350,11 @@ impl ProverService for ProverServiceSVC {
 
             let pipeline = self.pipeline.clone();
             let snark_func = move || {
-                let ctx: SnarkContext = snark_context;
-                pipeline.lock().unwrap().prove_snark(&ctx)
+                let guard = pipeline.lock().unwrap_or_else(|e| {
+                    log::error!("Mutex poisoned, recovering");
+                    e.into_inner()
+                });
+                guard.prove_snark(&snark_context)
             };
             let result = run_back_task(snark_func).await;
             let mut response = SnarkProofResponse {

@@ -30,7 +30,7 @@ impl AggProver {
                 shard_proofs,
                 is_complete: ctx.is_complete,
                 is_first_shard: ctx.is_first_shard,
-                vk_root: network_prove.prover.vk_root,
+                vk_root: network_prove.prover.recursion_vk_root,
             })
         } else {
             let reduced_proofs: Vec<ZKMReduceProof<_>> = ctx

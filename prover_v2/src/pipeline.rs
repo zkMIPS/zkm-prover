@@ -50,7 +50,7 @@ impl Pipeline {
         }
     }
 
-    pub fn prove_aggregate(&mut self, agg_context: &AggContext) -> Result<(bool, Vec<u8>), String> {
+    pub fn prove_aggregate(&self, agg_context: &AggContext) -> Result<(bool, Vec<u8>), String> {
         match self.mutex.try_lock() {
             Ok(_) => self
                 .agg_prover
@@ -67,7 +67,7 @@ impl Pipeline {
         }
     }
 
-    pub fn prove_snark(&mut self, snark_context: &SnarkContext) -> Result<(bool, Vec<u8>), String> {
+    pub fn prove_snark(&self, snark_context: &SnarkContext) -> Result<(bool, Vec<u8>), String> {
         match self.mutex.try_lock() {
             Ok(_) => self.snark_prover.prove(snark_context).map_err(|e| {
                 tracing::error!("prove_snark error {:#?}", e);

@@ -51,7 +51,7 @@ impl Pipeline {
     }
 
     pub fn prove_aggregate(
-        &mut self,
+        &self,
         agg_context: &AggContext,
     ) -> std::result::Result<(bool, Vec<u8>), String> {
         let result = self.mutex.try_lock();
@@ -71,7 +71,7 @@ impl Pipeline {
     }
 
     pub fn prove_snark(
-        &mut self,
+        &self,
         snark_context: &SnarkContext,
     ) -> std::result::Result<(bool, Vec<u8>), String> {
         let result = self.mutex.try_lock();

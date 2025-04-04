@@ -1,5 +1,5 @@
 use crate::proto::prover_service::v1::{
-    get_status_response, prover_service_client::ProverServiceClient, GetStatusRequest,
+    prover_service_client::ProverServiceClient,
 };
 use crate::stage::tasks::TASK_TIMEOUT;
 use common::tls::Config as TlsConfig;
@@ -9,7 +9,7 @@ use std::time::Duration;
 use tonic::transport::Channel;
 use tonic::transport::ClientTlsConfig;
 use tonic::transport::Uri;
-use tonic::Request;
+// use tonic::Request;
 
 #[derive(Debug, PartialEq)]
 pub enum NodeStatus {
