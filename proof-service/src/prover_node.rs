@@ -1,6 +1,4 @@
-use crate::proto::prover_service::v1::{
-    prover_service_client::ProverServiceClient,
-};
+use crate::proto::prover_service::v1::prover_service_client::ProverServiceClient;
 use crate::stage::tasks::TASK_TIMEOUT;
 use common::tls::Config as TlsConfig;
 use once_cell::sync::OnceCell;

@@ -1,9 +1,9 @@
-use std::sync::{Arc, Mutex};
 use crate::proto::prover_service::v1::{
     prover_service_client::ProverServiceClient, AggregateRequest, GetTaskResultRequest,
     GetTaskResultResponse, ProveRequest, ResultCode, SnarkProofRequest, SplitElfRequest,
 };
 use common::tls::Config as TlsConfig;
+use std::sync::{Arc, Mutex};
 
 use crate::stage::tasks::{
     AggTask, ProveTask, SnarkTask, SplitTask, TASK_STATE_FAILED, TASK_STATE_PROCESSING,
@@ -12,11 +12,11 @@ use crate::stage::tasks::{
 use tonic::Request;
 
 use crate::prover_node::{NodeStatus, ProverNode};
+use rand::rngs::StdRng;
+use rand::seq::SliceRandom;
+use rand::SeedableRng;
 use std::time::Duration;
 use tonic::transport::Channel;
-use rand::SeedableRng;
-use rand::seq::SliceRandom;
-use rand::rngs::StdRng;
 
 pub fn get_nodes() -> Vec<ProverNode> {
     let nodes_lock = crate::prover_node::instance();

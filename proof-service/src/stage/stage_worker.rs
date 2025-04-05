@@ -22,7 +22,8 @@ use crate::proto::stage_service::{self, v1::Step};
 macro_rules! save_task {
     ($task:ident, $db_pool:ident, $type:expr) => {
         if $task.state == TASK_STATE_FAILED || $task.state == TASK_STATE_SUCCESS {
-            log::info!("begin to save task: {:?}:{:?} type {:?} status {}",
+            log::info!(
+                "begin to save task: {:?}:{:?} type {:?} status {}",
                 $task.proof_id,
                 $task.task_id,
                 $type,
@@ -195,8 +196,8 @@ async fn run_stage_task(
                         stage_service::v1::Status::Success.into(),
                         &String::from_utf8(result).expect("Invalid UTF-8 bytes"),
                     )
-                        .await
-                        .unwrap();
+                    .await
+                    .unwrap();
                     log::info!("[stage] finished {:?} ", stage);
                 }
             }

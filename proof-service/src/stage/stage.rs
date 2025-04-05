@@ -1,18 +1,17 @@
+use common::file;
 use std::{
     fmt::{Debug, Formatter},
     io::Write,
     time::{SystemTime, UNIX_EPOCH},
 };
-use common::file;
 
 use crate::proto::stage_service::v1::Step;
 use crate::stage::{
     safe_read,
     tasks::{
-        agg_task::AggTask,
-        generate_task::GenerateTask,
-        ProveTask, SnarkTask, SplitTask, Trace, TASK_STATE_FAILED, TASK_STATE_INITIAL,
-        TASK_STATE_PROCESSING, TASK_STATE_SUCCESS, TASK_STATE_UNPROCESSED,
+        agg_task::AggTask, generate_task::GenerateTask, ProveTask, SnarkTask, SplitTask, Trace,
+        TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_PROCESSING, TASK_STATE_SUCCESS,
+        TASK_STATE_UNPROCESSED,
     },
 };
 
@@ -279,11 +278,8 @@ impl Stage {
             let mut new_result = Vec::new();
             for i in (0..current_length - 1).step_by(2) {
                 agg_index += 1;
-                let agg_task = AggTask::init_from_two_agg_task(
-                    &result[i],
-                    &result[i + 1],
-                    agg_index,
-                );
+                let agg_task =
+                    AggTask::init_from_two_agg_task(&result[i], &result[i + 1], agg_index);
                 self.agg_tasks.push(agg_task.clone());
                 new_result.push(agg_task);
             }

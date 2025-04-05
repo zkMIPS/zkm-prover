@@ -57,7 +57,6 @@ impl Executor {
                         log::info!("split set private_input data {}", data.len());
                     }
 
-
                     if !ctx.receipt_inputs_path.is_empty() {
                         let data = file::new(&ctx.receipt_inputs_path)
                             .read()

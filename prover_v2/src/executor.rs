@@ -1,4 +1,3 @@
-use zkm2_core_machine::utils::trace_checkpoint;
 use common::file;
 use std::fs::File;
 use std::io::{self, Seek, Write};
@@ -8,6 +7,7 @@ use std::sync::{
 };
 use std::thread::ScopedJoinHandle;
 use std::time::Instant;
+use zkm2_core_machine::utils::trace_checkpoint;
 
 use p3_field::PrimeField32;
 use p3_matrix::dense::RowMajorMatrix;
@@ -19,8 +19,9 @@ use zkm2_core_executor::{
 };
 use zkm2_core_machine::{
     io::ZKMStdin,
+    shape::CoreShapeConfig,
     utils::{concurrency::TurnBasedSync, ZKMCoreProverError},
-    shape::CoreShapeConfig, MipsAir,
+    MipsAir,
 };
 use zkm2_prover::components::{DefaultProverComponents, ZKMProverComponents};
 use zkm2_prover::ZKMProver;
@@ -97,7 +98,10 @@ impl Executor {
         // Setup the runtime.
         let mut runtime = Runtime::with_context(program.clone(), opts, context);
         runtime.maximal_shapes = shape_config.map(|config| {
-            config.maximal_core_shapes(opts.shard_size.ilog2() as usize).into_iter().collect()
+            config
+                .maximal_core_shapes(opts.shard_size.ilog2() as usize)
+                .into_iter()
+                .collect()
         });
         runtime.write_vecs(&stdin.buffer);
         for proof in stdin.proofs.iter() {
@@ -351,4 +355,3 @@ impl Executor {
         })
     }
 }
-
