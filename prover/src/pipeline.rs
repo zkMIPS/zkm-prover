@@ -3,7 +3,6 @@ use crate::provers::{AggProver, Prover, RootProver, SnarkProver};
 
 use crate::executor::{Executor, SplitContext};
 use std::sync::Mutex;
-
 #[derive(Default)]
 pub struct Pipeline {
     mutex: Mutex<usize>,
@@ -37,7 +36,7 @@ impl Pipeline {
     ) -> std::result::Result<(bool, Vec<u8>), String> {
         let result = self.mutex.try_lock();
         match result {
-            Ok(_) => match self.root_prover.prove(prove_context) {
+            Ok(_guard) => match self.root_prover.prove(prove_context) {
                 Ok(receipt_output) => Ok(receipt_output),
                 Err(e) => {
                     log::error!("prove_root error {:#?}", e);
@@ -52,12 +51,12 @@ impl Pipeline {
     }
 
     pub fn prove_aggregate(
-        &mut self,
+        &self,
         agg_context: &AggContext,
     ) -> std::result::Result<(bool, Vec<u8>), String> {
         let result = self.mutex.try_lock();
         match result {
-            Ok(_) => match self.agg_prover.prove(agg_context) {
+            Ok(_guard) => match self.agg_prover.prove(agg_context) {
                 Ok(agg_receipt_output) => Ok(agg_receipt_output),
                 Err(e) => {
                     log::error!("prove_aggregate error {:#?}", e);
@@ -72,12 +71,12 @@ impl Pipeline {
     }
 
     pub fn prove_snark(
-        &mut self,
+        &self,
         snark_context: &SnarkContext,
     ) -> std::result::Result<(bool, Vec<u8>), String> {
         let result = self.mutex.try_lock();
         match result {
-            Ok(_) => match self.snark_prover.prove(snark_context) {
+            Ok(_guard) => match self.snark_prover.prove(snark_context) {
                 Ok(output) => Ok(output),
                 Err(e) => {
                     log::error!("prove_snark error {:#?}", e);

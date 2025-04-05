@@ -54,8 +54,8 @@ impl Database {
             check_at,
             limit,
         )
-        .fetch_all(&self.db_pool)
-        .await?;
+            .fetch_all(&self.db_pool)
+            .await?;
         Ok(rows)
     }
 
@@ -143,8 +143,8 @@ impl Database {
             task.content,
             task.check_at
         )
-        .execute(&self.db_pool)
-        .await?;
+            .execute(&self.db_pool)
+            .await?;
         Ok(true)
     }
 
@@ -155,8 +155,8 @@ impl Database {
             "SELECT id, itype, proof_id, status, time_cost, node_info, content, check_at from prove_task where proof_id = ?",
             proof_id,
         )
-        .fetch_all(&self.db_pool)
-        .await?;
+            .fetch_all(&self.db_pool)
+            .await?;
         Ok(rows)
     }
 
@@ -175,8 +175,8 @@ impl Database {
             proof_id,
             itype,
         )
-        .fetch_all(&self.db_pool)
-        .await?;
+            .fetch_all(&self.db_pool)
+            .await?;
         let mut task_infos: Vec<Info> = vec![];
         for row in rows {
             let task_info = serde_json::from_str(row.content.as_ref().unwrap())
@@ -192,6 +192,8 @@ impl Database {
     pub async fn get_user(&self, address: &str) -> anyhow::Result<Vec<User>> {
         let checksum_address =
             ethers::utils::to_checksum(&address.parse::<ethereum_types::Address>()?, None);
+        // Determine whether “0x” is needed based on the specific `User` table in the database.
+        let checksum_address = checksum_address.trim_start_matches("0x");
         log::debug!("searching address {}", checksum_address);
         let rows = sqlx::query_as!(
             User,

@@ -18,6 +18,8 @@ pub struct SplitTask {
     pub recepit_inputs_path: String,
 
     pub trace: Trace,
+
+    #[serde(skip_serializing, skip_deserializing)]
     pub output: Vec<u8>, //void
 
     pub total_steps: u64,

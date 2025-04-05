@@ -6,8 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-prover = { path = "../prover", optional = true}
-prover_v2 = { path = "../prover_v2", optional = true}
+prover = { path = "../prover", optional = true }
+prover_v2 = { path = "../prover_v2", optional = true }
+
+plonky2 = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev", optional = true }
 
 common = { path = "../common" }
 
@@ -19,7 +21,7 @@ tokio = { version = "1.21.0", features = ["macros", "rt-multi-thread", "signal"]
 
 once_cell = "1.8"
 uuid = { version = "1.2", features = ["v4", "fast-rng", "macro-diagnostics"] }
-sqlx = { version = "0.8.1", features = ["mysql", "time", "runtime-tokio" ] }
+sqlx = { version = "0.8.1", features = ["mysql", "time", "runtime-tokio"] }
 serde = "1.0.92"
 serde_json = "1.0"
 serde_derive = "1.0.92"
@@ -35,6 +37,8 @@ prometheus = "0.13"
 hyper = { version = "^0.14", features = ["server", "http1", "tcp"] }
 backtrace = "0.3.74"
 
+rand = "0.8"
+
 # file server
 warp = "0.3"
 
@@ -43,5 +47,8 @@ tonic-build = "0.8.0"
 
 
 [features]
-default = ["prover"]
-#zkm2-prover = ["zkm2-prover"]
+default = []
+prover = ["dep:prover"]
+prover_v2 = ["dep:prover_v2"]
+
+gpu = ["dep:plonky2", "prover/gpu"]

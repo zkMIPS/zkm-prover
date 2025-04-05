@@ -21,7 +21,7 @@ pub struct GenerateTask {
     pub composite_proof: bool,
     pub receipt_inputs_path: String,
     pub receipts_path: String,
-
+    #[serde(skip_serializing, skip_deserializing)]
     pub program: Option<Program>,
 }
 
@@ -73,6 +73,7 @@ impl GenerateTask {
 
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        version: ProverVersion,
         proof_id: &str,
         base_dir: &str,
         elf_path: &str,
@@ -91,7 +92,7 @@ impl GenerateTask {
         receipts_path: &str,
     ) -> Self {
         GenerateTask {
-            version: ProverVersion::Zkm,
+            version,
             proof_id: proof_id.to_string(),
             base_dir: base_dir.to_string(),
             elf_path: elf_path.to_string(),

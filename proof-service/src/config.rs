@@ -12,7 +12,7 @@ pub struct RuntimeConfig {
     pub base_dir: String,
 
     pub fileserver_url: Option<String>,
-    pub fileserver_addr: String,
+    // pub fileserver_addr: String,
     pub proving_key_paths: Vec<String>,
 
     pub ca_cert_path: Option<String>,
@@ -29,7 +29,7 @@ impl RuntimeConfig {
             prover_addrs: ["0.0.0.0:50000".to_string()].to_vec(),
             base_dir: "/tmp".to_string(),
             fileserver_url: None,
-            fileserver_addr: "0.0.0.0:40000".to_string(),
+            // fileserver_addr: "0.0.0.0:40000".to_string(),
             proving_key_paths: vec![],
             ca_cert_path: None,
             cert_path: None,

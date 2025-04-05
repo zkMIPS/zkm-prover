@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 plonky2 = { git = "https://github.com/zkMIPS/plonky2.git", branch = "zkm_dev" }
-plonky2x = { git = "https://github.com/zkMIPS/succinctx.git", package = "plonky2x",  branch = "zkm" }
+plonky2x = { git = "https://github.com/zkMIPS/succinctx.git", package = "plonky2x", branch = "zkm" }
 
 zkm-prover = { git = "https://github.com/zkMIPS/zkm.git", branch = "main" }
 zkm-emulator = { git = "https://github.com/zkMIPS/zkm.git", branch = "main" }
@@ -27,4 +27,7 @@ once_cell = "1.13.0"
 lazy_static = "1.4.0"
 elf = { version = "0.7", default-features = false }
 
-common = {path = "../common"}
+common = { path = "../common" }
+
+[features]
+gpu = []

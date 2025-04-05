@@ -1,8 +1,8 @@
+use std::sync::{Arc, Mutex};
 use crate::proto::prover_service::v1::{
     prover_service_client::ProverServiceClient, AggregateRequest, GetTaskResultRequest,
     GetTaskResultResponse, ProveRequest, ResultCode, SnarkProofRequest, SplitElfRequest,
 };
-use common::file;
 use common::tls::Config as TlsConfig;
 
 use crate::stage::tasks::{
@@ -11,27 +11,49 @@ use crate::stage::tasks::{
 };
 use tonic::Request;
 
-use crate::prover_node::ProverNode;
+use crate::prover_node::{NodeStatus, ProverNode};
 use std::time::Duration;
 use tonic::transport::Channel;
+use rand::SeedableRng;
+use rand::seq::SliceRandom;
+use rand::rngs::StdRng;
 
 pub fn get_nodes() -> Vec<ProverNode> {
     let nodes_lock = crate::prover_node::instance();
-    let nodes_data = nodes_lock.lock().unwrap();
+    let mut nodes_data = nodes_lock.lock().unwrap();
     nodes_data.get_nodes()
 }
 
 pub async fn get_idle_client(
     tls_config: Option<TlsConfig>,
-) -> Option<(String, ProverServiceClient<Channel>)> {
-    let nodes: Vec<ProverNode> = get_nodes();
+    is_snark: bool,
+) -> Option<(String, ProverServiceClient<Channel>, Arc<Mutex<NodeStatus>>)> {
+    let mut nodes: Vec<ProverNode> = if is_snark {
+        get_snark_nodes()
+    } else {
+        get_nodes()
+    };
+    let mut rng = StdRng::from_entropy();
+    nodes.shuffle(&mut rng);
+
     for mut node in nodes {
-        let client = node.is_active(tls_config.clone()).await;
-        if let Some(client) = client {
-            return Some((node.addr.clone(), client));
+        let is_idle = {
+            let status = node.status.lock().unwrap();
+            *status == NodeStatus::Idle
+        };
+
+        if !is_idle {
+            continue;
+        }
+
+        if let Some(client) = node.is_active(tls_config.clone()).await {
+            let mut status = node.status.lock().unwrap();
+            *status = NodeStatus::Busy;
+
+            return Some((node.addr.clone(), client, node.status.clone()));
         }
     }
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    // tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     None
 }
 
@@ -53,8 +75,8 @@ pub fn result_code_to_state(code: i32) -> u32 {
 
 pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> Option<SplitTask> {
     split_task.state = TASK_STATE_UNPROCESSED;
-    let client = get_idle_client(tls_config).await;
-    if let Some((addrs, mut client)) = client {
+    let client = get_idle_client(tls_config, false).await;
+    if let Some((addrs, mut client, node_status)) = client {
         let request = SplitElfRequest {
             proof_id: split_task.proof_id.clone(),
             computed_request_id: split_task.task_id.clone(),
@@ -77,6 +99,8 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.split_elf(grpc_request).await;
+        let mut status = node_status.lock().unwrap();
+        *status = NodeStatus::Idle;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 split_task.state = result_code_to_state(response_result.code);
@@ -100,8 +124,8 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
 
 pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> Option<ProveTask> {
     prove_task.state = TASK_STATE_UNPROCESSED;
-    let client = get_idle_client(tls_config).await;
-    if let Some((addrs, mut client)) = client {
+    let client = get_idle_client(tls_config, false).await;
+    if let Some((addrs, mut client, node_status)) = client {
         let request = ProveRequest {
             proof_id: prove_task.program.proof_id.clone(),
             computed_request_id: prove_task.task_id.clone(),
@@ -109,15 +133,20 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             block_no: prove_task.program.block_no,
             seg_size: prove_task.program.seg_size,
             receipts_input: prove_task.program.receipts.clone(),
+            index: prove_task.file_no as u32,
+            done: prove_task.done,
         };
         log::info!(
-            "[prove] rpc {}:{}start",
+            "[prove] node {} rpc {}:{}start",
+            addrs,
             request.proof_id,
             request.computed_request_id,
         );
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.prove(grpc_request).await;
+        let mut status = node_status.lock().unwrap();
+        *status = NodeStatus::Idle;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 prove_task.state = result_code_to_state(response_result.code);
@@ -140,35 +169,30 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
 
 pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> Option<AggTask> {
     agg_task.state = TASK_STATE_UNPROCESSED;
-    let client = get_idle_client(tls_config).await;
-    if let Some((addrs, mut client)) = client {
+    let client = get_idle_client(tls_config, false).await;
+    if let Some((addrs, mut client, node_status)) = client {
         let request = AggregateRequest {
             proof_id: agg_task.proof_id.clone(),
             computed_request_id: agg_task.task_id.clone(),
             block_no: agg_task.block_no,
             seg_size: agg_task.seg_size,
-            input1: Some(agg_task.input1.clone()),
-            input2: Some(agg_task.input2.clone()),
+            vk: agg_task.vk.clone(),
+            inputs: agg_task.inputs.clone(),
             is_final: agg_task.is_final,
+            is_first_shard: agg_task.is_first_shard,
+            is_leaf_layer: agg_task.is_leaf_layer,
         };
         log::info!(
-            "[aggregate] rpc {}:{} {}+{} start",
+            "[aggregate] rpc {}:{} {} inputs start",
             request.proof_id,
             request.computed_request_id,
-            request
-                .input1
-                .clone()
-                .expect("need input1")
-                .computed_request_id,
-            request
-                .input2
-                .clone()
-                .expect("need input2")
-                .computed_request_id,
+            request.inputs.len()
         );
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.aggregate(grpc_request).await;
+        let mut status = node_status.lock().unwrap();
+        *status = NodeStatus::Idle;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 agg_task.state = result_code_to_state(response_result.code);
@@ -192,8 +216,8 @@ pub async fn snark_proof(
     mut snark_task: SnarkTask,
     tls_config: Option<TlsConfig>,
 ) -> Option<SnarkTask> {
-    let client = get_idle_client(tls_config).await;
-    if let Some((addrs, mut client)) = client {
+    let client = get_idle_client(tls_config, true).await;
+    if let Some((addrs, mut client, node_status)) = client {
         let request = SnarkProofRequest {
             version: snark_task.version,
             proof_id: snark_task.proof_id.clone(),
@@ -208,46 +232,22 @@ pub async fn snark_proof(
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.snark_proof(grpc_request).await;
+        let mut status = node_status.lock().unwrap();
+        *status = NodeStatus::Idle;
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
-                    let mut loop_count = 0;
-                    loop {
-                        let task_result =
-                            get_task_result(&mut client, &snark_task.proof_id, &snark_task.task_id)
-                                .await;
-                        if let Some(task_result) = task_result {
-                            if let Some(result) = task_result.result {
-                                if let Some(code) = ResultCode::from_i32(result.code) {
-                                    if code == ResultCode::Ok {
-                                        log::info!(
-                                            "[snark_proof] rpc {}:{}  code:{:?} message:{:?}",
-                                            response.get_ref().proof_id,
-                                            response.get_ref().computed_request_id,
-                                            response_result.code,
-                                            response_result.message,
-                                        );
-                                        log::debug!("[snark_proof] rpc {:#?} end", result);
-                                        let _ = file::new(&snark_task.output_path)
-                                            .write(result.message.as_bytes())
-                                            .unwrap();
-                                        snark_task.state = TASK_STATE_SUCCESS;
-                                        snark_task.trace.node_info = addrs;
-                                        snark_task.output = response
-                                            .get_ref()
-                                            .snark_proof_with_public_inputs
-                                            .clone();
-                                        return Some(snark_task);
-                                    }
-                                }
-                            }
-                        }
-                        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-                        loop_count += 1;
-                        if loop_count > TASK_TIMEOUT {
-                            break;
-                        }
-                    }
+                    log::info!(
+                        "[snark_proof] rpc {}:{}  code:{:?} message:{:?}",
+                        response.get_ref().proof_id,
+                        response.get_ref().computed_request_id,
+                        response_result.code,
+                        response_result.message,
+                    );
+                    snark_task.state = TASK_STATE_SUCCESS;
+                    snark_task.trace.node_info = addrs;
+                    snark_task.output = response.get_ref().snark_proof_with_public_inputs.clone();
+                    return Some(snark_task);
                 }
             }
         }

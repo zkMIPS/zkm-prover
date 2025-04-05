@@ -1,18 +1,26 @@
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
+use tonic::{Request, Response, Status};
+
+use crate::proto::includes::v1::ProverVersion;
 use crate::proto::prover_service::v1::{
     get_status_response, prover_service_server::ProverService, AggregateRequest, AggregateResponse,
     GetStatusRequest, GetStatusResponse, GetTaskResultRequest, GetTaskResultResponse, ProveRequest,
     ProveResponse, Result, ResultCode, SnarkProofRequest, SnarkProofResponse, SplitElfRequest,
     SplitElfResponse,
 };
-use prover::contexts::{AggContext, ProveContext, SnarkContext};
-use prover::executor::SplitContext;
-use prover::pipeline::Pipeline;
-
-use std::time::Instant;
-use tonic::{Request, Response, Status};
-
-use crate::proto::includes::v1::ProverVersion;
 use crate::{config, metrics};
+#[cfg(feature = "prover")]
+use prover::{
+    contexts::{AggContext, ProveContext, SnarkContext},
+    executor::SplitContext,
+    pipeline::Pipeline,
+};
+#[cfg(feature = "prover_v2")]
+use prover_v2::{
+    contexts::{AggContext, ProveContext, SnarkContext, SplitContext},
+    pipeline::Pipeline,
+};
 
 async fn run_back_task<
     T: Send + 'static,
@@ -43,17 +51,25 @@ async fn run_back_task<
     })
 }
 
-use std::sync::{Arc, Mutex};
 #[derive(Default)]
 pub struct ProverServiceSVC {
     pub config: config::RuntimeConfig,
+    #[cfg(feature = "prover")]
+    pipeline: Arc<Mutex<Pipeline>>,
+    #[cfg(feature = "prover_v2")]
     pipeline: Arc<Mutex<Pipeline>>,
 }
 impl ProverServiceSVC {
     pub fn new(config: config::RuntimeConfig) -> Self {
+        #[cfg(feature = "prover")]
         let pipeline = Arc::new(Mutex::new(Pipeline::new(
             &config.base_dir,
             &config.get_proving_key_path(ProverVersion::Zkm.into()),
+        )));
+        #[cfg(feature = "prover_v2")]
+        let pipeline = Arc::new(Mutex::new(Pipeline::new(
+            &config.base_dir,
+            &config.get_proving_key_path(ProverVersion::Zkm2.into()),
         )));
         Self { config, pipeline }
     }
@@ -94,11 +110,8 @@ impl ProverService for ProverServiceSVC {
         metrics::record_metrics("prover::get_status", || async {
             // log::info!("{:#?}", request);
             let mut response = GetStatusResponse::default();
-            if self.pipeline.lock().is_err() {
-                response.status = get_status_response::Status::Computing.into();
-                return Ok(Response::new(response));
-            }
             let success = self.pipeline.lock().unwrap().get_status();
+            log::info!("node {:?}: lock pipeline {:?}", self.config.addr, success);
             if success {
                 response.status = get_status_response::Status::Idle.into();
             } else {
@@ -106,7 +119,7 @@ impl ProverService for ProverServiceSVC {
             }
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn get_task_result(
@@ -118,7 +131,7 @@ impl ProverService for ProverServiceSVC {
             let response = GetTaskResultResponse::default();
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn split_elf(
@@ -146,7 +159,15 @@ impl ProverService for ProverServiceSVC {
             );
 
             let pipeline = self.pipeline.clone();
-            let split_func = move || pipeline.lock().unwrap().split(&split_context);
+            let split_func = move || {
+                // todo: use try_lock?
+                let guard = pipeline.lock().unwrap_or_else(|e| {
+                    log::error!("Mutex poisoned, recovering");
+                    e.into_inner()
+                });
+
+                guard.split(&split_context)
+            };
             let result = run_back_task(split_func).await;
             let mut response = SplitElfResponse {
                 proof_id: request.get_ref().proof_id.clone(),
@@ -171,7 +192,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn prove(
@@ -186,18 +207,31 @@ impl ProverService for ProverServiceSVC {
                 //request.get_ref().seg_path,
             );
             let start = Instant::now();
-
+            #[cfg(feature = "prover")]
             let prove_context = ProveContext::new(
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
                 &request.get_ref().segment,
                 &request.get_ref().receipts_input,
             );
+            #[cfg(feature = "prover_v2")]
+            let prove_context = ProveContext {
+                proof_id: request.get_ref().proof_id.clone(),
+                index: request.get_ref().index as usize,
+                done: request.get_ref().done,
+                segment: request.get_ref().segment.clone(),
+                seg_size: request.get_ref().seg_size,
+            };
 
             let pipeline = self.pipeline.clone();
+            // todo: lock the pipeline
             let prove_func = move || {
-                let s_ctx: ProveContext = prove_context;
-                pipeline.lock().unwrap().prove_root(&s_ctx)
+                let guard = pipeline.lock().unwrap_or_else(|e| {
+                    log::error!("Mutex poisoned, recovering");
+                    e.into_inner()
+                });
+
+                guard.prove_root(&prove_context)
             };
             let result = run_back_task(prove_func).await;
             let mut response = ProveResponse {
@@ -221,7 +255,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn aggregate(
@@ -230,38 +264,45 @@ impl ProverService for ProverServiceSVC {
     ) -> tonic::Result<Response<AggregateResponse>, Status> {
         metrics::record_metrics("prover::aggregate", || async {
             log::info!(
-                "[aggregate] {}:{} {}+{} start",
+                "[aggregate] {}:{} {} inputs start",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
-                request
-                    .get_ref()
-                    .input1
-                    .clone()
-                    .expect("need input1")
-                    .computed_request_id,
-                request
-                    .get_ref()
-                    .input2
-                    .clone()
-                    .expect("need input2")
-                    .computed_request_id,
+                request.get_ref().inputs.len()
             );
             let start = Instant::now();
-            let input1 = request.get_ref().input1.clone().expect("need input1");
-            let input2 = request.get_ref().input2.clone().expect("need input2");
-            let agg_context = AggContext::new(
-                request.get_ref().seg_size,
-                &input1.receipt_input,
-                &input2.receipt_input,
-                input1.is_agg,
-                input2.is_agg,
-                request.get_ref().is_final,
-            );
+            #[cfg(feature = "prover")]
+            let agg_context = {
+                let inputs = request.get_ref().inputs.clone();
+                AggContext::new(
+                    request.get_ref().seg_size,
+                    &inputs[0].receipt_input,
+                    &inputs[1].receipt_input,
+                    inputs[0].is_agg,
+                    inputs[1].is_agg,
+                    request.get_ref().is_final,
+                )
+            };
+            #[cfg(feature = "prover_v2")]
+            let agg_context = AggContext {
+                vk: request.get_ref().vk.clone(),
+                proofs: request
+                    .get_ref()
+                    .inputs
+                    .iter()
+                    .map(|input| input.receipt_input.clone())
+                    .collect(),
+                is_complete: request.get_ref().is_final,
+                is_first_shard: request.get_ref().is_first_shard,
+                is_leaf_layer: request.get_ref().is_leaf_layer,
+            };
 
             let pipeline = self.pipeline.clone();
             let agg_func = move || {
-                let agg_ctx = agg_context;
-                pipeline.lock().unwrap().prove_aggregate(&agg_ctx)
+                let ppl = pipeline.lock().unwrap_or_else(|e| {
+                    log::error!("Mutex poisoned, recovering");
+                    e.into_inner()
+                });
+                ppl.prove_aggregate(&agg_context)
             };
             let result = run_back_task(agg_func).await;
             let mut response = AggregateResponse {
@@ -285,7 +326,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn snark_proof(
@@ -303,14 +344,17 @@ impl ProverService for ProverServiceSVC {
             let snark_context = SnarkContext {
                 version: request.get_ref().version,
                 proof_id: request.get_ref().proof_id.clone(),
-                proving_key_path: self.config.get_proving_key_path(request.get_ref().version),
+                // proving_key_path: self.config.get_proving_key_path(request.get_ref().version),
                 agg_receipt: request.get_ref().agg_receipt.clone(),
             };
 
             let pipeline = self.pipeline.clone();
             let snark_func = move || {
-                let ctx: SnarkContext = snark_context;
-                pipeline.lock().unwrap().prove_snark(&ctx)
+                let guard = pipeline.lock().unwrap_or_else(|e| {
+                    log::error!("Mutex poisoned, recovering");
+                    e.into_inner()
+                });
+                guard.prove_snark(&snark_context)
             };
             let result = run_back_task(snark_func).await;
             let mut response = SnarkProofResponse {
@@ -334,6 +378,6 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 }
