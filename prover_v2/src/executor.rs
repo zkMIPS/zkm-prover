@@ -49,7 +49,11 @@ impl Executor {
         // let input_path = format!("{}/input", block_path.trim_end_matches('/'));
         let input_data = file::new(&ctx.private_input_path).read()?;
 
-        let mut network_prove = NetworkProve::new_with_segment_size(ctx.seg_size);
+        // set SHARD_SIZE
+        if ctx.seg_size > 0 {
+            std::env::set_var("SHARD_SIZE", ctx.seg_size.to_string());
+        }
+        let mut network_prove = NetworkProve::new();
         // TODO: add more input
         network_prove.stdin.write_vec(input_data);
 

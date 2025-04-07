@@ -12,7 +12,11 @@ impl RootProver {
         let segment = std::fs::read(&ctx.segment)?;
         let mut record: ExecutionRecord = bincode::deserialize(&segment)?;
 
-        let mut network_prove = NetworkProve::new_with_segment_size(ctx.seg_size);
+        // set SHARD_SIZE
+        if ctx.seg_size > 0 {
+            std::env::set_var("SHARD_SIZE", ctx.seg_size.to_string());
+        }
+        let mut network_prove = NetworkProve::new();
         let opts = network_prove.opts.core_opts;
         let prover = network_prove.prover.core_prover;
         let (pk, _) = prover.machine().setup(&record.program);
