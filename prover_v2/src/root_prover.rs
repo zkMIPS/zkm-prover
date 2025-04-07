@@ -9,7 +9,8 @@ pub struct RootProver {}
 
 impl RootProver {
     pub fn prove(&self, ctx: &ProveContext) -> anyhow::Result<Vec<u8>> {
-        let mut record: ExecutionRecord = bincode::deserialize(&ctx.segment)?;
+        let segment = std::fs::read(&ctx.segment)?;
+        let mut record: ExecutionRecord = bincode::deserialize(&segment)?;
 
         let mut network_prove = NetworkProve::new_with_segment_size(ctx.seg_size);
         let opts = network_prove.opts.core_opts;

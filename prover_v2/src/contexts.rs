@@ -52,7 +52,8 @@ pub struct ProveContext {
     pub done: bool,
     // pub elf: Vec<u8>,
     // execution record
-    pub segment: Vec<u8>,
+    // pub segment: Vec<u8>,
+    pub segment: String,
     pub seg_size: u32,
     // pub receipts_input: Vec<Vec<u8>>,
 }

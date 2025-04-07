@@ -209,7 +209,8 @@ impl Stage {
                     base_dir: self.generate_task.base_dir.clone(),
                     file_no,
                     done: false,
-                    segment: safe_read(&format!("{}/{file_name}", self.generate_task.seg_path)),
+                    // segment: safe_read(&format!("{}/{file_name}", self.generate_task.seg_path)),
+                    segment: format!("{}/{file_name}", self.generate_task.seg_path),
                     program: self.generate_task.gen_program(),
                     // will be assigned after the root proving
                     output: vec![],

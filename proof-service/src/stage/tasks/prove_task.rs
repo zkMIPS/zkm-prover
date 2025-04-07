@@ -13,7 +13,8 @@ pub struct ProveTask {
     pub done: bool,
 
     #[serde(skip_serializing, skip_deserializing)]
-    pub segment: Vec<u8>,
+    // pub segment: Vec<u8>,
+    pub segment: String,
     #[serde(skip_serializing, skip_deserializing)]
     pub program: Program,
 
