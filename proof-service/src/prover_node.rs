@@ -123,7 +123,7 @@ impl ProverNodes {
         self.prover_nodes.push(node);
     }
 
-    pub fn get_nodes(&mut self) -> Vec<ProverNode> {
+    pub fn get_nodes(&self) -> Vec<ProverNode> {
         self.prover_nodes.clone()
     }
 
