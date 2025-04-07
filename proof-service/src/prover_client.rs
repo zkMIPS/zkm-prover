@@ -92,7 +92,8 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             receipt_inputs_path: split_task.recepit_inputs_path.clone(),
         };
         log::info!(
-            "[split] rpc {}:{} start",
+            "[split] rpc {} {}:{} start",
+            addrs,
             request.proof_id,
             request.computed_request_id
         );
@@ -105,10 +106,11 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 split_task.state = result_code_to_state(response_result.code);
                 // FIXME: node_info usage?
-                split_task.trace.node_info = addrs;
+                split_task.trace.node_info = addrs.clone();
                 split_task.total_steps = response.get_ref().total_steps;
                 log::info!(
-                    "[split] rpc {}:{} code:{:?} message:{:?} end",
+                    "[split] rpc {} {}:{} code:{:?} message:{:?} end",
+                    addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
@@ -137,7 +139,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             done: prove_task.done,
         };
         log::info!(
-            "[prove] node {} rpc {}:{}start",
+            "[prove] rpc {} {}:{}start",
             addrs,
             request.proof_id,
             request.computed_request_id,
@@ -150,9 +152,10 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 prove_task.state = result_code_to_state(response_result.code);
-                prove_task.trace.node_info = addrs;
+                prove_task.trace.node_info = addrs.clone();
                 log::info!(
-                    "[prove] rpc {}:{} code:{:?} message:{:?} end",
+                    "[prove] rpc {} {}:{} code:{:?} message:{:?} end",
+                    addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
@@ -183,7 +186,8 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             is_leaf_layer: agg_task.is_leaf_layer,
         };
         log::info!(
-            "[aggregate] rpc {}:{} {} inputs start",
+            "[aggregate] rpc {} {}:{} {} inputs start",
+            addrs,
             request.proof_id,
             request.computed_request_id,
             request.inputs.len()
@@ -196,9 +200,10 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 agg_task.state = result_code_to_state(response_result.code);
-                agg_task.trace.node_info = addrs;
+                agg_task.trace.node_info = addrs.clone();
                 log::info!(
-                    "[aggregate] rpc {}:{} code:{:?} message:{:?} end",
+                    "[aggregate] rpc {} {}:{} code:{:?} message:{:?} end",
+                    addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
@@ -225,7 +230,8 @@ pub async fn snark_proof(
             agg_receipt: snark_task.agg_receipt.clone(),
         };
         log::info!(
-            "[snark_proof] rpc {}:{} start",
+            "[snark_proof] rpc {} {}:{} start",
+            addrs,
             request.proof_id,
             request.computed_request_id,
         );
@@ -238,7 +244,8 @@ pub async fn snark_proof(
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
                     log::info!(
-                        "[snark_proof] rpc {}:{}  code:{:?} message:{:?}",
+                        "[snark_proof] rpc {} {}:{}  code:{:?} message:{:?}",
+                        addrs,
                         response.get_ref().proof_id,
                         response.get_ref().computed_request_id,
                         response_result.code,
