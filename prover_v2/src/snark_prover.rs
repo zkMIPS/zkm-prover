@@ -5,7 +5,7 @@ use zkm2_sdk::ZKMProof;
 use zkm2_stark::ZKMProverOpts;
 
 use crate::contexts::SnarkContext;
-use crate::NetworkProve;
+use crate::{get_prover, NetworkProve};
 
 // It seems we don't need `output_dir`.
 #[derive(Default)]
@@ -26,17 +26,17 @@ impl SnarkProver {
         let network_prove = NetworkProve::new();
 
         let gnark_proof =
-            self.prove_groth16(&network_prove.prover, reduced_proof, network_prove.opts)?;
+            self.prove_groth16(reduced_proof, network_prove.opts)?;
 
         Ok((true, serde_json::to_vec(&gnark_proof)?))
     }
 
     fn prove_groth16(
         &self,
-        prover: &ZKMProver,
         reduced_proof: ZKMReduceProof<InnerSC>,
         opts: ZKMProverOpts,
     ) -> Result<ZKMProof, ZKMRecursionProverError> {
+        let prover = get_prover();
         let compress_proof = prover.shrink(reduced_proof, opts)?;
         let outer_proof = prover.wrap_bn254(compress_proof, opts)?;
 

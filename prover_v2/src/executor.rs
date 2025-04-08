@@ -33,7 +33,7 @@ use zkm2_stark::{
 
 pub use crate::contexts::SplitContext;
 use crate::utils::get_block_path;
-use crate::NetworkProve;
+use crate::{get_prover, NetworkProve};
 
 #[derive(Default)]
 pub struct Executor {}
@@ -57,23 +57,23 @@ impl Executor {
         // TODO: add more input
         network_prove.stdin.write_vec(input_data);
 
-        let program = network_prove
-            .prover
+        let prover = get_prover();
+        let program = prover
             .get_program(&elf)
             .map_err(|e| anyhow::Error::msg(e.to_string()))?;
-        let (_, vk) = network_prove.prover.core_prover.setup(&program);
+        let (_, vk) = prover.core_prover.setup(&program);
         let vk_bytes = bincode::serialize(&vk)?;
         file::new(&format!("{}/vk.bin", ctx.base_dir)).write(&vk_bytes)?;
 
         let context = network_prove.context_builder.build();
         let (total_steps, public_values_stream) = self.split_with_context::<_, _>(
-            &network_prove.prover.core_prover,
+            &prover.core_prover,
             ctx,
             program,
             &network_prove.stdin,
             network_prove.opts.core_opts,
             context,
-            network_prove.prover.core_shape_config.as_ref(),
+            prover.core_shape_config.as_ref(),
         )?;
         // write public_values_stream to output_path
         file::new(&ctx.output_path).write(&public_values_stream)?;
