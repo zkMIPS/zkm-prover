@@ -1,11 +1,14 @@
 use std::path::PathBuf;
 use zkm2_core_executor::ZKMReduceProof;
-use zkm2_prover::{InnerSC, ZKMProver, ZKMRecursionProverError};
+use zkm2_prover::{InnerSC, OuterSC, ZKMProver, ZKMRecursionProverError};
+use zkm2_recursion_circuit::machine::ZKMCompressWitnessValues;
+use zkm2_recursion_circuit::witness::Witnessable;
+use zkm2_recursion_compiler::config::InnerConfig;
 use zkm2_sdk::ZKMProof;
-use zkm2_stark::ZKMProverOpts;
-
+use zkm2_stark::{Challenge, MachineProver, StarkGenericConfig, Val, ZKMProverOpts};
+use zkm2_recursion_core::Runtime;
 use crate::contexts::SnarkContext;
-use crate::{get_prover, NetworkProve};
+use crate::{get_prover, NetworkProve, WRAP_KEYS};
 
 // It seems we don't need `output_dir`.
 #[derive(Default)]
@@ -38,7 +41,7 @@ impl SnarkProver {
     ) -> Result<ZKMProof, ZKMRecursionProverError> {
         let prover = get_prover();
         let compress_proof = prover.shrink(reduced_proof, opts)?;
-        let outer_proof = prover.wrap_bn254(compress_proof, opts)?;
+        let outer_proof = self.wrap_bn254(&prover, compress_proof, opts)?;
 
         // TODO: Pull artifacts from the server
         // let groth16_bn254_artifacts = if zkm2_prover::build::zkm2_dev_mode() {
@@ -54,5 +57,71 @@ impl SnarkProver {
         let proof = prover.wrap_groth16_bn254(outer_proof, &groth16_bn254_artifacts);
 
         Ok(ZKMProof::Groth16(proof))
+    }
+
+    fn wrap_bn254(
+        &self,
+        prover: &ZKMProver,
+        compressed_proof: ZKMReduceProof<InnerSC>,
+        opts: ZKMProverOpts,
+    ) -> Result<ZKMReduceProof<OuterSC>, ZKMRecursionProverError> {
+        let ZKMReduceProof { vk: compressed_vk, proof: compressed_proof } = compressed_proof;
+        let input = ZKMCompressWitnessValues {
+            vks_and_proofs: vec![(compressed_vk, compressed_proof)],
+            is_complete: true,
+        };
+        let input_with_vk = prover.make_merkle_proofs(input);
+
+        let program = prover.wrap_program();
+
+        // Run the compress program.
+        let mut runtime = Runtime::<Val<InnerSC>, Challenge<InnerSC>, _>::new(
+            program.clone(),
+            prover.shrink_prover.config().perm.clone(),
+        );
+
+        let mut witness_stream = Vec::new();
+        Witnessable::<InnerConfig>::write(&input_with_vk, &mut witness_stream);
+
+        runtime.witness_stream = witness_stream.into();
+
+        runtime.run().map_err(|e| ZKMRecursionProverError::RuntimeError(e.to_string()))?;
+
+        runtime.print_stats();
+        tracing::debug!("wrap program executed successfully");
+
+        // cache wrap_pk and wrap_vk
+        let time = std::time::Instant::now();
+        let (wrap_pk, wrap_vk) = if let Some((pk, vk)) = WRAP_KEYS.get() {
+            tracing::info!("using cached pk and vk");
+            (pk.clone(), vk.clone())
+        } else {
+            tracing::info!("setup wrap_prover");
+            let (pk, vk) =
+                tracing::info_span!("setup wrap").in_scope(|| prover.wrap_prover.setup(&program));
+            WRAP_KEYS.set((pk.clone(), vk.clone())).ok();
+            (pk, vk)
+        };
+        let elapsed = time.elapsed();
+        tracing::info!("setup wrap time: {:?}", elapsed);
+
+        if prover.wrap_vk.set(wrap_vk.clone()).is_ok() {
+            tracing::debug!("wrap verifier key set");
+        }
+
+        // Prove the wrap program.
+        let mut wrap_challenger = prover.wrap_prover.config().challenger();
+        let time = std::time::Instant::now();
+        let mut wrap_proof = prover
+            .wrap_prover
+            .prove(&wrap_pk, vec![runtime.record], &mut wrap_challenger, opts.recursion_opts)
+            .unwrap();
+        let elapsed = time.elapsed();
+        tracing::debug!("wrap proving time: {:?}", elapsed);
+        let mut wrap_challenger = prover.wrap_prover.config().challenger();
+        prover.wrap_prover.machine().verify(&wrap_vk, &wrap_proof, &mut wrap_challenger).unwrap();
+        tracing::info!("wrapping successful");
+
+        Ok(ZKMReduceProof { vk: wrap_vk, proof: wrap_proof.shard_proofs.pop().unwrap() })
     }
 }
