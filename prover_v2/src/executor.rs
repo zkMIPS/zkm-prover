@@ -7,26 +7,26 @@ use std::sync::{
 };
 use std::thread::ScopedJoinHandle;
 use std::time::Instant;
-use zkm2_core_machine::utils::trace_checkpoint;
+use zkm_core_machine::utils::trace_checkpoint;
 
 use p3_field::PrimeField32;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
 use tracing_subscriber::fmt::format;
-use zkm2_core_executor::{
+use zkm_core_executor::{
     events::{format_table_line, sorted_table_lines},
     ExecutionRecord, ExecutionReport, ExecutionState, Executor as Runtime, Program, ZKMContext,
 };
-use zkm2_core_machine::{
+use zkm_core_machine::{
     io::ZKMStdin,
     shape::CoreShapeConfig,
     utils::{concurrency::TurnBasedSync, ZKMCoreProverError},
     MipsAir,
 };
-use zkm2_prover::components::{DefaultProverComponents, ZKMProverComponents};
-use zkm2_prover::ZKMProver;
-use zkm2_sdk::ProverClient;
-use zkm2_stark::{
+use zkm_prover::components::{DefaultProverComponents, ZKMProverComponents};
+use zkm_prover::ZKMProver;
+use zkm_sdk::ProverClient;
+use zkm_stark::{
     Com, MachineProver, MachineProvingKey, MachineRecord, OpeningProof, PcsProverData,
     PublicValues, StarkGenericConfig, Val, ZKMCoreOpts,
 };

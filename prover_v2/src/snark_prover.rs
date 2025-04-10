@@ -1,12 +1,12 @@
 use std::path::PathBuf;
-use zkm2_core_executor::ZKMReduceProof;
-use zkm2_prover::{InnerSC, OuterSC, ZKMProver, ZKMRecursionProverError};
-use zkm2_recursion_circuit::machine::ZKMCompressWitnessValues;
-use zkm2_recursion_circuit::witness::Witnessable;
-use zkm2_recursion_compiler::config::InnerConfig;
-use zkm2_sdk::ZKMProof;
-use zkm2_stark::{Challenge, MachineProver, StarkGenericConfig, Val, ZKMProverOpts};
-use zkm2_recursion_core::Runtime;
+use zkm_core_executor::ZKMReduceProof;
+use zkm_prover::{InnerSC, OuterSC, ZKMProver, ZKMRecursionProverError};
+use zkm_recursion_circuit::machine::ZKMCompressWitnessValues;
+use zkm_recursion_circuit::witness::Witnessable;
+use zkm_recursion_compiler::config::InnerConfig;
+use zkm_sdk::ZKMProof;
+use zkm_stark::{Challenge, MachineProver, StarkGenericConfig, Val, ZKMProverOpts};
+use zkm_recursion_core::Runtime;
 use crate::contexts::SnarkContext;
 use crate::{get_prover, NetworkProve, WRAP_KEYS};
 

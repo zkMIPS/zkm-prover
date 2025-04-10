@@ -1,14 +1,14 @@
 use crate::contexts::AggContext;
 use crate::{get_prover, NetworkProve};
-use zkm2_core_executor::ZKMReduceProof;
-use zkm2_prover::build::Witnessable;
-use zkm2_prover::{
+use zkm_core_executor::ZKMReduceProof;
+use zkm_prover::build::Witnessable;
+use zkm_prover::{
     CoreSC, InnerSC, ZKMCircuitWitness, ZKMProver, ZKMRecursionProverError, ZKMVerifyingKey,
 };
-use zkm2_recursion_circuit::machine::{ZKMCompressWitnessValues, ZKMRecursionWitnessValues};
-use zkm2_recursion_compiler::config::InnerConfig;
-use zkm2_recursion_core::Runtime;
-use zkm2_stark::{
+use zkm_recursion_circuit::machine::{ZKMCompressWitnessValues, ZKMRecursionWitnessValues};
+use zkm_recursion_compiler::config::InnerConfig;
+use zkm_recursion_core::Runtime;
+use zkm_stark::{
     Challenge, MachineProver, ShardProof, StarkGenericConfig, Val, ZKMCoreOpts, ZKMProverOpts,
 };
 

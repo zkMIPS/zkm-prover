@@ -18,14 +18,14 @@ bincode = "1.3.3"
 anyhow = "1.0.97"
 once_cell = "1.13.0"
 
-zkm2-core-machine = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
-zkm2-core-executor = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
-zkm2-stark = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
-zkm2-prover = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
-zkm2-recursion-compiler = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
-zkm2-recursion-core = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
-zkm2-recursion-circuit = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
-zkm2-sdk = { git = "https://github.com/zkMIPS/zkm2", branch = "feat/network" }
+zkm-core-machine = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
+zkm-core-executor = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
+zkm-stark = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
+zkm-prover = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
+zkm-recursion-compiler = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
+zkm-recursion-core = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
+zkm-recursion-circuit = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
+zkm-sdk = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
 
 p3-field = { git = "https://github.com/zkMIPS/Plonky3" }
 p3-maybe-rayon = { git = "https://github.com/zkMIPS/Plonky3" }

@@ -1,5 +1,5 @@
-use zkm2_core_executor::ExecutionRecord;
-use zkm2_stark::{MachineProver, MachineProvingKey, StarkGenericConfig};
+use zkm_core_executor::ExecutionRecord;
+use zkm_stark::{MachineProver, MachineProvingKey, StarkGenericConfig};
 
 use crate::contexts::ProveContext;
 use crate::{get_prover, NetworkProve};

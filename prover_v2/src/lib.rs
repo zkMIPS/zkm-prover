@@ -1,12 +1,12 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use once_cell::sync::OnceCell;
-use zkm2_core_executor::ZKMContextBuilder;
-use zkm2_core_machine::io::ZKMStdin;
-use zkm2_prover::components::{DefaultProverComponents, ZKMProverComponents};
-use zkm2_prover::{OuterSC, ZKMProver, ZKMProvingKey};
-use zkm2_sdk::Prover;
-use zkm2_stark::{StarkProvingKey, StarkVerifyingKey, ZKMCoreOpts, ZKMProverOpts};
+use zkm_core_executor::ZKMContextBuilder;
+use zkm_core_machine::io::ZKMStdin;
+use zkm_prover::components::{DefaultProverComponents, ZKMProverComponents};
+use zkm_prover::{OuterSC, ZKMProver, ZKMProvingKey};
+use zkm_sdk::Prover;
+use zkm_stark::{StarkProvingKey, StarkVerifyingKey, ZKMCoreOpts, ZKMProverOpts};
 
 pub mod agg_prover;
 pub mod contexts;
