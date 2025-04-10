@@ -39,24 +39,21 @@ use crate::{get_prover, NetworkProve};
 pub struct Executor {}
 impl Executor {
     pub fn split(&self, ctx: &SplitContext) -> anyhow::Result<u64> {
-        let elf_path = ctx.elf_path.clone();
-        // let block_no = ctx.block_no.unwrap_or(0);
-        // let seg_path = ctx.seg_path.clone();
-
-        tracing::info!("split {} load elf file", elf_path);
-        let elf = file::new(&elf_path).read()?;
-        // let block_path = get_block_path(&ctx.base_dir, &block_no.to_string(), "");
-        // let input_path = format!("{}/input", block_path.trim_end_matches('/'));
-        let input_data = file::new(&ctx.private_input_path).read()?;
-
         // set SHARD_SIZE
         if ctx.seg_size > 0 {
             std::env::set_var("SHARD_SIZE", ctx.seg_size.to_string());
         }
         let mut network_prove = NetworkProve::new();
-        // TODO: add more input
-        network_prove.stdin.write_vec(input_data);
 
+        let encoded_input = file::new(&ctx.private_input_path).read()?;
+        let inputs_data: Vec<Vec<u8>> = bincode::deserialize(&encoded_input)?;
+        inputs_data.into_iter().for_each(|input| {
+            network_prove.stdin.write_vec(input);
+        });
+
+        let elf_path = ctx.elf_path.clone();
+        tracing::info!("split {} load elf file", elf_path);
+        let elf = file::new(&elf_path).read()?;
         let prover = get_prover();
         let program = prover
             .get_program(&elf)
