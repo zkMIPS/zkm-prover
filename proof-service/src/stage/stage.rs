@@ -313,7 +313,7 @@ impl Stage {
         for (batch_index, batch) in self.prove_tasks.chunks(first_layer_batch_size).enumerate() {
             let agg_task = AggTask::init_from_prove_tasks(
                 &vk,
-                &batch.to_vec(),
+                batch,
                 agg_index,
                 is_complete,
                 batch_index == 0,
@@ -328,7 +328,7 @@ impl Stage {
         while current_length > 1 {
             let mut new_result = Vec::new();
             for batch in result.chunks(batch_size) {
-                let agg_task = AggTask::init_from_agg_tasks(&batch.to_vec(), agg_index, false);
+                let agg_task = AggTask::init_from_agg_tasks(batch, agg_index, false);
                 self.agg_tasks.push(agg_task.clone());
                 new_result.push(agg_task);
             }
@@ -490,10 +490,10 @@ impl Debug for Stage {
 }
 
 #[cfg(test)]
+#[cfg(feature = "prover")]
 mod tests {
     use super::*;
     #[test]
-    #[cfg(feature = "prover")]
     fn test_gen_agg_tasks() {
         for n in 12..20 {
             let mut stage = Stage::default();
