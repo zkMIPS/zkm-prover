@@ -120,7 +120,7 @@ impl ProverService for ProverServiceSVC {
             }
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn get_task_result(
@@ -132,7 +132,7 @@ impl ProverService for ProverServiceSVC {
             let response = GetTaskResultResponse::default();
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn split_elf(
@@ -193,7 +193,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn prove(
@@ -256,7 +256,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn aggregate(
@@ -327,7 +327,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn snark_proof(
@@ -379,6 +379,6 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 }

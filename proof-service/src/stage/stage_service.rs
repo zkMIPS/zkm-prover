@@ -47,7 +47,7 @@ impl StageServiceSVC {
                     config.cert_path.as_ref().unwrap(),
                     config.key_path.as_ref().unwrap(),
                 )
-                    .await?,
+                .await?,
             )
         } else {
             None
@@ -149,7 +149,7 @@ impl StageService for StageServiceSVC {
             }
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 
     async fn generate_proof(
@@ -418,6 +418,6 @@ impl StageService for StageServiceSVC {
             log::info!("[generate_proof] {} end", request.get_ref().proof_id);
             Ok(Response::new(response))
         })
-            .await
+        .await
     }
 }

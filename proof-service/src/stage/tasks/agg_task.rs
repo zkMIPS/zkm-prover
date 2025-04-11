@@ -87,11 +87,7 @@ impl AggTask {
         }
     }
 
-    pub fn init_from_agg_tasks(
-        agg_tasks: &[AggTask],
-        agg_index: i32,
-        is_final: bool,
-    ) -> AggTask {
+    pub fn init_from_agg_tasks(agg_tasks: &[AggTask], agg_index: i32, is_final: bool) -> AggTask {
         let mut agg_task = AggTask {
             task_id: uuid::Uuid::new_v4().to_string(),
             block_no: agg_tasks[0].block_no,

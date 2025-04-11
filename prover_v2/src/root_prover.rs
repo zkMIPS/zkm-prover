@@ -21,9 +21,11 @@ impl RootProver {
 
         let prover = get_prover();
         let (pk, _) = prover.core_prover.machine().setup(&record.program);
-        prover.core_prover
-            .machine()
-            .generate_dependencies(std::slice::from_mut(&mut record), &opts, None);
+        prover.core_prover.machine().generate_dependencies(
+            std::slice::from_mut(&mut record),
+            &opts,
+            None,
+        );
 
         // Fix the shape of the record.
         if let Some(shape_config) = &prover.core_shape_config {

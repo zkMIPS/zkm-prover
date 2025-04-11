@@ -22,8 +22,8 @@ use zkm_core_machine::{
     MipsAir,
 };
 use zkm_stark::{
-    Com, MachineProver, MachineRecord, OpeningProof, PcsProverData,
-    PublicValues, StarkGenericConfig, ZKMCoreOpts,
+    Com, MachineProver, MachineRecord, OpeningProof, PcsProverData, PublicValues,
+    StarkGenericConfig, ZKMCoreOpts,
 };
 
 pub use crate::contexts::SplitContext;

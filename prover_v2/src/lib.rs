@@ -1,6 +1,6 @@
+use once_cell::sync::OnceCell;
 use std::sync::Mutex;
 use std::time::Duration;
-use once_cell::sync::OnceCell;
 use zkm_core_executor::ZKMContextBuilder;
 use zkm_core_machine::io::ZKMStdin;
 use zkm_prover::{OuterSC, ZKMProver};
@@ -27,8 +27,11 @@ fn prover_instance() -> &'static Mutex<ZKMProver> {
     GLOBAL_PROVER.get_or_init(|| Mutex::new(ZKMProver::new()))
 }
 
-pub fn get_prover() -> impl std::ops::DerefMut<Target=ZKMProver> {
-    prover_instance().lock().expect("GLOBAL_PROVER lock poisoned")
+pub fn get_prover() -> impl std::ops::DerefMut<Target = ZKMProver> {
+    prover_instance()
+        .lock()
+        .expect("GLOBAL_PROVER lock poisoned")
 }
 
-static WRAP_KEYS: OnceCell<(StarkProvingKey<OuterSC>, StarkVerifyingKey<OuterSC>)> = OnceCell::new();
+static WRAP_KEYS: OnceCell<(StarkProvingKey<OuterSC>, StarkVerifyingKey<OuterSC>)> =
+    OnceCell::new();

@@ -157,8 +157,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 get_status_response.proof_with_public_inputs.len(),
                                 get_status_response.output_stream.len(),
                             );
-                            log::info!("public_values {:?}",get_status_response.public_values_url);
-                            log::info!("snark_proof_url {:?}",get_status_response.snark_proof_url);
+                            log::info!("public_values {:?}", get_status_response.public_values_url);
+                            log::info!("snark_proof_url {:?}", get_status_response.snark_proof_url);
                             let output_dir = Path::new(&output_dir);
                             let public_inputs_path = output_dir.join("proof_with_public_inputs");
                             let _ = file::new(&public_inputs_path.to_string_lossy())

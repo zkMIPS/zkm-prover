@@ -2,15 +2,11 @@ use crate::contexts::AggContext;
 use crate::{get_prover, NetworkProve};
 use zkm_core_executor::ZKMReduceProof;
 use zkm_prover::build::Witnessable;
-use zkm_prover::{
-    InnerSC, ZKMCircuitWitness, ZKMProver, ZKMRecursionProverError,
-};
+use zkm_prover::{InnerSC, ZKMCircuitWitness, ZKMProver, ZKMRecursionProverError};
 use zkm_recursion_circuit::machine::{ZKMCompressWitnessValues, ZKMRecursionWitnessValues};
 use zkm_recursion_compiler::config::InnerConfig;
 use zkm_recursion_core::Runtime;
-use zkm_stark::{
-    Challenge, MachineProver, StarkGenericConfig, Val, ZKMCoreOpts,
-};
+use zkm_stark::{Challenge, MachineProver, StarkGenericConfig, Val, ZKMCoreOpts};
 
 #[derive(Default)]
 pub struct AggProver {}
@@ -49,11 +45,7 @@ impl AggProver {
             })
         };
 
-        let reduced_proof = self.compress(
-            &prover,
-            input,
-            network_prove.opts.recursion_opts,
-        )?;
+        let reduced_proof = self.compress(&prover, input, network_prove.opts.recursion_opts)?;
 
         Ok(bincode::serialize(&reduced_proof)?)
     }

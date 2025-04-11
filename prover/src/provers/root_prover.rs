@@ -1,13 +1,13 @@
 use super::Prover;
 use super::{C, D, F};
 use crate::contexts::ProveContext;
+use common::file;
 use plonky2::util::timing::TimingTree;
 use std::time::Duration;
 use zkm_prover::all_stark::AllStark;
 use zkm_prover::config::StarkConfig;
 use zkm_prover::cpu::kernel::assembler::segment_kernel;
 use zkm_prover::generation::state::{AssumptionReceipts, Receipt};
-use common::file;
 
 #[derive(Default)]
 pub struct RootProver {}
