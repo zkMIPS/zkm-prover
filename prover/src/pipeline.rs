@@ -19,7 +19,7 @@ impl Pipeline {
             executor: Executor::default(),
             root_prover: RootProver::default(),
             agg_prover: AggProver::default(),
-            snark_prover: SnarkProver::new(keys_input_dir, &format!("{}/output", base_dir)),
+            snark_prover: SnarkProver::new(keys_input_dir, base_dir),
         }
     }
 

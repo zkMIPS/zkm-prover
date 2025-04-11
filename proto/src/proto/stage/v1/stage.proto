@@ -61,15 +61,15 @@ message GetStatusRequest {
 }
 
 message GetStatusResponse {
-    string proof_id = 1;
-    Status status = 2;
-    bytes proof_with_public_inputs = 3;
-    string snark_proof_url = 4;
-    string stark_proof_url = 5;
-    bytes output_stream = 7;
-    Step step = 8; // Step
-    bytes public_values_url = 9;
-    uint64 total_steps = 10;
-    bytes receipt = 11;
-    bytes elf_id = 12;
+  string proof_id = 1;
+  Status status = 2;
+  bytes proof_with_public_inputs = 3;
+  string snark_proof_url = 4;
+  string stark_proof_url = 5;
+  bytes output_stream = 7;
+  Step step = 8; // Step
+  string public_values_url = 9;
+  uint64 total_steps = 10;
+  bytes receipt = 11;
+  bytes elf_id = 12;
 }

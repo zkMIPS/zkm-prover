@@ -125,23 +125,23 @@ impl StageService for StageServiceSVC {
                     if let Some(result) = task.result {
                         response.proof_with_public_inputs = result.into_bytes();
                     }
-                    //if let Some(fileserver_url) = &self.fileserver_url {
-                    //    response.proof_url = format!(
-                    //        "{}/{}/snark/proof_with_public_inputs.json",
-                    //        fileserver_url,
-                    //        request.get_ref().proof_id
-                    //    );
-                    //    response.stark_proof_url = format!(
-                    //        "{}/{}/aggregate/proof_with_public_inputs.json",
-                    //        fileserver_url,
-                    //        request.get_ref().proof_id
-                    //    );
-                    //    response.public_values_url = format!(
-                    //        "{}/{}/aggregate/public_values.json",
-                    //        fileserver_url,
-                    //        request.get_ref().proof_id
-                    //    );
-                    //}
+                    if let Some(fileserver_url) = &self.config.fileserver_url {
+                        // response.proof_url = format!(
+                        //     "{}/{}/snark/proof_with_public_inputs.json",
+                        //     fileserver_url,
+                        //     request.get_ref().proof_id
+                        // );
+                        response.stark_proof_url = format!(
+                            "{}/{}/aggregate/proof_with_public_inputs.json",
+                            fileserver_url,
+                            request.get_ref().proof_id
+                        );
+                        response.public_values_url = format!(
+                            "{}/{}/wrap/public_values.json",
+                            fileserver_url,
+                            request.get_ref().proof_id
+                        );
+                    }
                     //if let Some(verifier_url) = &self.verifier_url {
                     //    response.solidity_verifier_url.clone_from(verifier_url);
                     //}
@@ -374,7 +374,7 @@ impl StageService for StageServiceSVC {
             };
             let mut stark_proof_url = match &self.config.fileserver_url {
                 Some(fileserver_url) => format!(
-                    "{}/{}/aggregate/proof_with_public_inputs.json",
+                    "{}/{}/wrap/proof_with_public_inputs.json",
                     fileserver_url,
                     request.get_ref().proof_id
                 ),
@@ -382,7 +382,7 @@ impl StageService for StageServiceSVC {
             };
             let mut public_values_url = match &self.config.fileserver_url {
                 Some(fileserver_url) => format!(
-                    "{}/{}/aggregate/public_values.json",
+                    "{}/{}/wrap/public_values.json",
                     fileserver_url,
                     request.get_ref().proof_id
                 ),

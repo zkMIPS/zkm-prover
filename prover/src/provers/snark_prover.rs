@@ -4,28 +4,30 @@ use zkm_recursion::as_groth16;
 
 #[derive(Default)]
 pub struct SnarkProver {
-    input_dir: String,
-    output_dir: String,
+    key_path: String,
+    base_dir: String,
 }
 
 impl SnarkProver {
-    pub fn new(input_dir: &str, output_dir: &str) -> Self {
+    pub fn new(key_path: &str, base_dir: &str) -> Self {
         Self {
-            input_dir: input_dir.to_string(),
-            output_dir: output_dir.to_string(),
+            key_path: key_path.to_string(),
+            base_dir: base_dir.to_string(),
         }
     }
 }
 
 impl Prover<SnarkContext, Vec<u8>> for SnarkProver {
     fn prove(&self, ctx: &SnarkContext) -> anyhow::Result<(bool, Vec<u8>)> {
-        //let input_dir = format!("{}/{}", self.input_dir, ctx.proof_id);
-        let output_dir = format!("{}/{}", self.output_dir, ctx.proof_id);
+        let base_dir = format!("{}/{}", self.base_dir, ctx.proof_id);
+        let input_dir = format!("{}/wrap", base_dir);
+        let output_dir = format!("{}/snark", base_dir);
+        std::fs::create_dir_all(&input_dir)?;
         std::fs::create_dir_all(&output_dir)?;
 
         log::info!(
             "snark prove: input_dir {:?}, output_dir: {:?}",
-            self.input_dir,
+            input_dir,
             output_dir
         );
 
@@ -33,9 +35,9 @@ impl Prover<SnarkContext, Vec<u8>> for SnarkProver {
         // wrap stark
         let all_circuits = &*crate::provers::instance().lock().unwrap();
         let agg_receipt = serde_json::from_slice(&ctx.agg_receipt)?;
-        zkm_recursion::wrap_stark_bn254(all_circuits, agg_receipt, &self.input_dir)?;
+        zkm_recursion::wrap_stark_bn254(all_circuits, agg_receipt, &input_dir)?;
 
-        as_groth16(&self.input_dir, &self.input_dir, &output_dir)?;
+        as_groth16(&self.key_path, &input_dir, &output_dir)?;
 
         let snark_proof_with_public_inputs = std::fs::read(format!(
             "{}/snark_proof_with_public_inputs.json",
