@@ -72,8 +72,10 @@ impl Executor {
             context,
             prover.core_shape_config.as_ref(),
         )?;
-        // write public_values_stream to output_path
-        file::new(&ctx.output_path).write(&public_values_stream)?;
+        // write public_values_stream
+        // file::new(&ctx.output_path).write(&public_values_stream)?;
+        let public_values_path = format!("{}/wrap/public_values.bin", ctx.base_dir);
+        file::new(&public_values_path).write(&public_values_stream)?;
 
         Ok(total_steps)
     }

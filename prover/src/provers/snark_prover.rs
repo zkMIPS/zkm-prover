@@ -12,7 +12,7 @@ impl SnarkProver {
     pub fn new(key_path: &str, base_dir: &str) -> Self {
         Self {
             key_path: key_path.to_string(),
-            base_dir: base_dir.to_string(),
+            base_dir: format!("{}/proof", base_dir),
         }
     }
 }
@@ -22,8 +22,6 @@ impl Prover<SnarkContext, Vec<u8>> for SnarkProver {
         let base_dir = format!("{}/{}", self.base_dir, ctx.proof_id);
         let input_dir = format!("{}/wrap", base_dir);
         let output_dir = format!("{}/snark", base_dir);
-        std::fs::create_dir_all(&input_dir)?;
-        std::fs::create_dir_all(&output_dir)?;
 
         log::info!(
             "snark prove: input_dir {:?}, output_dir: {:?}",

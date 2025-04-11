@@ -47,7 +47,7 @@ impl StageServiceSVC {
                     config.cert_path.as_ref().unwrap(),
                     config.key_path.as_ref().unwrap(),
                 )
-                .await?,
+                    .await?,
             )
         } else {
             None
@@ -126,13 +126,13 @@ impl StageService for StageServiceSVC {
                         response.proof_with_public_inputs = result.into_bytes();
                     }
                     if let Some(fileserver_url) = &self.config.fileserver_url {
-                        // response.proof_url = format!(
-                        //     "{}/{}/snark/proof_with_public_inputs.json",
-                        //     fileserver_url,
-                        //     request.get_ref().proof_id
-                        // );
+                        response.snark_proof_url = format!(
+                            "{}/{}/snark/proof_with_public_inputs.json",
+                            fileserver_url,
+                            request.get_ref().proof_id
+                        );
                         response.stark_proof_url = format!(
-                            "{}/{}/aggregate/proof_with_public_inputs.json",
+                            "{}/{}/wrap/proof_with_public_inputs.json",
                             fileserver_url,
                             request.get_ref().proof_id
                         );
@@ -149,7 +149,7 @@ impl StageService for StageServiceSVC {
             }
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn generate_proof(
@@ -306,7 +306,11 @@ impl StageService for StageServiceSVC {
                 .create_dir_all()
                 .map_err(|e| Status::internal(e.to_string()))?;
 
-            let output_stream_path = format!("{}/{}", output_stream_dir, "output_stream");
+            let output_stream_path = if cfg!(feature = "prover") {
+                format!("{}/{}", output_stream_dir, "output_stream")
+            } else {
+                String::new()
+            };
 
             let seg_path = format!("{}/segment", dir_path);
             file::new(&seg_path)
@@ -321,6 +325,10 @@ impl StageService for StageServiceSVC {
                 .map_err(|e| Status::internal(e.to_string()))?;
 
             let agg_path = format!("{}/aggregate", dir_path);
+            let wrap_dir = format!("{}/wrap", dir_path);
+            file::new(&wrap_dir)
+                .create_dir_all()
+                .map_err(|e| Status::internal(e.to_string()))?;
             let snark_dir = format!("{}/snark", dir_path);
             file::new(&snark_dir)
                 .create_dir_all()
@@ -372,20 +380,34 @@ impl StageService for StageServiceSVC {
                 ),
                 None => "".to_string(),
             };
-            let mut stark_proof_url = match &self.config.fileserver_url {
-                Some(fileserver_url) => format!(
+            let mut snark_proof_url = String::new();
+            let mut stark_proof_url = String::new();
+            #[cfg(feature = "prover")]
+            if let Some(fileserver_url) = &self.config.fileserver_url {
+                snark_proof_url = format!(
+                    "{}/{}/snark/proof_with_public_inputs.json",
+                    fileserver_url,
+                    request.get_ref().proof_id
+                );
+                stark_proof_url = format!(
                     "{}/{}/wrap/proof_with_public_inputs.json",
                     fileserver_url,
                     request.get_ref().proof_id
-                ),
-                None => "".to_string(),
+                );
             };
             let mut public_values_url = match &self.config.fileserver_url {
-                Some(fileserver_url) => format!(
-                    "{}/{}/wrap/public_values.json",
-                    fileserver_url,
-                    request.get_ref().proof_id
-                ),
+                Some(fileserver_url) => {
+                    #[cfg(feature = "prover")]
+                    let suffix = "json";
+                    #[cfg(feature = "prover_v2")]
+                    let suffix = "bin";
+                    format!(
+                        "{}/{}/wrap/public_values.{}",
+                        fileserver_url,
+                        request.get_ref().proof_id,
+                        suffix
+                    )
+                }
                 None => "".to_string(),
             };
             if request.get_ref().execute_only {
@@ -404,6 +426,6 @@ impl StageService for StageServiceSVC {
             log::info!("[generate_proof] {} end", request.get_ref().proof_id);
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 }
