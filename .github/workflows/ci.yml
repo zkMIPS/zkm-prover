@@ -17,24 +17,19 @@ env:
 
 jobs:
   build_and_test:
-    name: Rust project - latest
+    name: Rust build/test - ${{ matrix.feature }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        toolchain:
-          - stable
-          - beta
-          - nightly
+        feature: [ prover, prover_v2 ]
 
     services:
       postgres:
         image: postgres
-
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_USER: root
           POSTGRES_DB: state
-
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -45,16 +40,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          components: clippy
+
+      - run: curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/zkMIPS/toolchain/refs/heads/main/setup.sh | sh
       - name: Install Dependencies
         run: sudo apt install protobuf-compiler
-      - name: Cargo build
-        run: cargo build --verbose --release
-      - name: Cargo test
-        run: cargo test --release --verbose
-      - name: Cargo test zkm-prover
-        run: cargo test --release -- --nocapture
-        working-directory: ./
+      - name: Cargo Build
+        run: source ~/.zkm-toolchain/env && cargo build --release --verbose --features=${{ matrix.feature }}
+      - name: Cargo Test
+        run: source ~/.zkm-toolchain/env && cargo test --release --verbose --features=${{ matrix.feature }}
+      - name: Clippy
+        run: source ~/.zkm-toolchain/env && cargo clippy --all-targets --features=${{ matrix.feature }} -- -D warnings
 
   fmt:
     name: Rustfmt
@@ -66,23 +67,8 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
-      - run: rustup component add rustfmt
+          components: rustfmt
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
-
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - name: Install Dependencies
-        run: sudo apt install protobuf-compiler
-      - run: rustup component add clippy
-      - run: cargo clippy --all-targets -- -D warnings
