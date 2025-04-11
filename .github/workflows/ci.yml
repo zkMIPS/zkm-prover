@@ -9,6 +9,7 @@ on:
       - main
 
 env:
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
   CARGO_TERM_COLOR: always
   DATABASE_URL: postgresql://root:password@localhost:5432/state
   RUST_BACKTRACE: 1
@@ -40,6 +41,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Git Auth for Private Repo
+        run: git config --global url."https://${{ secrets.GITHUB_TOKEN }}:@github.com/".insteadOf "https://github.com/"
+
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
