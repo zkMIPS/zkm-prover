@@ -7,6 +7,7 @@ use zkm_prover::all_stark::AllStark;
 use zkm_prover::config::StarkConfig;
 use zkm_prover::cpu::kernel::assembler::segment_kernel;
 use zkm_prover::generation::state::{AssumptionReceipts, Receipt};
+use common::file;
 
 #[derive(Default)]
 pub struct RootProver {}
@@ -15,7 +16,6 @@ impl Prover<ProveContext, Vec<u8>> for RootProver {
     fn prove(&self, ctx: &ProveContext) -> anyhow::Result<(bool, Vec<u8>)> {
         //let basedir = ctx.base_dir.clone();
         let block_no = ctx.block_no.unwrap_or(0);
-        let segment = ctx.segment.clone();
 
         let mut receipts: AssumptionReceipts<F, C, D> = vec![];
         if !ctx.receipts_input.is_empty() {
@@ -40,9 +40,9 @@ impl Prover<ProveContext, Vec<u8>> for RootProver {
         timing = TimingTree::new("root_prove load input", log::Level::Info);
 
         //let file = String::from("");
-        //let seg_data = file::new(&seg_path).read()?;
+        let seg_data = file::new(&ctx.segment).read()?;
         // TODO: don't support block_data
-        let seg_reader = std::io::Cursor::new(segment);
+        let seg_reader = std::io::Cursor::new(seg_data);
         let input = segment_kernel("", &block_no.to_string(), "", seg_reader);
         timing.filter(Duration::from_millis(100)).print();
 

@@ -7,69 +7,70 @@ use std::sync::{
 };
 use std::thread::ScopedJoinHandle;
 use std::time::Instant;
-use zkm2_core_machine::utils::trace_checkpoint;
+use zkm_core_machine::utils::trace_checkpoint;
 
 use p3_field::PrimeField32;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
 use tracing_subscriber::fmt::format;
-use zkm2_core_executor::{
+use zkm_core_executor::{
     events::{format_table_line, sorted_table_lines},
     ExecutionRecord, ExecutionReport, ExecutionState, Executor as Runtime, Program, ZKMContext,
 };
-use zkm2_core_machine::{
+use zkm_core_machine::{
     io::ZKMStdin,
     shape::CoreShapeConfig,
     utils::{concurrency::TurnBasedSync, ZKMCoreProverError},
     MipsAir,
 };
-use zkm2_prover::components::{DefaultProverComponents, ZKMProverComponents};
-use zkm2_prover::ZKMProver;
-use zkm2_sdk::ProverClient;
-use zkm2_stark::{
+use zkm_prover::components::{DefaultProverComponents, ZKMProverComponents};
+use zkm_prover::ZKMProver;
+use zkm_sdk::ProverClient;
+use zkm_stark::{
     Com, MachineProver, MachineProvingKey, MachineRecord, OpeningProof, PcsProverData,
     PublicValues, StarkGenericConfig, Val, ZKMCoreOpts,
 };
 
 pub use crate::contexts::SplitContext;
 use crate::utils::get_block_path;
-use crate::NetworkProve;
+use crate::{get_prover, NetworkProve};
 
 #[derive(Default)]
 pub struct Executor {}
 impl Executor {
     pub fn split(&self, ctx: &SplitContext) -> anyhow::Result<u64> {
-        let elf_path = ctx.elf_path.clone();
-        // let block_no = ctx.block_no.unwrap_or(0);
-        // let seg_path = ctx.seg_path.clone();
+        // set SHARD_SIZE
+        if ctx.seg_size > 0 {
+            std::env::set_var("SHARD_SIZE", ctx.seg_size.to_string());
+        }
+        let mut network_prove = NetworkProve::new();
 
+        let encoded_input = file::new(&ctx.private_input_path).read()?;
+        let inputs_data: Vec<Vec<u8>> = bincode::deserialize(&encoded_input)?;
+        inputs_data.into_iter().for_each(|input| {
+            network_prove.stdin.write_vec(input);
+        });
+
+        let elf_path = ctx.elf_path.clone();
         tracing::info!("split {} load elf file", elf_path);
         let elf = file::new(&elf_path).read()?;
-        // let block_path = get_block_path(&ctx.base_dir, &block_no.to_string(), "");
-        // let input_path = format!("{}/input", block_path.trim_end_matches('/'));
-        let input_data = file::new(&ctx.private_input_path).read()?;
-
-        let mut network_prove = NetworkProve::new_with_segment_size(ctx.seg_size);
-        // TODO: add more input
-        network_prove.stdin.write_vec(input_data);
-
-        let program = network_prove
-            .prover
+        let prover = get_prover();
+        let program = prover
             .get_program(&elf)
             .map_err(|e| anyhow::Error::msg(e.to_string()))?;
-        let (_, vk) = network_prove.prover.core_prover.setup(&program);
+        let (_, vk) = prover.core_prover.setup(&program);
         let vk_bytes = bincode::serialize(&vk)?;
         file::new(&format!("{}/vk.bin", ctx.base_dir)).write(&vk_bytes)?;
 
         let context = network_prove.context_builder.build();
         let (total_steps, public_values_stream) = self.split_with_context::<_, _>(
-            &network_prove.prover.core_prover,
+            &prover.core_prover,
             ctx,
             program,
             &network_prove.stdin,
             network_prove.opts.core_opts,
             context,
-            network_prove.prover.core_shape_config.as_ref(),
+            prover.core_shape_config.as_ref(),
         )?;
         // write public_values_stream to output_path
         file::new(&ctx.output_path).write(&public_values_stream)?;

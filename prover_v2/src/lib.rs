@@ -1,10 +1,12 @@
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use zkm2_core_executor::ZKMContextBuilder;
-use zkm2_core_machine::io::ZKMStdin;
-use zkm2_prover::components::{DefaultProverComponents, ZKMProverComponents};
-use zkm2_prover::{ZKMProver, ZKMProvingKey};
-use zkm2_sdk::Prover;
-use zkm2_stark::{ZKMCoreOpts, ZKMProverOpts};
+use once_cell::sync::OnceCell;
+use zkm_core_executor::ZKMContextBuilder;
+use zkm_core_machine::io::ZKMStdin;
+use zkm_prover::components::{DefaultProverComponents, ZKMProverComponents};
+use zkm_prover::{OuterSC, ZKMProver, ZKMProvingKey};
+use zkm_sdk::Prover;
+use zkm_stark::{StarkProvingKey, StarkVerifyingKey, ZKMCoreOpts, ZKMProverOpts};
 
 pub mod agg_prover;
 pub mod contexts;
@@ -15,8 +17,7 @@ pub mod snark_prover;
 pub mod pipeline;
 pub mod utils;
 
-pub struct NetworkProve<'a, C: ZKMProverComponents = DefaultProverComponents> {
-    pub prover: ZKMProver<C>,
+pub struct NetworkProve<'a> {
     pub context_builder: ZKMContextBuilder<'a>,
     pub stdin: ZKMStdin,
     pub opts: ZKMProverOpts,
@@ -27,26 +28,21 @@ pub struct NetworkProve<'a, C: ZKMProverComponents = DefaultProverComponents> {
 impl<'a> NetworkProve<'a> {
     pub fn new() -> Self {
         Self {
-            prover: ZKMProver::new(),
             context_builder: Default::default(),
             stdin: ZKMStdin::new(),
             opts: Default::default(),
             timeout: None,
         }
     }
-
-    pub fn new_with_segment_size(segment_size: u32) -> Self {
-        let mut opts = ZKMProverOpts::default();
-        if segment_size > 0 {
-            opts.core_opts.shard_size = segment_size as usize;
-        }
-
-        Self {
-            prover: ZKMProver::new(),
-            context_builder: Default::default(),
-            stdin: ZKMStdin::new(),
-            opts,
-            timeout: None,
-        }
-    }
 }
+
+static GLOBAL_PROVER: OnceCell<Mutex<ZKMProver>> = OnceCell::new();
+fn prover_instance() -> &'static Mutex<ZKMProver> {
+    GLOBAL_PROVER.get_or_init(|| Mutex::new(ZKMProver::new()))
+}
+
+pub fn get_prover() -> impl std::ops::DerefMut<Target=ZKMProver> {
+    prover_instance().lock().expect("GLOBAL_PROVER lock poisoned")
+}
+
+static WRAP_KEYS: OnceCell<(StarkProvingKey<OuterSC>, StarkVerifyingKey<OuterSC>)> = OnceCell::new();

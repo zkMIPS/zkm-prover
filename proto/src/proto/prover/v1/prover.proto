@@ -89,8 +89,8 @@ message ProveRequest {
   string computed_request_id = 2;
 
   //string base_dir = 3;
-  //string seg_path = 4;
-  bytes segment = 4;
+  string segment = 4;
+  //  bytes segment = 4;
   optional uint64 block_no = 5;
   uint32 seg_size = 6;
   //string receipt_path = 7;

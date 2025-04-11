@@ -18,21 +18,36 @@ use rand::SeedableRng;
 use std::time::Duration;
 use tonic::transport::Channel;
 
-pub fn get_nodes() -> Vec<ProverNode> {
-    let nodes_lock = crate::prover_node::instance();
-    let mut nodes_data = nodes_lock.lock().unwrap();
-    nodes_data.get_nodes()
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+enum TaskType {
+    Split,
+    Prove,
+    Agg,
+    Snark,
 }
 
-pub async fn get_idle_client(
+fn get_nodes(task_type: TaskType) -> Vec<ProverNode> {
+    let nodes_data = crate::prover_node::instance().lock().unwrap();
+
+    match task_type {
+        TaskType::Snark => nodes_data.get_snark_nodes(),
+        TaskType::Prove => {
+            let all_nodes = nodes_data.get_nodes();
+            let nodes_num = std::env::var("PROVE_NODES_NUM")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(all_nodes.len());
+            all_nodes.into_iter().take(nodes_num).collect()
+        }
+        _ => nodes_data.get_nodes(),
+    }
+}
+
+async fn get_idle_client(
     tls_config: Option<TlsConfig>,
-    is_snark: bool,
+    task_type: TaskType,
 ) -> Option<(String, ProverServiceClient<Channel>, Arc<Mutex<NodeStatus>>)> {
-    let mut nodes: Vec<ProverNode> = if is_snark {
-        get_snark_nodes()
-    } else {
-        get_nodes()
-    };
+    let mut nodes = get_nodes(task_type);
     let mut rng = StdRng::from_entropy();
     nodes.shuffle(&mut rng);
 
@@ -57,12 +72,6 @@ pub async fn get_idle_client(
     None
 }
 
-pub fn get_snark_nodes() -> Vec<ProverNode> {
-    let nodes_lock = crate::prover_node::instance();
-    let nodes_data = nodes_lock.lock().unwrap();
-    nodes_data.get_snark_nodes()
-}
-
 pub fn result_code_to_state(code: i32) -> u32 {
     match ResultCode::from_i32(code) {
         Some(ResultCode::Unspecified) => TASK_STATE_PROCESSING,
@@ -75,7 +84,7 @@ pub fn result_code_to_state(code: i32) -> u32 {
 
 pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> Option<SplitTask> {
     split_task.state = TASK_STATE_UNPROCESSED;
-    let client = get_idle_client(tls_config, false).await;
+    let client = get_idle_client(tls_config, TaskType::Split).await;
     if let Some((addrs, mut client, node_status)) = client {
         let request = SplitElfRequest {
             proof_id: split_task.proof_id.clone(),
@@ -92,7 +101,8 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             receipt_inputs_path: split_task.recepit_inputs_path.clone(),
         };
         log::info!(
-            "[split] rpc {}:{} start",
+            "[split] rpc {} {}:{} start",
+            addrs,
             request.proof_id,
             request.computed_request_id
         );
@@ -105,10 +115,11 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 split_task.state = result_code_to_state(response_result.code);
                 // FIXME: node_info usage?
-                split_task.trace.node_info = addrs;
+                split_task.trace.node_info = addrs.clone();
                 split_task.total_steps = response.get_ref().total_steps;
                 log::info!(
-                    "[split] rpc {}:{} code:{:?} message:{:?} end",
+                    "[split] rpc {} {}:{} code:{:?} message:{:?} end",
+                    addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
@@ -124,7 +135,7 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
 
 pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> Option<ProveTask> {
     prove_task.state = TASK_STATE_UNPROCESSED;
-    let client = get_idle_client(tls_config, false).await;
+    let client = get_idle_client(tls_config, TaskType::Prove).await;
     if let Some((addrs, mut client, node_status)) = client {
         let request = ProveRequest {
             proof_id: prove_task.program.proof_id.clone(),
@@ -137,7 +148,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             done: prove_task.done,
         };
         log::info!(
-            "[prove] node {} rpc {}:{}start",
+            "[prove] rpc {} {}:{}start",
             addrs,
             request.proof_id,
             request.computed_request_id,
@@ -150,9 +161,10 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 prove_task.state = result_code_to_state(response_result.code);
-                prove_task.trace.node_info = addrs;
+                prove_task.trace.node_info = addrs.clone();
                 log::info!(
-                    "[prove] rpc {}:{} code:{:?} message:{:?} end",
+                    "[prove] rpc {} {}:{} code:{:?} message:{:?} end",
+                    addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
@@ -169,7 +181,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
 
 pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> Option<AggTask> {
     agg_task.state = TASK_STATE_UNPROCESSED;
-    let client = get_idle_client(tls_config, false).await;
+    let client = get_idle_client(tls_config, TaskType::Agg).await;
     if let Some((addrs, mut client, node_status)) = client {
         let request = AggregateRequest {
             proof_id: agg_task.proof_id.clone(),
@@ -183,7 +195,8 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             is_leaf_layer: agg_task.is_leaf_layer,
         };
         log::info!(
-            "[aggregate] rpc {}:{} {} inputs start",
+            "[aggregate] rpc {} {}:{} {} inputs start",
+            addrs,
             request.proof_id,
             request.computed_request_id,
             request.inputs.len()
@@ -196,9 +209,10 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 agg_task.state = result_code_to_state(response_result.code);
-                agg_task.trace.node_info = addrs;
+                agg_task.trace.node_info = addrs.clone();
                 log::info!(
-                    "[aggregate] rpc {}:{} code:{:?} message:{:?} end",
+                    "[aggregate] rpc {} {}:{} code:{:?} message:{:?} end",
+                    addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
@@ -216,7 +230,7 @@ pub async fn snark_proof(
     mut snark_task: SnarkTask,
     tls_config: Option<TlsConfig>,
 ) -> Option<SnarkTask> {
-    let client = get_idle_client(tls_config, true).await;
+    let client = get_idle_client(tls_config, TaskType::Snark).await;
     if let Some((addrs, mut client, node_status)) = client {
         let request = SnarkProofRequest {
             version: snark_task.version,
@@ -225,7 +239,8 @@ pub async fn snark_proof(
             agg_receipt: snark_task.agg_receipt.clone(),
         };
         log::info!(
-            "[snark_proof] rpc {}:{} start",
+            "[snark_proof] rpc {} {}:{} start",
+            addrs,
             request.proof_id,
             request.computed_request_id,
         );
@@ -238,7 +253,8 @@ pub async fn snark_proof(
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
                     log::info!(
-                        "[snark_proof] rpc {}:{}  code:{:?} message:{:?}",
+                        "[snark_proof] rpc {} {}:{}  code:{:?} message:{:?}",
+                        addrs,
                         response.get_ref().proof_id,
                         response.get_ref().computed_request_id,
                         response_result.code,
