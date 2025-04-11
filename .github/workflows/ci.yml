@@ -41,8 +41,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Git Auth for Private Repo
-        run: git config --global url."https://${{ secrets.GITHUB_TOKEN }}:@github.com/".insteadOf "https://github.com/"
+      - name: Auth for GitHub Private Repo
+        run: |
+          git config --global url."https://${{ secrets.GITHUB_TOKEN }}:@github.com/".insteadOf "https://github.com/"
+          mkdir -p .cargo
+          echo "[net]" >> .cargo/config.toml
+          echo "git-fetch-with-cli = true" >> .cargo/config.toml
 
       - uses: actions-rs/toolchain@v1
         with:
