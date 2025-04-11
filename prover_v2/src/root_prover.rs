@@ -1,5 +1,5 @@
 use zkm_core_executor::ExecutionRecord;
-use zkm_stark::{MachineProver, MachineProvingKey, StarkGenericConfig};
+use zkm_stark::{MachineProver, StarkGenericConfig};
 
 use crate::contexts::ProveContext;
 use crate::{get_prover, NetworkProve};
@@ -16,7 +16,7 @@ impl RootProver {
         if ctx.seg_size > 0 {
             std::env::set_var("SHARD_SIZE", ctx.seg_size.to_string());
         }
-        let network_prove = NetworkProve::new();
+        let network_prove = NetworkProve::default();
         let opts = network_prove.opts.core_opts;
 
         let prover = get_prover();

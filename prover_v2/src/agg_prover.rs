@@ -3,13 +3,13 @@ use crate::{get_prover, NetworkProve};
 use zkm_core_executor::ZKMReduceProof;
 use zkm_prover::build::Witnessable;
 use zkm_prover::{
-    CoreSC, InnerSC, ZKMCircuitWitness, ZKMProver, ZKMRecursionProverError, ZKMVerifyingKey,
+    InnerSC, ZKMCircuitWitness, ZKMProver, ZKMRecursionProverError,
 };
 use zkm_recursion_circuit::machine::{ZKMCompressWitnessValues, ZKMRecursionWitnessValues};
 use zkm_recursion_compiler::config::InnerConfig;
 use zkm_recursion_core::Runtime;
 use zkm_stark::{
-    Challenge, MachineProver, ShardProof, StarkGenericConfig, Val, ZKMCoreOpts, ZKMProverOpts,
+    Challenge, MachineProver, StarkGenericConfig, Val, ZKMCoreOpts,
 };
 
 #[derive(Default)]
@@ -17,7 +17,7 @@ pub struct AggProver {}
 
 impl AggProver {
     pub fn prove(&self, ctx: &AggContext) -> anyhow::Result<Vec<u8>> {
-        let network_prove = NetworkProve::new();
+        let network_prove = NetworkProve::default();
         let prover = get_prover();
         let input = if ctx.is_leaf_layer {
             let shard_proofs = ctx

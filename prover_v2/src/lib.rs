@@ -1,12 +1,10 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use std::time::Duration;
 use once_cell::sync::OnceCell;
 use zkm_core_executor::ZKMContextBuilder;
 use zkm_core_machine::io::ZKMStdin;
-use zkm_prover::components::{DefaultProverComponents, ZKMProverComponents};
-use zkm_prover::{OuterSC, ZKMProver, ZKMProvingKey};
-use zkm_sdk::Prover;
-use zkm_stark::{StarkProvingKey, StarkVerifyingKey, ZKMCoreOpts, ZKMProverOpts};
+use zkm_prover::{OuterSC, ZKMProver};
+use zkm_stark::{StarkProvingKey, StarkVerifyingKey, ZKMProverOpts};
 
 pub mod agg_prover;
 pub mod contexts;
@@ -15,25 +13,13 @@ pub mod root_prover;
 pub mod snark_prover;
 
 pub mod pipeline;
-pub mod utils;
 
+#[derive(Default)]
 pub struct NetworkProve<'a> {
     pub context_builder: ZKMContextBuilder<'a>,
     pub stdin: ZKMStdin,
     pub opts: ZKMProverOpts,
     pub timeout: Option<Duration>,
-}
-
-// TODO: create from config file
-impl<'a> NetworkProve<'a> {
-    pub fn new() -> Self {
-        Self {
-            context_builder: Default::default(),
-            stdin: ZKMStdin::new(),
-            opts: Default::default(),
-            timeout: None,
-        }
-    }
 }
 
 static GLOBAL_PROVER: OnceCell<Mutex<ZKMProver>> = OnceCell::new();

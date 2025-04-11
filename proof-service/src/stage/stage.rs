@@ -6,13 +6,10 @@ use std::{
 };
 
 use crate::proto::stage_service::v1::Step;
-use crate::stage::{
-    safe_read,
-    tasks::{
-        agg_task::AggTask, generate_task::GenerateTask, ProveTask, SnarkTask, SplitTask, Trace,
-        TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_PROCESSING, TASK_STATE_SUCCESS,
-        TASK_STATE_UNPROCESSED,
-    },
+use crate::stage::tasks::{
+    agg_task::AggTask, generate_task::GenerateTask, ProveTask, SnarkTask, SplitTask, Trace,
+    TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_PROCESSING, TASK_STATE_SUCCESS,
+    TASK_STATE_UNPROCESSED,
 };
 
 pub fn get_timestamp() -> u64 {
@@ -220,7 +217,9 @@ impl Stage {
         }
         self.prove_tasks.sort_by_key(|p| p.file_no);
         // todo: double check
-        self.prove_tasks.last_mut().map(|p| p.done = true);
+        if let Some(p) = self.prove_tasks.last_mut() {
+            p.done = true;
+        }
 
         if self.prove_tasks.len() < 2 {
             self.is_error = true;
@@ -439,7 +438,7 @@ impl Stage {
         // write snark proof to disk
         // TODO: handle the result gracefully
         let mut f = std::fs::File::create(&self.generate_task.snark_path)
-            .expect(&format!("can not open {}", &self.generate_task.snark_path));
+            .unwrap_or_else(|_| panic!("can not open {}", &self.generate_task.snark_path));
         f.write_all(&snark_task.output).unwrap();
         on_task!(snark_task, dst, self);
     }
@@ -507,8 +506,9 @@ mod tests {
             }
             stage.gen_agg_tasks();
             stage.agg_tasks.iter().for_each(|element| {
-                let left = element.inputs.get(0).map_or(false, |input| input.is_agg);
-                let right = element.inputs.get(1).map_or(false, |input| input.is_agg);
+                let left = element.inputs.first().is_some_and(|input| input.is_agg);
+                let right = element.inputs.get(1).is_some_and(|input| input.is_agg);
+
                 println!(
                     "agg: left:{} right:{} final:{}",
                     left, right, element.is_final,

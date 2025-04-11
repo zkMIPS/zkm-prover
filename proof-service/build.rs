@@ -7,6 +7,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         panic!("Either prover or prover_v2 must be enabled!");
     }
 
+    println!("cargo:rerun-if-changed=../proto/src/proto/prover/v1/prover.proto");
+    println!("cargo:rerun-if-changed=../proto/src/proto/stage/v1/stage.proto");
+    println!("cargo:rerun-if-changed=../proto/src/proto/include/v1/includes.proto");
     tonic_build::configure()
         .protoc_arg("--experimental_allow_proto3_optional")
         .type_attribute(

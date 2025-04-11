@@ -372,14 +372,6 @@ impl StageService for StageServiceSVC {
                 )
                 .await;
             // TODO: we use the stage server as the file server, any better way?
-            let mut snark_proof_url = match &self.config.fileserver_url {
-                Some(fileserver_url) => format!(
-                    "{}/{}/snark/proof_with_public_inputs.json",
-                    fileserver_url,
-                    request.get_ref().proof_id
-                ),
-                None => "".to_string(),
-            };
             let mut snark_proof_url = String::new();
             let mut stark_proof_url = String::new();
             #[cfg(feature = "prover")]

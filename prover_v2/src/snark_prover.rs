@@ -14,19 +14,17 @@ use crate::{get_prover, NetworkProve, WRAP_KEYS};
 #[derive(Default)]
 pub struct SnarkProver {
     proving_key_paths: String,
-    output_dir: String,
 }
 
 impl SnarkProver {
-    pub fn new(proving_key_paths: &str, output_dir: &str) -> Self {
+    pub fn new(proving_key_paths: &str) -> Self {
         Self {
             proving_key_paths: proving_key_paths.into(),
-            output_dir: output_dir.into(),
         }
     }
     pub fn prove(&self, ctx: &SnarkContext) -> anyhow::Result<(bool, Vec<u8>)> {
         let reduced_proof: ZKMReduceProof<InnerSC> = bincode::deserialize(&ctx.agg_receipt)?;
-        let network_prove = NetworkProve::new();
+        let network_prove = NetworkProve::default();
 
         let gnark_proof =
             self.prove_groth16(reduced_proof, network_prove.opts)?;

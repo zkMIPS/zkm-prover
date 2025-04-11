@@ -65,8 +65,8 @@ impl AggTask {
     }
 
     pub fn init_from_prove_tasks(
-        vk: &Vec<u8>,
-        prove_tasks: &Vec<ProveTask>,
+        vk: &[u8],
+        prove_tasks: &[ProveTask],
         agg_index: i32,
         is_final: bool,
         is_first_shard: bool,
@@ -77,7 +77,7 @@ impl AggTask {
             state: TASK_STATE_UNPROCESSED,
             seg_size: prove_tasks[0].program.seg_size,
             proof_id: prove_tasks[0].program.proof_id.clone(),
-            vk: vk.clone(),
+            vk: vk.to_owned(),
             inputs: prove_tasks.iter().map(from_prove_task).collect(),
             is_final,
             is_first_shard,
@@ -88,7 +88,7 @@ impl AggTask {
     }
 
     pub fn init_from_agg_tasks(
-        agg_tasks: &Vec<AggTask>,
+        agg_tasks: &[AggTask],
         agg_index: i32,
         is_final: bool,
     ) -> AggTask {

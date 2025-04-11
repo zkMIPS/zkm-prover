@@ -10,12 +10,10 @@ use std::time::Instant;
 use zkm_core_machine::utils::trace_checkpoint;
 
 use p3_field::PrimeField32;
-use p3_matrix::dense::RowMajorMatrix;
 use p3_maybe_rayon::prelude::*;
-use tracing_subscriber::fmt::format;
 use zkm_core_executor::{
     events::{format_table_line, sorted_table_lines},
-    ExecutionRecord, ExecutionReport, ExecutionState, Executor as Runtime, Program, ZKMContext,
+    ExecutionRecord, ExecutionReport, Executor as Runtime, Program, ZKMContext,
 };
 use zkm_core_machine::{
     io::ZKMStdin,
@@ -23,16 +21,12 @@ use zkm_core_machine::{
     utils::{concurrency::TurnBasedSync, ZKMCoreProverError},
     MipsAir,
 };
-use zkm_prover::components::{DefaultProverComponents, ZKMProverComponents};
-use zkm_prover::ZKMProver;
-use zkm_sdk::ProverClient;
 use zkm_stark::{
-    Com, MachineProver, MachineProvingKey, MachineRecord, OpeningProof, PcsProverData,
-    PublicValues, StarkGenericConfig, Val, ZKMCoreOpts,
+    Com, MachineProver, MachineRecord, OpeningProof, PcsProverData,
+    PublicValues, StarkGenericConfig, ZKMCoreOpts,
 };
 
 pub use crate::contexts::SplitContext;
-use crate::utils::get_block_path;
 use crate::{get_prover, NetworkProve};
 
 #[derive(Default)]
@@ -43,7 +37,7 @@ impl Executor {
         if ctx.seg_size > 0 {
             std::env::set_var("SHARD_SIZE", ctx.seg_size.to_string());
         }
-        let mut network_prove = NetworkProve::new();
+        let mut network_prove = NetworkProve::default();
 
         let encoded_input = file::new(&ctx.private_input_path).read()?;
         let inputs_data: Vec<Vec<u8>> = bincode::deserialize(&encoded_input)?;
@@ -60,7 +54,7 @@ impl Executor {
             .map_err(|e| anyhow::Error::msg(e.to_string()))?;
         let (_, vk) = prover.core_prover.setup(&program);
         let vk_bytes = bincode::serialize(&vk)?;
-        file::new(&format!("{}/vk.bin", ctx.base_dir)).write(&vk_bytes)?;
+        file::new(&format!("{}/vk.bin", ctx.base_dir)).write_all(&vk_bytes)?;
 
         let context = network_prove.context_builder.build();
         let (total_steps, public_values_stream) = self.split_with_context::<_, _>(
@@ -75,12 +69,13 @@ impl Executor {
         // write public_values_stream
         // file::new(&ctx.output_path).write(&public_values_stream)?;
         let public_values_path = format!("{}/wrap/public_values.bin", ctx.base_dir);
-        file::new(&public_values_path).write(&public_values_stream)?;
+        file::new(&public_values_path).write_all(&public_values_stream)?;
 
         Ok(total_steps)
     }
 
     // _prover is used for type inference.
+    #[allow(clippy::too_many_arguments)]
     pub fn split_with_context<SC: StarkGenericConfig, P: MachineProver<SC, MipsAir<SC::Val>>>(
         &self,
         _prover: &P,
@@ -267,7 +262,7 @@ impl Executor {
                                 records.par_iter().enumerate().for_each(|(i, record)| {
                                     let encoded_record = bincode::serialize(&record).unwrap();
                                     file::new(&format!("{}/{}", ctx.seg_path, base_index + i))
-                                        .write(&encoded_record)
+                                        .write_all(&encoded_record)
                                         .expect("Failed to write record");
                                 });
 
@@ -351,7 +346,7 @@ impl Executor {
                 "summary: cycles={}, executor={}s, khz={:.2}",
                 cycles,
                 split_time,
-                (cycles as f64 / (split_time * 1000.0) as f64),
+                cycles as f64 / (split_time * 1000.0),
             );
 
             Ok((cycles, public_values_stream))

@@ -118,7 +118,7 @@ impl Executor {
                     return Ok(instrumented_state.state.total_step);
                 }
                 Err(e) => {
-                    log::error!("split minimal_parse error {}", e.to_string());
+                    log::error!("split minimal_parse error {:?}", e.to_string());
                     return Err(e.to_string());
                 }
             }

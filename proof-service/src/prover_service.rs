@@ -61,15 +61,16 @@ pub struct ProverServiceSVC {
 }
 impl ProverServiceSVC {
     pub fn new(config: config::RuntimeConfig) -> Self {
-        #[cfg(feature = "prover")]
+        let version = if cfg!(feature = "prover") {
+            ProverVersion::Zkm
+        } else if cfg!(feature = "prover_v2") {
+            ProverVersion::Zkm2
+        } else {
+            panic!("Not supported prover version");
+        };
         let pipeline = Arc::new(Mutex::new(Pipeline::new(
             &config.base_dir,
-            &config.get_proving_key_path(ProverVersion::Zkm.into()),
-        )));
-        #[cfg(feature = "prover_v2")]
-        let pipeline = Arc::new(Mutex::new(Pipeline::new(
-            &config.base_dir,
-            &config.get_proving_key_path(ProverVersion::Zkm2.into()),
+            &config.get_proving_key_path(version.into()),
         )));
         Self { config, pipeline }
     }
@@ -119,7 +120,7 @@ impl ProverService for ProverServiceSVC {
             }
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn get_task_result(
@@ -131,7 +132,7 @@ impl ProverService for ProverServiceSVC {
             let response = GetTaskResultResponse::default();
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn split_elf(
@@ -192,7 +193,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn prove(
@@ -255,7 +256,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn aggregate(
@@ -326,7 +327,7 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 
     async fn snark_proof(
@@ -378,6 +379,6 @@ impl ProverService for ProverServiceSVC {
             );
             Ok(Response::new(response))
         })
-        .await
+            .await
     }
 }

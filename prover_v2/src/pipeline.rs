@@ -16,13 +16,13 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-    pub fn new(base_dir: &str, keys_input_dir: &str) -> Self {
+    pub fn new(_base_dir: &str, keys_input_dir: &str) -> Self {
         Pipeline {
             mutex: Mutex::new(0),
             executor: Executor::default(),
             root_prover: RootProver::default(),
             agg_prover: AggProver::default(),
-            snark_prover: SnarkProver::new(keys_input_dir, &format!("{}/output", base_dir)),
+            snark_prover: SnarkProver::new(keys_input_dir),
         }
     }
 

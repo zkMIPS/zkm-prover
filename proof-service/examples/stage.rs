@@ -54,8 +54,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let seg_size = env::var("SEG_SIZE").unwrap_or("131072".to_string());
     let seg_size = seg_size.parse::<_>().unwrap_or(131072);
     let args = env::var("ARGS").unwrap_or("".to_string());
-    let public_input_path = env::var("PUBLIC_INPUT_PATH").unwrap_or("".to_string());
-    let private_input_path = env::var("PRIVATE_INPUT_PATH").unwrap_or("".to_string());
+    let _public_input_path = env::var("PUBLIC_INPUT_PATH").unwrap_or("".to_string());
+    let _private_input_path = env::var("PRIVATE_INPUT_PATH").unwrap_or("".to_string());
     let endpoint = env::var("ENDPOINT").unwrap_or("http://127.0.0.1:50000".to_string());
     let ca_cert_path = env::var("CA_CERT_PATH").unwrap_or("".to_string());
     let cert_path = env::var("CERT_PATH").unwrap_or("".to_string());
@@ -157,6 +157,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 get_status_response.proof_with_public_inputs.len(),
                                 get_status_response.output_stream.len(),
                             );
+                            log::info!("public_values {:?}",get_status_response.public_values_url);
+                            log::info!("snark_proof_url {:?}",get_status_response.snark_proof_url);
                             let output_dir = Path::new(&output_dir);
                             let public_inputs_path = output_dir.join("proof_with_public_inputs");
                             let _ = file::new(&public_inputs_path.to_string_lossy())
