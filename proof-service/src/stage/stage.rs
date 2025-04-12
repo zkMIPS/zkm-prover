@@ -94,6 +94,10 @@ impl Stage {
                             self.generate_task.proof_id,
                             self.prove_tasks.len()
                         );
+                        if !self.generate_task.composite_proof {
+                            self.gen_agg_tasks();
+                        }
+
                         self.step = Step::InProve;
                     }
                 }
@@ -106,9 +110,16 @@ impl Stage {
                 {
                     if self.generate_task.composite_proof {
                         self.step = Step::End;
-                    } else {
-                        self.gen_agg_tasks();
-                        self.step = Step::InAgg;
+                    } else if self
+                        .agg_tasks
+                        .iter()
+                        .all(|task| task.state == TASK_STATE_SUCCESS)
+                    {
+                        self.gen_snark_task();
+                        self.step = Step::InSnark;
+
+                        // self.gen_agg_tasks();
+                        // self.step = Step::InAgg;
                     }
                     // TODO: we will deprecate the agg_all prover.
                     //} else if self.prove_tasks.len() > 3 {
@@ -120,16 +131,16 @@ impl Stage {
                     //}
                 }
             }
-            Step::InAgg => {
-                if self
-                    .agg_tasks
-                    .iter()
-                    .all(|task| task.state == TASK_STATE_SUCCESS)
-                {
-                    self.gen_snark_task();
-                    self.step = Step::InSnark;
-                }
-            }
+            // Step::InAgg => {
+            //     if self
+            //         .agg_tasks
+            //         .iter()
+            //         .all(|task| task.state == TASK_STATE_SUCCESS)
+            //     {
+            //         self.gen_snark_task();
+            //         self.step = Step::InSnark;
+            //     }
+            // }
             Step::InSnark => {
                 if self.snark_task.state == TASK_STATE_SUCCESS {
                     self.step = Step::End;
@@ -231,8 +242,7 @@ impl Stage {
     }
 
     pub fn get_prove_task(&mut self) -> Option<ProveTask> {
-        //  get tasks in reverse order
-        for prove_task in self.prove_tasks.iter_mut().rev() {
+        for prove_task in self.prove_tasks.iter_mut() {
             if prove_task.state == TASK_STATE_UNPROCESSED || prove_task.state == TASK_STATE_FAILED {
                 prove_task.state = TASK_STATE_PROCESSING;
                 prove_task.trace.start_ts = get_timestamp();
@@ -243,11 +253,19 @@ impl Stage {
     }
 
     pub fn on_prove_task(&mut self, prove_task: &mut ProveTask) {
-        for item_task in self.prove_tasks.iter_mut().rev() {
+        for item_task in self.prove_tasks.iter_mut() {
             if item_task.task_id == prove_task.task_id && item_task.state == TASK_STATE_PROCESSING {
                 // let dst = &mut item_task;
                 on_task!(prove_task, item_task, self);
                 break;
+            }
+        }
+        // clear agg‘s child task
+        if prove_task.state == TASK_STATE_SUCCESS {
+            for item_task in &mut self.agg_tasks {
+                if item_task.clear_child_task(&prove_task.task_id) {
+                    break;
+                }
             }
         }
     }
@@ -346,7 +364,7 @@ impl Stage {
         let mut result: Option<AggTask> = None;
         for agg_task in &mut self.agg_tasks {
             if agg_task.childs.iter().any(|c| c.is_some()) {
-                log::info!("Skipping agg_task: childs: {:?}", agg_task.childs);
+                log::debug!("Skipping agg_task: childs: {:?}", agg_task.childs);
                 continue;
             }
             if agg_task.state == TASK_STATE_UNPROCESSED || agg_task.state == TASK_STATE_FAILED {
@@ -376,7 +394,6 @@ impl Stage {
                 }
             });
         };
-        log::info!("get_agg_task:yes? {:?}", result.is_some());
         result
     }
 

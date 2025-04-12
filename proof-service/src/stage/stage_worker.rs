@@ -80,7 +80,7 @@ async fn run_stage_task(
                         }
                         Step::InProve => {
                             let prove_task = stage.get_prove_task();
-                            log::debug!("Step::InProve prove_task {:?}", prove_task.is_some());
+                            log::debug!("Step::InProve get_prove_task {:?}", prove_task.is_some());
                             if let Some(prove_task) = prove_task {
                                 let tx = tx.clone();
                                 let tls_config = tls_config.clone();
@@ -92,9 +92,10 @@ async fn run_stage_task(
                                     }
                                 });
                             }
-                        }
-                        Step::InAgg => {
+                            // }
+                            // Step::InAgg => {
                             let agg_task = stage.get_agg_task();
+                            log::debug!("get_agg_task: {:?}", agg_task.is_some());
                             if let Some(agg_task) = agg_task {
                                 let tx = tx.clone();
                                 let tls_config = tls_config.clone();
@@ -196,8 +197,8 @@ async fn run_stage_task(
                         stage_service::v1::Status::Success.into(),
                         &String::from_utf8(result).expect("Invalid UTF-8 bytes"),
                     )
-                    .await
-                    .unwrap();
+                        .await
+                        .unwrap();
                     log::info!("[stage] finished {:?} ", stage);
                 }
             }

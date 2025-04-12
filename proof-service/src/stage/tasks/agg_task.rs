@@ -6,7 +6,7 @@ use crate::stage::tasks::{ProveTask, Trace, TASK_STATE_SUCCESS, TASK_STATE_UNPRO
 pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
     AggregateInput {
         // we put the receipt of prove_task, instead of the file path
-        receipt_input: prove_task.output.clone(),
+        receipt_input: vec![],
         computed_request_id: prove_task.task_id.clone(),
         is_agg: false,
     }
@@ -140,6 +140,7 @@ impl AggTask {
             proof_id: left.program.proof_id.clone(),
             inputs: vec![from_prove_task(left), from_prove_task(right)],
             agg_index,
+            childs: vec![Some(left.task_id.clone()), Some(right.task_id.clone())],
             ..Default::default()
         }
     }
@@ -156,12 +157,12 @@ impl AggTask {
             childs: vec![None, None],
             ..Default::default()
         };
-        if !left.from_prove {
-            agg_task.childs[0] = Some(left.task_id.clone());
-        }
-        if !right.from_prove {
-            agg_task.childs[1] = Some(right.task_id.clone());
-        }
+        // if !left.from_prove {
+        agg_task.childs[0] = Some(left.task_id.clone());
+        // }
+        // if !right.from_prove {
+        agg_task.childs[1] = Some(right.task_id.clone());
+        // }
         agg_task
     }
 }
