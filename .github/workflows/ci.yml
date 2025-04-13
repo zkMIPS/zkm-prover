@@ -9,7 +9,6 @@ on:
       - main
 
 env:
-  CARGO_NET_GIT_FETCH_WITH_CLI: true
   CARGO_TERM_COLOR: always
   DATABASE_URL: postgresql://root:password@localhost:5432/state
   RUST_BACKTRACE: 1
@@ -17,7 +16,7 @@ env:
   SQLX_OFFLINE: 1
 
 jobs:
-  build_and_test:
+  build_test_and_clippy:
     name: Rust build/test - ${{ matrix.feature }}
     runs-on: ubuntu-latest
     strategy:
@@ -41,13 +40,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Auth for GitHub Private Repo
-        run: |
-          git config --global url."https://${{ secrets.GITHUB_TOKEN }}:@github.com/".insteadOf "https://github.com/"
-          mkdir -p .cargo
-          echo "[net]" >> .cargo/config.toml
-          echo "git-fetch-with-cli = true" >> .cargo/config.toml
-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
