@@ -126,16 +126,20 @@ impl StageService for StageServiceSVC {
                         response.proof_with_public_inputs = result.into_bytes();
                     }
                     if let Some(fileserver_url) = &self.config.fileserver_url {
-                        response.snark_proof_url = format!(
-                            "{}/{}/snark/proof_with_public_inputs.json",
-                            fileserver_url,
-                            request.get_ref().proof_id
-                        );
-                        response.stark_proof_url = format!(
-                            "{}/{}/wrap/proof_with_public_inputs.json",
-                            fileserver_url,
-                            request.get_ref().proof_id
-                        );
+                        #[cfg(feature = "prover")]
+                        {
+                            response.snark_proof_url = format!(
+                                "{}/{}/snark/proof_with_public_inputs.json",
+                                fileserver_url,
+                                request.get_ref().proof_id
+                            );
+                            response.stark_proof_url = format!(
+                                "{}/{}/wrap/proof_with_public_inputs.json",
+                                fileserver_url,
+                                request.get_ref().proof_id
+                            );
+                        }
+
                         response.public_values_url = format!(
                             "{}/{}/wrap/public_values.json",
                             fileserver_url,
