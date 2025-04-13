@@ -55,7 +55,7 @@ jobs:
       - name: Cargo Test
         run: source ~/.zkm-toolchain/env && cargo test --release --verbose --features=${{ matrix.feature }}
       - name: Clippy
-        run: source ~/.zkm-toolchain/env && cargo clippy --all-targets --features=${{ matrix.feature }} -- -D warnings
+        run: cargo clippy --all-targets --features=${{ matrix.feature }} -- -D warnings
 
   fmt:
     name: Rustfmt
