@@ -33,11 +33,7 @@ use crate::{get_prover, NetworkProve};
 pub struct Executor {}
 impl Executor {
     pub fn split(&self, ctx: &SplitContext) -> anyhow::Result<u64> {
-        // set SHARD_SIZE
-        if ctx.seg_size > 0 {
-            std::env::set_var("SHARD_SIZE", ctx.seg_size.to_string());
-        }
-        let mut network_prove = NetworkProve::default();
+        let mut network_prove = NetworkProve::new(ctx.seg_size);
 
         let encoded_input = file::new(&ctx.private_input_path).read()?;
         let inputs_data: Vec<Vec<u8>> = bincode::deserialize(&encoded_input)?;

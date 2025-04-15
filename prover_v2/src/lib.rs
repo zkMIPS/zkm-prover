@@ -22,6 +22,25 @@ pub struct NetworkProve<'a> {
     pub timeout: Option<Duration>,
 }
 
+impl NetworkProve<'_> {
+    pub fn new(shard_size: u32) -> Self {
+        if shard_size > 0 {
+            std::env::set_var("SHARD_SIZE", shard_size.to_string());
+        }
+        let keccaks: usize = std::env::var("KECCAK_PER_SHARD")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or_default();
+
+        let mut prove = Self::default();
+        if keccaks > 0 {
+            prove.opts.core_opts.split_opts.keccak = keccaks;
+        }
+
+        prove
+    }
+}
+
 static GLOBAL_PROVER: OnceCell<Mutex<ZKMProver>> = OnceCell::new();
 fn prover_instance() -> &'static Mutex<ZKMProver> {
     GLOBAL_PROVER.get_or_init(|| Mutex::new(ZKMProver::new()))
