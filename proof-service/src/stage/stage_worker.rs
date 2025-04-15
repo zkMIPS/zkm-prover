@@ -49,6 +49,7 @@ macro_rules! save_task {
 }
 
 async fn run_stage_task(
+    node_num: usize,
     mut task: StageTask,
     tls_config: Option<TlsConfig>,
     db: database::Database,
@@ -94,18 +95,21 @@ async fn run_stage_task(
                             }
                             // }
                             // Step::InAgg => {
-                            let agg_task = stage.get_agg_task();
-                            log::debug!("get_agg_task: {:?}", agg_task.is_some());
-                            if let Some(agg_task) = agg_task {
-                                let tx = tx.clone();
-                                let tls_config = tls_config.clone();
-                                tokio::spawn(async move {
-                                    let response =
-                                        prover_client::aggregate(agg_task, tls_config).await;
-                                    if let Some(agg_task) = response {
-                                        let _ = tx.send(Task::Agg(agg_task)).await;
-                                    }
-                                });
+                            //
+                            if stage.count_unfinished_prove_tasks() < node_num {
+                                let agg_task = stage.get_agg_task();
+                                log::debug!("get_agg_task: {:?}", agg_task.is_some());
+                                if let Some(agg_task) = agg_task {
+                                    let tx = tx.clone();
+                                    let tls_config = tls_config.clone();
+                                    tokio::spawn(async move {
+                                        let response =
+                                            prover_client::aggregate(agg_task, tls_config).await;
+                                        if let Some(agg_task) = response {
+                                            let _ = tx.send(Task::Agg(agg_task)).await;
+                                        }
+                                    });
+                                }
                             }
                         }
                         Step::InSnark => {
@@ -197,8 +201,8 @@ async fn run_stage_task(
                         stage_service::v1::Status::Success.into(),
                         &String::from_utf8(result).expect("Invalid UTF-8 bytes"),
                     )
-                        .await
-                        .unwrap();
+                    .await
+                    .unwrap();
                     log::info!("[stage] finished {:?} ", stage);
                 }
             }
@@ -215,7 +219,7 @@ async fn run_stage_task(
     }
 }
 
-async fn load_stage_task(tls_config: Option<TlsConfig>, db: database::Database) {
+async fn load_stage_task(node_num: usize, tls_config: Option<TlsConfig>, db: database::Database) {
     let store = Arc::new(Mutex::new(HashMap::new()));
     loop {
         let limit = 5;
@@ -252,7 +256,8 @@ async fn load_stage_task(tls_config: Option<TlsConfig>, db: database::Database) 
                                     let db_copy = db.clone();
                                     tokio::spawn(async move {
                                         let id = task.id.clone();
-                                        run_stage_task(task, tls_config_copy, db_copy).await;
+                                        run_stage_task(node_num, task, tls_config_copy, db_copy)
+                                            .await;
                                         store_arc.lock().unwrap().remove(&id);
                                     });
                                 }
@@ -269,9 +274,13 @@ async fn load_stage_task(tls_config: Option<TlsConfig>, db: database::Database) 
     }
 }
 
-pub async fn start(tls_config: Option<TlsConfig>, db: database::Database) -> anyhow::Result<bool> {
+pub async fn start(
+    node_num: usize,
+    tls_config: Option<TlsConfig>,
+    db: database::Database,
+) -> anyhow::Result<bool> {
     tokio::spawn(async move {
-        load_stage_task(tls_config, db).await;
+        load_stage_task(node_num, tls_config, db).await;
     });
     Ok(true)
 }

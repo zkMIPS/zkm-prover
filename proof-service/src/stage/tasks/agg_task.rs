@@ -83,7 +83,10 @@ impl AggTask {
             is_first_shard,
             is_leaf_layer: true,
             agg_index,
-            childs: prove_tasks.iter().map(|t| Some(t.task_id.to_owned())).collect(),
+            childs: prove_tasks
+                .iter()
+                .map(|t| Some(t.task_id.to_owned()))
+                .collect(),
             ..Default::default()
         }
     }
@@ -99,7 +102,10 @@ impl AggTask {
             is_final,
             is_leaf_layer: false,
             agg_index,
-            childs: agg_tasks.iter().map(|t| Some(t.task_id.to_owned())).collect(),
+            childs: agg_tasks
+                .iter()
+                .map(|t| Some(t.task_id.to_owned()))
+                .collect(),
             ..Default::default()
         };
         // for (raw_agg_task, child) in agg_tasks.iter().zip(agg_task.childs.iter_mut()) {

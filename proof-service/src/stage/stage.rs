@@ -242,7 +242,7 @@ impl Stage {
     }
 
     pub fn get_prove_task(&mut self) -> Option<ProveTask> {
-        for prove_task in self.prove_tasks.iter_mut() {
+        for prove_task in self.prove_tasks.iter_mut().rev() {
             if prove_task.state == TASK_STATE_UNPROCESSED || prove_task.state == TASK_STATE_FAILED {
                 prove_task.state = TASK_STATE_PROCESSING;
                 prove_task.trace.start_ts = get_timestamp();
@@ -253,7 +253,7 @@ impl Stage {
     }
 
     pub fn on_prove_task(&mut self, prove_task: &mut ProveTask) {
-        for item_task in self.prove_tasks.iter_mut() {
+        for item_task in self.prove_tasks.iter_mut().rev() {
             if item_task.task_id == prove_task.task_id && item_task.state == TASK_STATE_PROCESSING {
                 // let dst = &mut item_task;
                 on_task!(prove_task, item_task, self);
@@ -268,6 +268,13 @@ impl Stage {
                 }
             }
         }
+    }
+
+    pub fn count_unfinished_prove_tasks(&self) -> usize {
+        self.prove_tasks
+            .iter()
+            .filter(|task| task.state != TASK_STATE_SUCCESS)
+            .count()
     }
 
     #[cfg(feature = "prover")]

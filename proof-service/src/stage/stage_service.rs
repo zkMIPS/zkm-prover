@@ -55,7 +55,8 @@ impl StageServiceSVC {
         let database_url = config.database_url.as_str();
         let db = database::Database::new(database_url);
         sqlx::migrate!("./migrations").run(&db.db_pool).await?;
-        let _ = stage_worker::start(tls_config.clone(), db.clone()).await;
+        let _ =
+            stage_worker::start(config.prover_addrs.len(), tls_config.clone(), db.clone()).await;
         Ok(StageServiceSVC { db, config })
     }
 
