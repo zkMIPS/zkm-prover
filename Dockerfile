@@ -35,14 +35,14 @@ FROM debian:stable-slim
 RUN apt-get update && apt-get install -y --no-install-recommends apt
 RUN apt-get update && apt-get install -y --no-install-recommends openssl
 
-COPY --from=builder /usr/src/app/target/release/service /usr/local/bin/service  
-COPY --from=builder /usr/src/app/service/config/config.toml /usr/local/bin/config.toml
+COPY --from=builder /usr/src/app/target/release/proof-service /usr/local/bin/proof-service
+COPY --from=builder /usr/src/app/proof-service/config/config.toml /usr/local/bin/config.toml
   
 WORKDIR /  
   
-RUN adduser --disabled-password --gecos '' --uid 1000 appuser && chown -R appuser:appuser /usr/local/bin/service  
+RUN adduser --disabled-password --gecos '' --uid 1000 appuser && chown -R appuser:appuser /usr/local/bin/proof-service
 USER appuser  
   
 EXPOSE 50000  
   
-CMD ["/usr/local/bin/service --config /usr/local/bin/config.toml"]
+CMD ["/usr/local/bin/proof-service --config /usr/local/bin/config.toml"]

@@ -16,25 +16,16 @@ env:
   SQLX_OFFLINE: 1
 
 jobs:
-  build_and_test:
-    name: Rust project - latest
+  test:
+    name: Cargo Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        toolchain:
-          - stable
-          - beta
-          - nightly
-
     services:
       postgres:
         image: postgres
-
         env:
           POSTGRES_PASSWORD: password
           POSTGRES_USER: root
           POSTGRES_DB: state
-
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -42,35 +33,19 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-
-    steps:
-      - uses: actions/checkout@v2
-      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - name: Install Dependencies
-        run: sudo apt install protobuf-compiler
-      - name: Cargo build
-        run: cargo build --verbose --release
-      - name: Cargo test
-        run: cargo test --release --verbose
-      - name: Cargo test prover
-        run: cargo test --release -- --nocapture
-        working-directory: ./prover
-
-  fmt:
-    name: Rustfmt
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2024-07-20
+          toolchain: nightly
           override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - name: Install Dependencies
+        run: sudo apt install protobuf-compiler
+      - name: Cargo Test with prover
+        run: cargo test --release --verbose --features=prover
+      - name: Cargo Test with prover_v2
+        run: cargo test --release --verbose --features=prover_v2
 
   clippy:
     name: Clippy
@@ -80,9 +55,26 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2024-07-20
+          toolchain: nightly
           override: true
+          components: clippy
       - name: Install Dependencies
         run: sudo apt install protobuf-compiler
-      - run: rustup component add clippy
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --features=prover --all-targets -- -D warnings
+      - run: cargo clippy --features=prover_v2 --all-targets -- -D warnings
+
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          components: rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check

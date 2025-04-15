@@ -8,24 +8,21 @@ pub struct Config {
 }
 
 impl Config {
-    pub async fn new(
-        ca_cert_path: String,
-        cert_path: String,
-        key_path: String,
-    ) -> anyhow::Result<Self> {
+    pub async fn new(ca_cert_path: &str, cert_path: &str, key_path: &str) -> anyhow::Result<Self> {
         let (ca_cert, identity) = get_cert_and_identity(ca_cert_path, cert_path, key_path).await?;
         Ok(Config { ca_cert, identity })
     }
 }
 
+// FIXME: remember to align with the project-template
 async fn get_cert_and_identity(
-    ca_cert_path: String,
-    cert_path: String,
-    key_path: String,
+    ca_cert_path: &str,
+    cert_path: &str,
+    key_path: &str,
 ) -> anyhow::Result<(Option<Certificate>, Option<Identity>)> {
-    let ca_cert_path = Path::new(&ca_cert_path);
-    let cert_path = Path::new(&cert_path);
-    let key_path = Path::new(&key_path);
+    let ca_cert_path = Path::new(ca_cert_path);
+    let cert_path = Path::new(cert_path);
+    let key_path = Path::new(key_path);
     // if !ca_cert_path.is_file() || !cert_path.is_file() || !key_path.is_file() {
     //     bail!("both ca_cert_path, cert_path and key_path should be valid file")
     // }

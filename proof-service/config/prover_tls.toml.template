@@ -1,0 +1,8 @@
+addr = "{{addr}}"
+prover_addrs = [{{prover_addrs}}]
+proving_key_paths = ["/mnt/data/zkm/proving.key", "/mnt/data/zkm2/proving.key"]
+base_dir = "{{base_dir}}"
+
+ca_cert_path = "tools/certs/ca.pem"
+cert_path = "tools/certs/{{prover_name}}.pem"
+key_path = "tools/certs/{{prover_name}}.key"

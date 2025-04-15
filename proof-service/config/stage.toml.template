@@ -1,0 +1,5 @@
+addr = "{{addr}}"
+prover_addrs = [{{prover_addrs}}]
+base_dir = "{{base_dir}}"
+fileserver_url = "/data/zkm/proof-service/"
+fileserver_addr = "0.0.0.0:40000"

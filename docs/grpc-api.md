@@ -6,7 +6,7 @@
 
 ## Proto Link
 
-Please refer to [Stage Proto](../service/proto/src/proto/stage/v1/stage.proto).
+Please refer to [Stage Proto](../proof-service/proto/src/proto/stage/v1/stage.proto).
 
 ## Status Codes
 

@@ -10,20 +10,18 @@ services:
     depends_on:
       zkm-prover:
         condition: service_started
-      zkm-snark:
-        condition: service_started
     image: zkmips/zkm-prover:latest
     ports:
       - 50000:50000
     environment:
       - RUST_LOG=info
     volumes:
-      - ./service/config/config_docker_compose.toml:/usr/local/bin/config.toml
+      - ./proof-service/config/config_docker_compose.toml:/usr/local/bin/config.toml
       - /tmp/zkm-prover/data:/zkm/data
     command:
       - "/bin/sh"
       - "-c"
-      - "/usr/local/bin/service --config /usr/local/bin/config.toml --stage"
+      - "/usr/local/bin/proof-service --config /usr/local/bin/config.toml --stage"
 
   zkm-prover:
     container_name: zkm-prover
@@ -32,22 +30,13 @@ services:
     environment:
       - RUST_LOG=info
     volumes:
-      - ./service/config/config_docker_compose.toml:/usr/local/bin/config.toml
+      - ./proof-service/config/config_docker_compose.toml:/usr/local/bin/config.toml
       - /tmp/zkm-prover/data:/zkm/data
     command:
       - "/bin/sh"
       - "-c"
-      - "/usr/local/bin/service --config /usr/local/bin/config.toml"
+      - "/usr/local/bin/proof-service --config /usr/local/bin/config.toml"
 
-  zkm-snark:
-    container_name: zkm-snark
-    restart: unless-stopped
-    image: zkmips/gnark-plonky2-verifier:stage
-    #volumes:
-    #  - /tmp/zkm-prover/data:/zkm/data
-    command: >
-      /usr/local/bin/start.sh
-  
   zkm-mysql:
     image: mysql:latest
     container_name: zkm-mysql

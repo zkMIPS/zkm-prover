@@ -2,30 +2,25 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct ProveContext {
-    pub basedir: String,
-    pub block_no: u64,
+    pub block_no: Option<u64>,
     pub seg_size: u32,
-    pub seg_path: String,
-    pub receipt_path: String,
-    pub receipts_path: String,
+    pub segment: String,
+    //pub receipt_output: Vec<u8>,
+    pub receipts_input: Vec<Vec<u8>>,
 }
 
 impl ProveContext {
     pub fn new(
-        basedir: &String,
-        block_no: u64,
+        block_no: Option<u64>,
         seg_size: u32,
-        seg_path: &String,
-        receipt_path: &String,
-        receipts_path: &String,
+        segment: &str,
+        receipts_input: &Vec<Vec<u8>>,
     ) -> Self {
         ProveContext {
-            basedir: basedir.to_string(),
             block_no,
             seg_size,
-            seg_path: seg_path.to_string(),
-            receipt_path: receipt_path.to_string(),
-            receipts_path: receipts_path.to_string(),
+            segment: segment.into(),
+            receipts_input: receipts_input.to_owned(),
         }
     }
 }

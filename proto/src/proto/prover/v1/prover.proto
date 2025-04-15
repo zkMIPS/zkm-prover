@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package prover.v1;
+
+import "include/v1/includes.proto";
+
+message Version {
+  string v0_0_1 = 1;
+}
+
+// timestamps are represented in unix time in seconds
+
+enum ResultCode {
+  OK = 0;
+  INVALID_PARAMETER = 1;
+  INTERNAL_ERROR = 2;
+  BUSY = 3;
+  UNSPECIFIED = 4;
+}
+
+message Result {
+  ResultCode code = 1;
+  string message = 2;
+}
+
+service ProverService {
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse) {}
+  rpc GetTaskResult(GetTaskResultRequest) returns (GetTaskResultResponse) {}
+  rpc SplitElf(SplitElfRequest) returns (SplitElfResponse) {}
+  rpc Prove(ProveRequest) returns (ProveResponse) {}
+  rpc Aggregate(AggregateRequest) returns (AggregateResponse) {}
+  rpc SnarkProof(SnarkProofRequest) returns (SnarkProofResponse) {}
+}
+
+message GetStatusRequest {}
+
+message GetStatusResponse {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    STATUS_BOOTING = 1;
+    STATUS_COMPUTING = 2;
+    STATUS_IDLE = 3;
+    STATUS_HALT = 4;
+  }
+  Status status = 1;
+  string prover_name = 2;
+  string prover_id = 3;
+  uint64 number_of_cores = 4;
+  uint64 total_memory = 5;
+  uint64 free_memory = 6;
+}
+
+message GetTaskResultRequest {
+  string proof_id = 1;
+  // uuid
+  string computed_request_id = 2;
+}
+
+message GetTaskResultResponse {
+  string proof_id = 1;
+  string computed_request_id = 2;
+  Result result = 3;
+}
+
+message SplitElfRequest {
+  string proof_id = 1;
+  string computed_request_id = 2;
+  string base_dir = 3;
+  string seg_path = 5;
+  string elf_path = 4;
+  optional uint64 block_no = 6;
+  uint32 seg_size = 7;
+  string args = 8;
+  string public_input_path = 9;
+  string private_input_path = 10;
+  string output_path = 11;
+  string receipt_inputs_path = 12;
+}
+
+message SplitElfResponse {
+  string proof_id = 1;
+  string computed_request_id = 2;
+  Result result = 3;
+  uint64 total_steps = 4;
+}
+
+message ProveRequest {
+  string proof_id = 1;
+  string computed_request_id = 2;
+
+  //string base_dir = 3;
+  string segment = 4;
+  //  bytes segment = 4;
+  optional uint64 block_no = 5;
+  uint32 seg_size = 6;
+  //string receipt_path = 7;
+  repeated bytes receipts_input = 8;
+  uint32 index = 9;
+  bool done = 10;
+}
+
+message ProveResponse {
+  string proof_id = 1;
+  string computed_request_id = 2;
+  bytes output_receipt = 3;
+  Result result = 4;
+}
+
+message AggregateRequest {
+  string proof_id = 1;
+  string computed_request_id = 2;
+  //string seg_path = 4;
+  optional uint64 block_no = 5;
+  uint32 seg_size = 6;
+  bytes vk = 7;
+  repeated includes.v1.AggregateInput inputs = 8;
+  bool is_final = 9;
+  bool is_first_shard = 10;
+  bool is_leaf_layer = 11;
+  //bytes agg_receipt = 9;
+  // string output_dir = 12;
+}
+
+message AggregateResponse {
+  string proof_id = 1;
+  string computed_request_id = 2;
+  bytes agg_receipt = 3;
+  Result result = 4;
+}
+
+message SnarkProofRequest {
+  string proof_id = 1;
+  string computed_request_id = 2;
+  includes.v1.ProverVersion version = 3;
+  bytes agg_receipt = 4;
+}
+
+message SnarkProofResponse {
+  string proof_id = 1;
+  string computed_request_id = 2;
+  bytes snark_proof_with_public_inputs = 3;
+  Result result = 4;
+}
