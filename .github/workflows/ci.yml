@@ -40,11 +40,12 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
-      - run: curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/zkMIPS/toolchain/refs/heads/main/setup.sh | sh
       - name: Install Dependencies
         run: sudo apt install protobuf-compiler
-      - name: Cargo Test
-        run: source ~/.zkm-toolchain/env && cargo test --release --verbose --features=prover_v2
+      - name: Cargo Test with prover
+        run: cargo test --release --verbose --features=prover
+      - name: Cargo Test with prover_v2
+        run: cargo test --release --verbose --features=prover_v2
 
   clippy:
     name: Clippy
@@ -56,12 +57,11 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
+          components: clippy
       - name: Install Dependencies
         run: sudo apt install protobuf-compiler
-      - run: curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/zkMIPS/toolchain/refs/heads/main/setup.sh | sh
-      - run: source ~/.zkm-toolchain/env && cargo build
-      - run: rustup component add clippy
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --features=prover --all-targets -- -D warnings
+      - run: cargo clippy --features=prover_v2 --all-targets -- -D warnings
 
   fmt:
     name: Rustfmt
