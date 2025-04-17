@@ -62,6 +62,7 @@ async fn run_stage_task(
                 let mut stage = Stage::new(generte_context.clone());
                 let (tx, mut rx) = tokio::sync::mpsc::channel(128);
                 stage.dispatch();
+                let mut interval = time::interval(time::Duration::from_millis(200));
                 loop {
                     let current_step = stage.step;
                     match stage.step {
@@ -151,9 +152,9 @@ async fn run_stage_task(
                                 };
                             }
                         },
-                        () = time::sleep(time::Duration::from_secs(1)) => {
+                        _ = interval.tick() => {
                         }
-                    };
+                    }
                     if stage.is_success() || stage.is_error() {
                         break;
                     }

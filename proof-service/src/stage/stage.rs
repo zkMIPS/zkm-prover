@@ -448,7 +448,7 @@ impl Stage {
 
     pub fn get_snark_task(&mut self) -> Option<SnarkTask> {
         let src = &mut self.snark_task;
-        log::info!(
+        log::debug!(
             "get_snark_task: proof_id:task_id: {:?}:{:?} => status:{}",
             src.proof_id,
             src.task_id,

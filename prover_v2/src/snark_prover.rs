@@ -1,6 +1,7 @@
 use crate::contexts::SnarkContext;
 use crate::{get_prover, NetworkProve, WRAP_KEYS};
 use std::path::PathBuf;
+use tracing::instrument;
 use zkm_core_executor::ZKMReduceProof;
 use zkm_prover::{InnerSC, OuterSC, ZKMProver, ZKMRecursionProverError};
 use zkm_recursion_circuit::machine::ZKMCompressWitnessValues;
@@ -37,32 +38,16 @@ impl SnarkProver {
         opts: ZKMProverOpts,
     ) -> Result<ZKMProof, ZKMRecursionProverError> {
         let prover = get_prover();
-        let time = std::time::Instant::now();
         let compress_proof = prover.shrink(reduced_proof, opts)?;
-        tracing::info!("shrink time: {:?}", time.elapsed());
-
-        let time = std::time::Instant::now();
         let outer_proof = self.wrap_bn254(&prover, compress_proof, opts)?;
-        tracing::info!("wrap_bn254 time: {:?}", time.elapsed());
 
-        // TODO: Pull artifacts from the server
-        // let groth16_bn254_artifacts = if zkm2_prover::build::zkm2_dev_mode() {
-        //     zkm2_prover::build::try_build_groth16_bn254_artifacts_dev(
-        //         &outer_proof.vk,
-        //         &outer_proof.proof,
-        //     )
-        // } else {
-        //     todo!("impl production artifacts");
-        //     // try_install_circuit_artifacts("groth16")
-        // };
         let groth16_bn254_artifacts = PathBuf::from(&self.proving_key_paths);
-        let time = std::time::Instant::now();
         let proof = prover.wrap_groth16_bn254(outer_proof, &groth16_bn254_artifacts);
-        tracing::info!("wrap_groth16_bn254 time: {:?}", time.elapsed());
 
         Ok(ZKMProof::Groth16(proof))
     }
 
+    #[instrument(name = "wrap_bn254", level = "info", skip_all)]
     fn wrap_bn254(
         &self,
         prover: &ZKMProver,
