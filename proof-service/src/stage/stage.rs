@@ -91,6 +91,7 @@ impl Stage {
                         self.step = Step::End;
                     } else {
                         self.gen_prove_task();
+                        crate::metrics::SEGMENTS_GAUGE.set(self.prove_tasks.len() as f64);
                         log::info!(
                             "proof_id {} generate {} prove_tasks",
                             self.generate_task.proof_id,
