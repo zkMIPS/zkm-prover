@@ -29,6 +29,7 @@ pub struct AggTask {
     pub is_leaf_layer: bool,
     pub from_prove: bool,
     pub agg_index: i32,
+    pub is_deferred: bool,
 
     pub trace: Trace,
 
@@ -70,8 +71,9 @@ impl AggTask {
         agg_index: i32,
         is_final: bool,
         is_first_shard: bool,
+        is_deferred: bool,
     ) -> AggTask {
-        AggTask {
+        let mut agg_task = AggTask {
             task_id: uuid::Uuid::new_v4().to_string(),
             block_no: prove_tasks[0].program.block_no,
             state: TASK_STATE_UNPROCESSED,
@@ -82,13 +84,19 @@ impl AggTask {
             is_final,
             is_first_shard,
             is_leaf_layer: true,
+            is_deferred,
             agg_index,
-            childs: prove_tasks
+            ..Default::default()
+        };
+
+        if !is_deferred {
+            agg_task.childs = prove_tasks
                 .iter()
                 .map(|t| Some(t.task_id.to_owned()))
-                .collect(),
-            ..Default::default()
+                .collect();
         }
+
+        agg_task
     }
 
     pub fn init_from_agg_tasks(agg_tasks: &[AggTask], agg_index: i32, is_final: bool) -> AggTask {

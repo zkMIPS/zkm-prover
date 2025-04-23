@@ -6,6 +6,8 @@ use std::{
 };
 
 use crate::proto::stage_service::v1::Step;
+#[cfg(feature = "prover_v2")]
+use crate::stage::safe_read;
 use crate::stage::tasks::{
     agg_task::AggTask, generate_task::GenerateTask, ProveTask, SnarkTask, SplitTask, Trace,
     TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_PROCESSING, TASK_STATE_SUCCESS,
@@ -182,6 +184,9 @@ impl Stage {
             .private_input_path
             .clone_from(&self.generate_task.private_input_path);
         self.split_task
+            .recepit_inputs_path
+            .clone_from(&self.generate_task.receipt_inputs_path);
+        self.split_task
             .output_path
             .clone_from(&self.generate_task.output_stream_path);
         self.split_task.block_no = self.generate_task.block_no;
@@ -203,10 +208,9 @@ impl Stage {
     }
 
     fn gen_prove_task(&mut self) {
-        //let prove_dir = self.generate_task.prove_path(true);
         let files = file::new(&self.generate_task.seg_path).read_dir().unwrap();
-        // Read the segment and put them in queue.
-        for file_name in files {
+
+        for file_name in files.iter() {
             let result = file_name.parse::<usize>();
             if let Ok(file_no) = result {
                 let prove_task = ProveTask {
@@ -216,7 +220,7 @@ impl Stage {
                     trace: Trace::default(),
                     base_dir: self.generate_task.base_dir.clone(),
                     file_no,
-                    done: false,
+                    is_deferred: false,
                     // segment: safe_read(&format!("{}/{file_name}", self.generate_task.seg_path)),
                     segment: format!("{}/{file_name}", self.generate_task.seg_path),
                     program: self.generate_task.gen_program(),
@@ -227,11 +231,37 @@ impl Stage {
             }
         }
         self.prove_tasks.sort_by_key(|p| p.file_no);
-        // todo: double check
-        if let Some(p) = self.prove_tasks.last_mut() {
-            p.done = true;
+
+        #[cfg(feature = "prover_v2")]
+        {
+            let mut deferred_files: Vec<(usize, String)> = Vec::new();
+            for file_name in files {
+                if file_name.starts_with("deferred_proof_") {
+                    if let Ok(num) = file_name[15..].parse::<usize>() {
+                        deferred_files.push((num, file_name));
+                    }
+                }
+            }
+            deferred_files.sort_by_key(|(n, _)| *n);
+            tracing::info!("Generate {} deferred proofs", deferred_files.len());
+
+            for (file_no, file_name) in deferred_files.into_iter() {
+                let prove_task = ProveTask {
+                    task_id: uuid::Uuid::new_v4().to_string(),
+                    proof_id: self.generate_task.proof_id.clone(),
+                    state: TASK_STATE_SUCCESS,
+                    base_dir: self.generate_task.base_dir.clone(),
+                    file_no,
+                    is_deferred: true,
+                    program: self.generate_task.gen_program(),
+                    output: safe_read(&format!("{}/{file_name}", self.generate_task.seg_path)),
+                    ..Default::default()
+                };
+                self.prove_tasks.push(prove_task);
+            }
         }
 
+        #[cfg(feature = "prover")]
         if self.prove_tasks.len() < 2 {
             self.is_error = true;
             self.errmsg = format!(
@@ -321,32 +351,48 @@ impl Stage {
 
     #[cfg(feature = "prover_v2")]
     pub fn gen_agg_tasks(&mut self) {
-        // FIXME: we don't have to wait all the prove tasks done for the single GenerateTask. We should keep track of the agg_index in the Stage structure.
-
+        use prover_v2::FIRST_LAYER_BATCH_SIZE;
         // The batch size for reducing two layers of recursion.
         let batch_size = 2;
         // The batch size for reducing the first layer of recursion.
-        let first_layer_batch_size = 1;
+        let first_layer_batch_size = FIRST_LAYER_BATCH_SIZE;
 
         let mut agg_index = 0;
         let mut result = Vec::new();
         // process the first layer
-        let is_complete = self.prove_tasks.len() == 1;
         let vk = file::new(&format!("{}/vk.bin", self.generate_task.base_dir))
             .read()
             .expect("read vk");
-        for (batch_index, batch) in self.prove_tasks.chunks(first_layer_batch_size).enumerate() {
+
+        let (normal_prove_tasks, deferred_prove_tasks): (Vec<_>, Vec<_>) = self
+            .prove_tasks
+            .iter()
+            .cloned()
+            .partition(|task| !task.is_deferred);
+        let is_complete = normal_prove_tasks.len() == 1 && deferred_prove_tasks.is_empty();
+
+        for (batch_index, batch) in normal_prove_tasks
+            .chunks(first_layer_batch_size)
+            .enumerate()
+        {
             let agg_task = AggTask::init_from_prove_tasks(
                 &vk,
                 batch,
                 agg_index,
                 is_complete,
                 batch_index == 0,
+                false,
             );
             result.push(agg_task);
             agg_index += 1;
         }
-
+        // already batched during the split phase
+        for batch in deferred_prove_tasks {
+            let agg_task =
+                AggTask::init_from_prove_tasks(&vk, &[batch], agg_index, is_complete, false, true);
+            result.push(agg_task);
+            agg_index += 1;
+        }
         self.agg_tasks.append(&mut result.clone());
 
         let mut current_length = result.len();

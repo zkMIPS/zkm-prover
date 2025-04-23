@@ -6,6 +6,8 @@ use zkm_core_machine::io::ZKMStdin;
 use zkm_prover::{OuterSC, ZKMProver};
 use zkm_stark::{StarkProvingKey, StarkVerifyingKey, ZKMProverOpts};
 
+pub use zkm_sdk;
+
 pub mod agg_prover;
 pub mod contexts;
 pub mod executor;
@@ -13,6 +15,8 @@ pub mod root_prover;
 pub mod snark_prover;
 
 pub mod pipeline;
+
+pub const FIRST_LAYER_BATCH_SIZE: usize = 1;
 
 #[derive(Default)]
 pub struct NetworkProve<'a> {

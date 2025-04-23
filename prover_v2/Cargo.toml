@@ -29,7 +29,7 @@ zkm-sdk = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
 
 p3-field = { git = "https://github.com/zkMIPS/Plonky3" }
 p3-maybe-rayon = { git = "https://github.com/zkMIPS/Plonky3" }
-p3-matrix = { git = "https://github.com/zkMIPS/Plonky3" }
+p3-koala-bear = { git = "https://github.com/zkMIPS/Plonky3" }
 
 common = { path = "../common" }
 tempfile = "3.18.0"

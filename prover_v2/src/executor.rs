@@ -1,4 +1,5 @@
 use common::file;
+use std::borrow::Borrow;
 use std::fs::File;
 use std::io::{self, Seek, Write};
 use std::sync::{
@@ -7,32 +8,32 @@ use std::sync::{
 };
 use std::thread::ScopedJoinHandle;
 use std::time::Instant;
-use zkm_core_machine::utils::trace_checkpoint;
 
-use p3_field::PrimeField32;
 use p3_maybe_rayon::prelude::*;
 use zkm_core_executor::{
     events::{format_table_line, sorted_table_lines},
-    ExecutionRecord, ExecutionReport, Executor as Runtime, Program, ZKMContext,
+    ExecutionRecord, ExecutionReport, Executor as Runtime, Program, SubproofVerifier, ZKMContext,
+    ZKMReduceProof,
 };
 use zkm_core_machine::{
     io::ZKMStdin,
     shape::CoreShapeConfig,
-    utils::{concurrency::TurnBasedSync, ZKMCoreProverError},
-    MipsAir,
+    utils::{concurrency::TurnBasedSync, trace_checkpoint, ZKMCoreProverError},
 };
+use zkm_prover::{CoreSC, ZKMProver};
+use zkm_stark::koala_bear_poseidon2::KoalaBearPoseidon2;
 use zkm_stark::{
-    Com, MachineProver, MachineRecord, OpeningProof, PcsProverData, PublicValues,
-    StarkGenericConfig, ZKMCoreOpts,
+    MachineProver, MachineRecord, PublicValues, StarkGenericConfig, StarkVerifyingKey, ZKMCoreOpts,
 };
 
 pub use crate::contexts::SplitContext;
-use crate::{get_prover, NetworkProve};
+use crate::{get_prover, NetworkProve, FIRST_LAYER_BATCH_SIZE};
 
 #[derive(Default)]
 pub struct Executor {}
 impl Executor {
     pub fn split(&self, ctx: &SplitContext) -> anyhow::Result<u64> {
+        let prover = get_prover();
         let mut network_prove = NetworkProve::new(ctx.seg_size);
 
         let encoded_input = file::new(&ctx.private_input_path).read()?;
@@ -41,10 +42,23 @@ impl Executor {
             network_prove.stdin.write_vec(input);
         });
 
+        if !ctx.receipt_inputs_path.is_empty() {
+            let receipt_datas = std::fs::read(&ctx.receipt_inputs_path)?;
+            let receipts = bincode::deserialize::<Vec<Vec<u8>>>(&receipt_datas)?;
+            for receipt in receipts.iter() {
+                let receipt: (
+                    ZKMReduceProof<KoalaBearPoseidon2>,
+                    StarkVerifyingKey<KoalaBearPoseidon2>,
+                ) = bincode::deserialize(receipt).map_err(|e| anyhow::anyhow!(e))?;
+                network_prove.stdin.write_proof(receipt.0, receipt.1);
+            }
+            tracing::info!("Write {} receipts", receipts.len());
+        }
+
         let elf_path = ctx.elf_path.clone();
         tracing::info!("split {} load elf file", elf_path);
         let elf = file::new(&elf_path).read()?;
-        let prover = get_prover();
+
         let program = prover
             .get_program(&elf)
             .map_err(|e| anyhow::Error::msg(e.to_string()))?;
@@ -53,10 +67,11 @@ impl Executor {
         file::new(&format!("{}/vk.bin", ctx.base_dir)).write_all(&vk_bytes)?;
 
         let context = network_prove.context_builder.build();
-        let (total_steps, public_values_stream) = self.split_with_context::<_, _>(
-            &prover.core_prover,
+        let (total_steps, public_values_stream) = self.split_with_context(
+            &prover,
             ctx,
             program,
+            &vk,
             &network_prove.stdin,
             network_prove.opts.core_opts,
             context,
@@ -70,25 +85,19 @@ impl Executor {
         Ok(total_steps)
     }
 
-    // _prover is used for type inference.
     #[allow(clippy::too_many_arguments)]
-    pub fn split_with_context<SC: StarkGenericConfig, P: MachineProver<SC, MipsAir<SC::Val>>>(
+    pub fn split_with_context<'a>(
         &self,
-        _prover: &P,
+        prover: &'a ZKMProver,
         ctx: &SplitContext,
         program: Program,
+        vk: &StarkVerifyingKey<CoreSC>,
         stdin: &ZKMStdin,
         opts: ZKMCoreOpts,
-        context: ZKMContext,
-        shape_config: Option<&CoreShapeConfig<SC::Val>>,
-    ) -> anyhow::Result<(u64, Vec<u8>)>
-    where
-        SC::Val: PrimeField32,
-        SC::Challenger: 'static + Clone + Send,
-        OpeningProof<SC>: Send,
-        Com<SC>: Send + Sync,
-        PcsProverData<SC>: Send + Sync,
-    {
+        mut context: ZKMContext<'a>,
+        shape_config: Option<&CoreShapeConfig<<CoreSC as StarkGenericConfig>::Val>>,
+    ) -> anyhow::Result<(u64, Vec<u8>)> {
+        context.subproof_verifier = Some(&*prover as &dyn SubproofVerifier);
         // Setup the runtime.
         let mut runtime = Runtime::with_context(program.clone(), opts, context);
         runtime.maximal_shapes = shape_config.map(|config| {
@@ -181,7 +190,7 @@ impl Executor {
                                 // Trace the checkpoint and reconstruct the execution records.
                                 let (mut records, report) =
                                     tracing::debug_span!("trace checkpoint").in_scope(|| {
-                                        trace_checkpoint::<SC>(
+                                        trace_checkpoint::<CoreSC>(
                                             program.clone(),
                                             &checkpoint,
                                             opts,
@@ -247,11 +256,6 @@ impl Executor {
                                 let base_index = *segment_index;
                                 *segment_index += records.len();
 
-                                // // Generate the dependencies.
-                                // tracing::debug_span!("generate dependencies", index).in_scope(|| {
-                                //     prover.machine().generate_dependencies(&mut records, &opts, None);
-                                // });
-
                                 // Let another worker update the state.
                                 record_gen_sync.advance_turn();
 
@@ -262,30 +266,38 @@ impl Executor {
                                         .expect("Failed to write record");
                                 });
 
-                                // // Fix the shape of the records.
-                                // if let Some(shape_config) = shape_config {
-                                //     for record in records.iter_mut() {
-                                //         shape_config.fix_shape(record).unwrap();
-                                //     }
-                                // }
+                                // process deferred proofs
+                                if done {
+                                    let last_record = records.last().unwrap();
+                                    let last_pv = last_record.public_values();
+                                    let last_proof_pv = last_pv.as_slice().borrow();
+                                    let deferred_proofs = stdin
+                                        .proofs
+                                        .iter()
+                                        .map(|(reduce_proof, _)| reduce_proof.clone())
+                                        .collect::<Vec<_>>();
+                                    let deferred_inputs = prover.get_recursion_deferred_inputs(
+                                        vk,
+                                        &last_proof_pv,
+                                        &deferred_proofs,
+                                        FIRST_LAYER_BATCH_SIZE,
+                                    );
 
-                                // trace_gen_sync.wait_for_turn(index);
-                                //
-                                // // Send the records to the phase 2 prover.
-                                // let chunked_records = chunk_vec(records, opts.shard_batch_size);
-                                // let chunked_main_traces = chunk_vec(main_traces, opts.shard_batch_size);
-                                // chunked_records
-                                //     .into_iter()
-                                //     .zip(chunked_main_traces.into_iter())
-                                //     .for_each(|(records, main_traces)| {
-                                //         records_and_traces_tx
-                                //             .lock()
-                                //             .unwrap()
-                                //             .send((records, main_traces))
-                                //             .unwrap();
-                                //     });
-                                //
-                                // trace_gen_sync.advance_turn();
+                                    deferred_inputs.par_iter().enumerate().for_each(
+                                        |(i, deferred_input)| {
+                                            let encoded_proof =
+                                                bincode::serialize(&deferred_input).unwrap();
+                                            // Start numbering from 2^16.
+                                            file::new(&format!(
+                                                "{}/deferred_proof_{}",
+                                                ctx.seg_path,
+                                                (1 << 16) | i
+                                            ))
+                                            .write_all(&encoded_proof)
+                                            .expect("Failed to write deferred proof");
+                                        },
+                                    );
+                                }
                             } else {
                                 break;
                             }
