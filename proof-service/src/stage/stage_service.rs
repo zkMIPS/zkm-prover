@@ -127,20 +127,28 @@ impl StageService for StageServiceSVC {
                         response.proof_with_public_inputs = result.into_bytes();
                     }
                     if let Some(fileserver_url) = &self.config.fileserver_url {
-                        response.snark_proof_url = format!(
-                            "{}/{}/snark/proof_with_public_inputs.json",
-                            fileserver_url,
-                            request.get_ref().proof_id
-                        );
-                        response.stark_proof_url = format!(
-                            "{}/{}/wrap/proof_with_public_inputs.json",
-                            fileserver_url,
-                            request.get_ref().proof_id
-                        );
+                        #[cfg(feature = "prover")]
+                        {
+                            response.snark_proof_url = format!(
+                                "{}/{}/snark/proof_with_public_inputs.json",
+                                fileserver_url,
+                                request.get_ref().proof_id
+                            );
+                            response.stark_proof_url = format!(
+                                "{}/{}/wrap/proof_with_public_inputs.json",
+                                fileserver_url,
+                                request.get_ref().proof_id
+                            );
+                        }
+                        #[cfg(feature = "prover")]
+                        let suffix = "json";
+                        #[cfg(feature = "prover_v2")]
+                        let suffix = "bin";
                         response.public_values_url = format!(
-                            "{}/{}/wrap/public_values.json",
+                            "{}/{}/wrap/public_values.{}",
                             fileserver_url,
-                            request.get_ref().proof_id
+                            request.get_ref().proof_id,
+                            suffix
                         );
                     }
                     //if let Some(verifier_url) = &self.verifier_url {
