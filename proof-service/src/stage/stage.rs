@@ -237,8 +237,8 @@ impl Stage {
         {
             let mut deferred_files: Vec<(usize, String)> = Vec::new();
             for file_name in files {
-                if file_name.starts_with("deferred_proof_") {
-                    if let Ok(num) = file_name[15..].parse::<usize>() {
+                if let Some(name) = file_name.strip_prefix("deferred_proof_") {
+                    if let Ok(num) = name.parse::<usize>() {
                         deferred_files.push((num, file_name));
                     }
                 }

@@ -97,7 +97,7 @@ impl Executor {
         mut context: ZKMContext<'a>,
         shape_config: Option<&CoreShapeConfig<<CoreSC as StarkGenericConfig>::Val>>,
     ) -> anyhow::Result<(u64, Vec<u8>)> {
-        context.subproof_verifier = Some(&*prover as &dyn SubproofVerifier);
+        context.subproof_verifier = Some(prover as &dyn SubproofVerifier);
         // Setup the runtime.
         let mut runtime = Runtime::with_context(program.clone(), opts, context);
         runtime.maximal_shapes = shape_config.map(|config| {
@@ -278,7 +278,7 @@ impl Executor {
                                         .collect::<Vec<_>>();
                                     let deferred_inputs = prover.get_recursion_deferred_inputs(
                                         vk,
-                                        &last_proof_pv,
+                                        last_proof_pv,
                                         &deferred_proofs,
                                         FIRST_LAYER_BATCH_SIZE,
                                     );
