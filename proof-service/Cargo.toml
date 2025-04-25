@@ -35,8 +35,6 @@ hex = "0.4.3"
 ethers = "2.0.14"
 prometheus = "0.13"
 hyper = { version = "^0.14", features = ["server", "http1", "tcp"] }
-backtrace = "0.3.74"
-
 rand = "0.8"
 
 # file server
@@ -45,14 +43,8 @@ tracing = "0.1.37"
 tracing-forest = { version = "0.1.6", features = ["ansi", "smallvec"] }
 tracing-subscriber = { version = "0.3.19", features = ["std", "env-filter"] }
 
-rand = "0.8"
-
-# file server
-warp = "0.3"
-
 [build-dependencies]
 tonic-build = "0.8.0"
-
 
 [features]
 default = []
