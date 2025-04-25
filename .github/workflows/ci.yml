@@ -43,9 +43,9 @@ jobs:
       - name: Install Dependencies
         run: sudo apt install protobuf-compiler
       - name: Cargo Test with prover
-        run: cargo test --release --verbose --features=prover
+        run: cargo test --release --features=prover
       - name: Cargo Test with prover_v2
-        run: cargo test --release --verbose --features=prover_v2
+        run: cargo test --release --features=prover_v2
 
   clippy:
     name: Clippy
