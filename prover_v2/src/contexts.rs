@@ -49,7 +49,6 @@ pub struct ProveContext {
     pub proof_id: String,
     // pub block_no: Option<u64>,
     pub index: usize,
-    pub done: bool,
     // pub elf: Vec<u8>,
     // execution record
     // pub segment: Vec<u8>,
@@ -68,6 +67,7 @@ pub struct AggContext {
     // for leaf layer proof
     pub is_first_shard: bool,
     pub is_leaf_layer: bool,
+    pub is_deferred: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]

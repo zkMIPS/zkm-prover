@@ -219,7 +219,6 @@ impl ProverService for ProverServiceSVC {
             let prove_context = ProveContext {
                 proof_id: request.get_ref().proof_id.clone(),
                 index: request.get_ref().index as usize,
-                done: request.get_ref().done,
                 segment: request.get_ref().segment.clone(),
                 seg_size: request.get_ref().seg_size,
             };
@@ -295,6 +294,7 @@ impl ProverService for ProverServiceSVC {
                 is_complete: request.get_ref().is_final,
                 is_first_shard: request.get_ref().is_first_shard,
                 is_leaf_layer: request.get_ref().is_leaf_layer,
+                is_deferred: request.get_ref().is_deferred,
             };
 
             let pipeline = self.pipeline.clone();

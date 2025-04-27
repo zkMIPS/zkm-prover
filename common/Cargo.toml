@@ -7,9 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
-serde = "1.0.92"
-serde_derive = "1.0.92"
 tokio = { version = "1", features = ["full"] }
 tonic = { version = "0.8.1", features = ["tls", "transport"] }
-aws-config = { version= "1.1.9", features = ["behavior-version-latest"] }
+aws-config = { version = "1.1.9", features = ["behavior-version-latest"] }
 aws-sdk-s3 = "1.21.0"
