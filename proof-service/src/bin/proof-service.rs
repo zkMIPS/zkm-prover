@@ -30,7 +30,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::try_init().unwrap_or_default();
+    config::setup_logger();
     let args = Args::parse();
     let runtime_config = config::RuntimeConfig::from_toml(&args.config).expect("Config is missing");
     let addr = runtime_config.addr.as_str().parse()?;

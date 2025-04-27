@@ -3,7 +3,9 @@ use crate::{get_prover, NetworkProve};
 use zkm_core_executor::ZKMReduceProof;
 use zkm_prover::build::Witnessable;
 use zkm_prover::{InnerSC, ZKMCircuitWitness, ZKMProver, ZKMRecursionProverError};
-use zkm_recursion_circuit::machine::{ZKMCompressWitnessValues, ZKMRecursionWitnessValues};
+use zkm_recursion_circuit::machine::{
+    ZKMCompressWitnessValues, ZKMDeferredWitnessValues, ZKMRecursionWitnessValues,
+};
 use zkm_recursion_compiler::config::InnerConfig;
 use zkm_recursion_core::Runtime;
 use zkm_stark::{Challenge, MachineProver, StarkGenericConfig, Val, ZKMCoreOpts};
@@ -16,19 +18,25 @@ impl AggProver {
         let network_prove = NetworkProve::default();
         let prover = get_prover();
         let input = if ctx.is_leaf_layer {
-            let shard_proofs = ctx
-                .proofs
-                .iter()
-                .map(|proof| bincode::deserialize(proof).unwrap())
-                .collect();
-            let vk = bincode::deserialize(&ctx.vk)?;
-            ZKMCircuitWitness::Core(ZKMRecursionWitnessValues {
-                vk,
-                shard_proofs,
-                is_complete: ctx.is_complete,
-                is_first_shard: ctx.is_first_shard,
-                vk_root: prover.recursion_vk_root,
-            })
+            if !ctx.is_deferred {
+                let shard_proofs = ctx
+                    .proofs
+                    .iter()
+                    .map(|proof| bincode::deserialize(proof).unwrap())
+                    .collect();
+                let vk = bincode::deserialize(&ctx.vk)?;
+                ZKMCircuitWitness::Core(ZKMRecursionWitnessValues {
+                    vk,
+                    shard_proofs,
+                    is_complete: ctx.is_complete,
+                    is_first_shard: ctx.is_first_shard,
+                    vk_root: prover.recursion_vk_root,
+                })
+            } else {
+                let deferred_witness: ZKMDeferredWitnessValues<_> =
+                    bincode::deserialize(&ctx.proofs[0])?;
+                ZKMCircuitWitness::Deferred(deferred_witness)
+            }
         } else {
             let reduced_proofs: Vec<ZKMReduceProof<_>> = ctx
                 .proofs

@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use prometheus::{CounterVec, HistogramOpts, HistogramVec, Opts, Registry};
+use prometheus::{CounterVec, Gauge, HistogramOpts, HistogramVec, Opts, Registry};
 use std::time::Instant;
 
 lazy_static! {
@@ -11,11 +11,14 @@ lazy_static! {
         &["method"]
     )
     .unwrap();
+    pub static ref SEGMENTS_GAUGE: Gauge =
+        Gauge::new("stage_segment_count", "Current number of segments").unwrap();
 }
 
 pub fn init_registry() {
     let _ = REGISTRY_INSTANCE.register(Box::new(REQ_COUNTER_VEC.clone()));
     let _ = REGISTRY_INSTANCE.register(Box::new(METHOD_HISTOGRAM_VEC.clone()));
+    let _ = REGISTRY_INSTANCE.register(Box::new(SEGMENTS_GAUGE.clone()));
 }
 
 pub async fn record_metrics<F, Fut, T>(

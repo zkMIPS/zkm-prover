@@ -6,6 +6,8 @@ use zkm_core_machine::io::ZKMStdin;
 use zkm_prover::{OuterSC, ZKMProver};
 use zkm_stark::{StarkProvingKey, StarkVerifyingKey, ZKMProverOpts};
 
+pub use zkm_sdk;
+
 pub mod agg_prover;
 pub mod contexts;
 pub mod executor;
@@ -14,12 +16,33 @@ pub mod snark_prover;
 
 pub mod pipeline;
 
+pub const FIRST_LAYER_BATCH_SIZE: usize = 1;
+
 #[derive(Default)]
 pub struct NetworkProve<'a> {
     pub context_builder: ZKMContextBuilder<'a>,
     pub stdin: ZKMStdin,
     pub opts: ZKMProverOpts,
     pub timeout: Option<Duration>,
+}
+
+impl NetworkProve<'_> {
+    pub fn new(shard_size: u32) -> Self {
+        if shard_size > 0 {
+            std::env::set_var("SHARD_SIZE", shard_size.to_string());
+        }
+        let keccaks: usize = std::env::var("KECCAK_PER_SHARD")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or_default();
+
+        let mut prove = Self::default();
+        if keccaks > 0 {
+            prove.opts.core_opts.split_opts.keccak = keccaks;
+        }
+
+        prove
+    }
 }
 
 static GLOBAL_PROVER: OnceCell<Mutex<ZKMProver>> = OnceCell::new();

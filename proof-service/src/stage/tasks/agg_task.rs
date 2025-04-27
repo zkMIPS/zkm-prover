@@ -6,7 +6,7 @@ use crate::stage::tasks::{ProveTask, Trace, TASK_STATE_SUCCESS, TASK_STATE_UNPRO
 pub fn from_prove_task(prove_task: &ProveTask) -> AggregateInput {
     AggregateInput {
         // we put the receipt of prove_task, instead of the file path
-        receipt_input: prove_task.output.clone(),
+        receipt_input: vec![],
         computed_request_id: prove_task.task_id.clone(),
         is_agg: false,
     }
@@ -29,6 +29,7 @@ pub struct AggTask {
     pub is_leaf_layer: bool,
     pub from_prove: bool,
     pub agg_index: i32,
+    pub is_deferred: bool,
 
     pub trace: Trace,
 
@@ -70,8 +71,9 @@ impl AggTask {
         agg_index: i32,
         is_final: bool,
         is_first_shard: bool,
+        is_deferred: bool,
     ) -> AggTask {
-        AggTask {
+        let mut agg_task = AggTask {
             task_id: uuid::Uuid::new_v4().to_string(),
             block_no: prove_tasks[0].program.block_no,
             state: TASK_STATE_UNPROCESSED,
@@ -82,13 +84,23 @@ impl AggTask {
             is_final,
             is_first_shard,
             is_leaf_layer: true,
+            is_deferred,
             agg_index,
             ..Default::default()
+        };
+
+        if !is_deferred {
+            agg_task.childs = prove_tasks
+                .iter()
+                .map(|t| Some(t.task_id.to_owned()))
+                .collect();
         }
+
+        agg_task
     }
 
     pub fn init_from_agg_tasks(agg_tasks: &[AggTask], agg_index: i32, is_final: bool) -> AggTask {
-        let mut agg_task = AggTask {
+        let agg_task = AggTask {
             task_id: uuid::Uuid::new_v4().to_string(),
             block_no: agg_tasks[0].block_no,
             state: TASK_STATE_UNPROCESSED,
@@ -98,14 +110,17 @@ impl AggTask {
             is_final,
             is_leaf_layer: false,
             agg_index,
-            childs: vec![None; agg_tasks.len()],
+            childs: agg_tasks
+                .iter()
+                .map(|t| Some(t.task_id.to_owned()))
+                .collect(),
             ..Default::default()
         };
-        for (raw_agg_task, child) in agg_tasks.iter().zip(agg_task.childs.iter_mut()) {
-            if !raw_agg_task.from_prove {
-                *child = Some(raw_agg_task.task_id.clone());
-            }
-        }
+        // for (raw_agg_task, child) in agg_tasks.iter().zip(agg_task.childs.iter_mut()) {
+        //     if !raw_agg_task.from_prove {
+        //         *child = Some(raw_agg_task.task_id.clone());
+        //     }
+        // }
         agg_task
     }
 
@@ -140,6 +155,7 @@ impl AggTask {
             proof_id: left.program.proof_id.clone(),
             inputs: vec![from_prove_task(left), from_prove_task(right)],
             agg_index,
+            childs: vec![Some(left.task_id.clone()), Some(right.task_id.clone())],
             ..Default::default()
         }
     }
@@ -156,12 +172,12 @@ impl AggTask {
             childs: vec![None, None],
             ..Default::default()
         };
-        if !left.from_prove {
-            agg_task.childs[0] = Some(left.task_id.clone());
-        }
-        if !right.from_prove {
-            agg_task.childs[1] = Some(right.task_id.clone());
-        }
+        // if !left.from_prove {
+        agg_task.childs[0] = Some(left.task_id.clone());
+        // }
+        // if !right.from_prove {
+        agg_task.childs[1] = Some(right.task_id.clone());
+        // }
         agg_task
     }
 }

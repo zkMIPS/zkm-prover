@@ -96,7 +96,6 @@ message ProveRequest {
   //string receipt_path = 7;
   repeated bytes receipts_input = 8;
   uint32 index = 9;
-  bool done = 10;
 }
 
 message ProveResponse {
@@ -117,6 +116,7 @@ message AggregateRequest {
   bool is_final = 9;
   bool is_first_shard = 10;
   bool is_leaf_layer = 11;
+  bool is_deferred = 12;
   //bytes agg_receipt = 9;
   // string output_dir = 12;
 }

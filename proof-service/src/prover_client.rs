@@ -145,7 +145,6 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             seg_size: prove_task.program.seg_size,
             receipts_input: prove_task.program.receipts.clone(),
             index: prove_task.file_no as u32,
-            done: prove_task.done,
         };
         log::info!(
             "[prove] rpc {} {}:{}start",
@@ -193,6 +192,7 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             is_final: agg_task.is_final,
             is_first_shard: agg_task.is_first_shard,
             is_leaf_layer: agg_task.is_leaf_layer,
+            is_deferred: agg_task.is_deferred,
         };
         log::info!(
             "[aggregate] rpc {} {}:{} {} inputs start",
