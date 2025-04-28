@@ -1,8 +1,12 @@
 use once_cell::sync::OnceCell;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 use zkm_core_executor::ZKMContextBuilder;
 use zkm_core_machine::io::ZKMStdin;
+#[cfg(feature = "gpu")]
+use zkm_cuda_adaptor::GpuProverComponents;
+#[cfg(not(feature = "gpu"))]
+use zkm_prover::components::DefaultProverComponents;
 use zkm_prover::{OuterSC, ZKMProver};
 use zkm_stark::{StarkProvingKey, StarkVerifyingKey, ZKMProverOpts};
 
@@ -45,12 +49,16 @@ impl NetworkProve<'_> {
     }
 }
 
-static GLOBAL_PROVER: OnceCell<Mutex<ZKMProver>> = OnceCell::new();
-fn prover_instance() -> &'static Mutex<ZKMProver> {
+#[cfg(not(feature = "gpu"))]
+type ProverComponents = DefaultProverComponents;
+#[cfg(feature = "gpu")]
+type ProverComponents = GpuProverComponents;
+static GLOBAL_PROVER: OnceCell<Mutex<ZKMProver<ProverComponents>>> = OnceCell::new();
+fn prover_instance() -> &'static Mutex<ZKMProver<ProverComponents>> {
     GLOBAL_PROVER.get_or_init(|| Mutex::new(ZKMProver::new()))
 }
 
-pub fn get_prover() -> impl std::ops::DerefMut<Target = ZKMProver> {
+pub fn get_prover() -> MutexGuard<'static, ZKMProver<ProverComponents>> {
     prover_instance()
         .lock()
         .expect("GLOBAL_PROVER lock poisoned")

@@ -1,4 +1,6 @@
 use zkm_core_executor::ExecutionRecord;
+#[cfg(feature = "gpu")]
+use zkm_stark::MachineProvingKey;
 use zkm_stark::{MachineProver, StarkGenericConfig};
 
 use crate::contexts::ProveContext;
@@ -19,7 +21,7 @@ impl RootProver {
 
         let prover = get_prover();
         let now = std::time::Instant::now();
-        let (pk, _) = prover.core_prover.machine().setup(&record.program);
+        let (pk, _) = prover.core_prover.setup(&record.program);
         tracing::info!("setup time: {:?}", now.elapsed());
         let now = std::time::Instant::now();
         prover.core_prover.machine().generate_dependencies(

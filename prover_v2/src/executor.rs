@@ -1,4 +1,5 @@
 use common::file;
+use p3_maybe_rayon::prelude::*;
 use std::borrow::Borrow;
 use std::fs::File;
 use std::io::{self, Seek, Write};
@@ -8,8 +9,6 @@ use std::sync::{
 };
 use std::thread::ScopedJoinHandle;
 use std::time::Instant;
-
-use p3_maybe_rayon::prelude::*;
 use zkm_core_executor::{
     events::{format_table_line, sorted_table_lines},
     ExecutionRecord, ExecutionReport, Executor as Runtime, Program, SubproofVerifier, ZKMContext,
@@ -27,7 +26,7 @@ use zkm_stark::{
 };
 
 pub use crate::contexts::SplitContext;
-use crate::{get_prover, NetworkProve, FIRST_LAYER_BATCH_SIZE};
+use crate::{get_prover, NetworkProve, ProverComponents, FIRST_LAYER_BATCH_SIZE};
 
 #[derive(Default)]
 pub struct Executor {}
@@ -88,7 +87,7 @@ impl Executor {
     #[allow(clippy::too_many_arguments)]
     pub fn split_with_context<'a>(
         &self,
-        prover: &'a ZKMProver,
+        prover: &'a ZKMProver<ProverComponents>,
         ctx: &SplitContext,
         program: Program,
         vk: &StarkVerifyingKey<CoreSC>,

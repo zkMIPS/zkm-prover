@@ -19,6 +19,7 @@ zkm-recursion-compiler = { git = "https://github.com/zkMIPS/zkMIPS", branch = "f
 zkm-recursion-core = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
 zkm-recursion-circuit = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
 zkm-sdk = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network" }
+zkm-cuda-adaptor = { git = "https://github.com/zkMIPS/zkMIPS", branch = "feat/network", optional = true }
 
 p3-maybe-rayon = { git = "https://github.com/zkMIPS/Plonky3" }
 
@@ -27,3 +28,4 @@ tempfile = "3.18.0"
 
 [features]
 debug = []
+gpu = ["dep:zkm-cuda-adaptor"]
