@@ -17,7 +17,8 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::time;
 
-use crate::proto::stage_service::{self, v1::Step};
+use crate::proto::includes::v1::Step;
+use crate::proto::stage_service;
 
 macro_rules! save_task {
     ($task:ident, $db_pool:ident, $type:expr) => {
@@ -57,16 +58,16 @@ async fn run_stage_task(
     if let Some(context) = task.context {
         let task_decoded = serde_json::from_str::<GenerateTask>(&context);
         match task_decoded {
-            Ok(generte_context) => {
+            Ok(generate_context) => {
                 let mut check_at = get_timestamp();
-                let mut stage = Stage::new(generte_context.clone());
+                let mut stage = Stage::new(generate_context.clone());
                 let (tx, mut rx) = tokio::sync::mpsc::channel(128);
                 stage.dispatch();
                 let mut interval = time::interval(time::Duration::from_millis(200));
                 loop {
                     let current_step = stage.step;
                     match stage.step {
-                        Step::InSplit => {
+                        Step::Split => {
                             let split_task = stage.get_split_task();
                             if let Some(split_task) = split_task {
                                 let tx = tx.clone();
@@ -80,9 +81,9 @@ async fn run_stage_task(
                                 });
                             }
                         }
-                        Step::InProve => {
+                        Step::Prove => {
                             let prove_task = stage.get_prove_task();
-                            log::debug!("Step::InProve get_prove_task {:?}", prove_task.is_some());
+                            log::debug!("Step::Prove get_prove_task {:?}", prove_task.is_some());
                             if let Some(prove_task) = prove_task {
                                 let tx = tx.clone();
                                 let tls_config = tls_config.clone();
@@ -94,9 +95,6 @@ async fn run_stage_task(
                                     }
                                 });
                             }
-                            // }
-                            // Step::InAgg => {
-                            //
                             if stage.count_unfinished_prove_tasks() < node_num {
                                 let agg_task = stage.get_agg_task();
                                 log::debug!("get_agg_task: {:?}", agg_task.is_some());
@@ -113,7 +111,7 @@ async fn run_stage_task(
                                 }
                             }
                         }
-                        Step::InSnark => {
+                        Step::Snark => {
                             let snark_task = stage.get_snark_task();
                             if let Some(snark_task) = snark_task {
                                 let tx = tx.clone();
@@ -179,11 +177,10 @@ async fn run_stage_task(
                 }
                 if stage.is_error() {
                     let get_status = || match stage.step {
-                        Step::InSplit => stage_service::v1::Status::SplitError,
-                        Step::InProve => stage_service::v1::Status::ProveError,
-                        Step::InAgg => stage_service::v1::Status::AggError,
-                        Step::InAggAll => stage_service::v1::Status::AggError,
-                        Step::InSnark => stage_service::v1::Status::SnarkError,
+                        Step::Split => stage_service::v1::Status::SplitError,
+                        Step::Prove => stage_service::v1::Status::ProveError,
+                        Step::Agg => stage_service::v1::Status::AggError,
+                        Step::Snark => stage_service::v1::Status::SnarkError,
                         _ => stage_service::v1::Status::InternalError,
                     };
                     let status = get_status();
@@ -191,11 +188,11 @@ async fn run_stage_task(
                         .await
                         .unwrap();
                 } else {
-                    let result = if generte_context.execute_only || generte_context.composite_proof
-                    {
-                        vec![]
+                    // If generate compressed proof, do not store in database, use file instead.
+                    let result = if generate_context.target_step == Step::Snark {
+                        file::new(&generate_context.snark_path).read().unwrap()
                     } else {
-                        file::new(&generte_context.snark_path).read().unwrap()
+                        vec![]
                     };
                     db.update_stage_task(
                         &task.id,

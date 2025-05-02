@@ -5,7 +5,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::proto::stage_service::v1::Step;
+use crate::proto::includes::v1::Step;
 #[cfg(feature = "prover_v2")]
 use crate::stage::safe_read;
 use crate::stage::tasks::{
@@ -83,11 +83,11 @@ impl Stage {
         match self.step {
             Step::Init => {
                 self.gen_split_task();
-                self.step = Step::InSplit;
+                self.step = Step::Split;
             }
-            Step::InSplit => {
+            Step::Split => {
                 if self.split_task.state == TASK_STATE_SUCCESS {
-                    if self.generate_task.execute_only {
+                    if self.generate_task.target_step == self.step {
                         self.step = Step::End;
                     } else {
                         self.gen_prove_task();
@@ -101,11 +101,11 @@ impl Stage {
                             self.gen_agg_tasks();
                         }
 
-                        self.step = Step::InProve;
+                        self.step = Step::Prove;
                     }
                 }
             }
-            Step::InProve => {
+            Step::Prove => {
                 if self
                     .prove_tasks
                     .iter()
@@ -118,33 +118,16 @@ impl Stage {
                         .iter()
                         .all(|task| task.state == TASK_STATE_SUCCESS)
                     {
-                        self.gen_snark_task();
-                        self.step = Step::InSnark;
-
-                        // self.gen_agg_tasks();
-                        // self.step = Step::InAgg;
+                        if self.generate_task.target_step == Step::Agg {
+                            self.step = Step::End;
+                        } else {
+                            self.gen_snark_task();
+                            self.step = Step::Snark;
+                        }
                     }
-                    // TODO: we will deprecate the agg_all prover.
-                    //} else if self.prove_tasks.len() > 3 {
-                    //    self.gen_agg_tasks();
-                    //    self.step = Step::InAgg;
-                    //} else {
-                    //    self.gen_agg_all_task();
-                    //    self.step = Step::InAggAll;
-                    //}
                 }
             }
-            // Step::InAgg => {
-            //     if self
-            //         .agg_tasks
-            //         .iter()
-            //         .all(|task| task.state == TASK_STATE_SUCCESS)
-            //     {
-            //         self.gen_snark_task();
-            //         self.step = Step::InSnark;
-            //     }
-            // }
-            Step::InSnark => {
+            Step::Snark => {
                 if self.snark_task.state == TASK_STATE_SUCCESS {
                     self.step = Step::End;
                 }
@@ -463,6 +446,14 @@ impl Stage {
                 if item_task.clear_child_task(&agg_task.task_id) {
                     break;
                 }
+            }
+
+            // write final agg task output
+            if agg_task.is_final && self.generate_task.target_step == Step::Agg {
+                // Here we also use snark_path to store agg proof ;
+                let mut f = std::fs::File::create(&self.generate_task.snark_path)
+                    .unwrap_or_else(|_| panic!("can not open {}", &self.generate_task.snark_path));
+                f.write_all(&agg_task.output).unwrap();
             }
         }
     }

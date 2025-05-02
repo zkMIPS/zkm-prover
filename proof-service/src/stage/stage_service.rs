@@ -25,7 +25,7 @@ use std::str::FromStr;
 use crate::database;
 use crate::metrics;
 
-use crate::proto::includes::v1::ProverVersion;
+use crate::proto::includes::v1::{ProverVersion, Step};
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
@@ -99,7 +99,8 @@ impl StageService for StageServiceSVC {
                     response.total_steps = execute_info[0].total_steps;
                 }
 
-                let (execute_only, composite_proof) = if let Some(context) = task.context {
+                let (target_step, composite_proof, proof_path) = if let Some(context) = task.context
+                {
                     match serde_json::from_str::<GenerateTask>(&context) {
                         Ok(context) => {
                             if task.status
@@ -115,20 +116,28 @@ impl StageService for StageServiceSVC {
                                     response.receipt = receipts_data;
                                 }
                             }
-                            (context.execute_only, context.composite_proof)
+                            (
+                                context.target_step,
+                                context.composite_proof,
+                                context.snark_path,
+                            )
                         }
-                        Err(_) => (false, false),
+                        Err(_) => (Step::Snark, false, "".into()),
                     }
                 } else {
-                    (false, false)
+                    (Step::Snark, false, "".into())
                 };
-                if !execute_only && !composite_proof {
+                if target_step != Step::Split && !composite_proof {
                     if let Some(result) = task.result {
-                        response.proof_with_public_inputs = result.into_bytes();
+                        response.proof_with_public_inputs = if target_step == Step::Agg {
+                            file::new(&proof_path).read().unwrap()
+                        } else {
+                            result.into_bytes()
+                        };
                     }
                     if let Some(fileserver_url) = &self.config.fileserver_url {
                         #[cfg(feature = "prover")]
-                        {
+                        if target_step == Step::Snark {
                             response.snark_proof_url = format!(
                                 "{}/{}/snark/proof_with_public_inputs.json",
                                 fileserver_url,
@@ -235,6 +244,27 @@ impl StageService for StageServiceSVC {
                     return Ok(Response::new(response));
                 }
             }
+
+            let target_step = request.get_ref().target_step.unwrap_or(Step::Snark.into());
+            if !(target_step == Step::Split as i32
+                || target_step == Step::Agg as i32
+                || target_step == Step::Snark as i32)
+            {
+                let response = GenerateProofResponse {
+                    proof_id: request.get_ref().proof_id.clone(),
+                    status: InvalidParameter.into(),
+                    error_message: "invalid TargetStep, only Support Split, Agg and Snark"
+                        .to_string(),
+                    ..Default::default()
+                };
+                log::warn!(
+                    "[generate_proof] {} invalid TargetStep {:?}",
+                    request.get_ref().proof_id,
+                    target_step,
+                );
+                return Ok(Response::new(response));
+            }
+            let target_step = Step::from_i32(target_step).unwrap();
 
             let base_dir = self.config.base_dir.clone();
             let dir_path = format!("{}/proof/{}", base_dir, request.get_ref().proof_id);
@@ -351,6 +381,7 @@ impl StageService for StageServiceSVC {
             } else {
                 return Err(Status::internal("ProverVersion error"));
             };
+
             let generate_task = GenerateTask::new(
                 prover_version,
                 &request.get_ref().proof_id,
@@ -365,7 +396,7 @@ impl StageService for StageServiceSVC {
                 &output_stream_path,
                 Some(block_no),
                 request.get_ref().seg_size,
-                request.get_ref().execute_only,
+                target_step,
                 request.get_ref().composite_proof,
                 &receipt_inputs_path,
                 &receipts_path,
@@ -385,16 +416,18 @@ impl StageService for StageServiceSVC {
             let mut stark_proof_url = String::new();
             #[cfg(feature = "prover")]
             if let Some(fileserver_url) = &self.config.fileserver_url {
-                snark_proof_url = format!(
-                    "{}/{}/snark/proof_with_public_inputs.json",
-                    fileserver_url,
-                    request.get_ref().proof_id
-                );
-                stark_proof_url = format!(
-                    "{}/{}/wrap/proof_with_public_inputs.json",
-                    fileserver_url,
-                    request.get_ref().proof_id
-                );
+                if target_step == Step::Snark {
+                    snark_proof_url = format!(
+                        "{}/{}/snark/proof_with_public_inputs.json",
+                        fileserver_url,
+                        request.get_ref().proof_id
+                    );
+                    stark_proof_url = format!(
+                        "{}/{}/wrap/proof_with_public_inputs.json",
+                        fileserver_url,
+                        request.get_ref().proof_id
+                    );
+                }
             };
             let mut public_values_url = match &self.config.fileserver_url {
                 Some(fileserver_url) => {
@@ -411,7 +444,7 @@ impl StageService for StageServiceSVC {
                 }
                 None => "".to_string(),
             };
-            if request.get_ref().execute_only {
+            if target_step == Step::Split {
                 snark_proof_url = "".to_string();
                 stark_proof_url = "".to_string();
                 public_values_url = "".to_string();

@@ -2,33 +2,43 @@ syntax = "proto3";
 package includes.v1;
 
 enum ProverVersion {
-    ZKM = 0;
-    ZKM2 = 1;
+  ZKM = 0;
+  ZKM2 = 1;
+}
+
+enum Step {
+  Init = 0;
+  Split = 1;
+  Prove = 2;
+  Agg = 3;
+  //  InAggAll = 4;
+  Snark = 5;
+  End = 6;
 }
 
 message BlockFileItem {
-    string file_name = 1;
-    bytes file_content = 2;
+  string file_name = 1;
+  bytes file_content = 2;
 }
 
 message Program {
-    ProverVersion version = 1;
-    bytes elf_data = 2;
-    repeated BlockFileItem block_data = 3;
-    optional uint64 block_no = 4;
-    uint32 seg_size = 5;
-    bytes public_input_stream = 6;
-    bytes private_input_stream = 7;
-    bool execute_only = 8;
-    bool composite_proof = 9;
-    repeated bytes receipts = 10;
-    string proof_id = 11;
+  ProverVersion version = 1;
+  bytes elf_data = 2;
+  repeated BlockFileItem block_data = 3;
+  optional uint64 block_no = 4;
+  uint32 seg_size = 5;
+  bytes public_input_stream = 6;
+  bytes private_input_stream = 7;
+  Step target_step = 8;
+  bool composite_proof = 9;
+  repeated bytes receipts = 10;
+  string proof_id = 11;
 
-    bytes output_stream = 12;
+  bytes output_stream = 12;
 }
 
 message AggregateInput {
-    bytes receipt_input = 1;
-    string computed_request_id = 2;
-    bool is_agg = 3;
+  bytes receipt_input = 1;
+  string computed_request_id = 2;
+  bool is_agg = 3;
 };
