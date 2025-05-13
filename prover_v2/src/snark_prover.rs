@@ -24,9 +24,14 @@ impl SnarkProver {
         }
     }
     pub fn prove(&self, ctx: &SnarkContext) -> anyhow::Result<(bool, Vec<u8>)> {
-        let reduced_proof: ZKMReduceProof<InnerSC> = bincode::deserialize(&ctx.agg_receipt)?;
-        let network_prove = NetworkProve::default();
+        let json_str = String::from_utf8_lossy(&ctx.agg_receipt).to_string();
+        let proof: ZKMProof = serde_json::from_str(&json_str).expect("could not deserialize proof");
+        let reduced_proof = match proof {
+            ZKMProof::Compressed(proof) => *proof,
+            _ => unreachable!("unexpected proof"),
+        };
 
+        let network_prove = NetworkProve::default();
         let gnark_proof = self.prove_groth16(reduced_proof, network_prove.opts)?;
 
         Ok((true, serde_json::to_vec(&gnark_proof)?))
