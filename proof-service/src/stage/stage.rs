@@ -29,6 +29,7 @@ pub struct Stage {
     pub is_error: bool,
     pub errmsg: String,
     pub step: Step,
+    pub is_tasks_gen_done: bool,
 }
 
 macro_rules! on_task {
@@ -76,6 +77,7 @@ impl Stage {
             is_error: false,
             errmsg: "".to_string(),
             step: Step::Init,
+            is_tasks_gen_done: false,
         }
     }
 
@@ -83,33 +85,35 @@ impl Stage {
         match self.step {
             Step::Init => {
                 self.gen_split_task();
-                self.step = Step::Split;
+                self.step = Step::Prove;
             }
-            Step::Split => {
-                if self.split_task.state == TASK_STATE_SUCCESS {
-                    if self.generate_task.target_step == self.step {
+            Step::Prove => {
+                self.gen_prove_task();
+                tracing::debug!("generate {} tasks", self.prove_tasks.len());
+                if self.split_task.state == TASK_STATE_SUCCESS && !self.is_tasks_gen_done {
+                    if self.generate_task.target_step == Step::Split {
                         self.step = Step::End;
+                        return;
                     } else {
-                        self.gen_prove_task();
+                        self.gen_prove_task_post();
                         crate::metrics::SEGMENTS_GAUGE.set(self.prove_tasks.len() as f64);
-                        log::info!(
-                            "proof_id {} generate {} prove_tasks",
+                        tracing::info!(
+                            "proof_id {} done. Generate {} prove_tasks",
                             self.generate_task.proof_id,
                             self.prove_tasks.len()
                         );
                         if !self.generate_task.composite_proof {
                             self.gen_agg_tasks();
                         }
-
-                        self.step = Step::Prove;
+                        self.is_tasks_gen_done = true;
                     }
                 }
-            }
-            Step::Prove => {
-                if self
-                    .prove_tasks
-                    .iter()
-                    .all(|task| task.state == TASK_STATE_SUCCESS)
+
+                if self.is_tasks_gen_done
+                    && self
+                        .prove_tasks
+                        .iter()
+                        .all(|task| task.state == TASK_STATE_SUCCESS)
                 {
                     if self.generate_task.composite_proof {
                         self.step = Step::End;
@@ -136,7 +140,7 @@ impl Stage {
         }
     }
 
-    pub fn is_success(&mut self) -> bool {
+    pub fn is_success(&self) -> bool {
         if self.step == Step::End || self.snark_task.state == TASK_STATE_SUCCESS {
             return true;
         }
@@ -148,7 +152,7 @@ impl Stage {
     }
 
     fn gen_split_task(&mut self) {
-        assert!(self.split_task.state == TASK_STATE_INITIAL);
+        assert_eq!(self.split_task.state, TASK_STATE_INITIAL);
         self.split_task
             .proof_id
             .clone_from(&self.generate_task.proof_id);
@@ -192,12 +196,27 @@ impl Stage {
     }
 
     fn gen_prove_task(&mut self) {
-        let files = file::new(&self.generate_task.seg_path).read_dir().unwrap();
-
-        for file_name in files.iter() {
-            let result = file_name.parse::<usize>();
-            if let Ok(file_no) = result {
-                let prove_task = ProveTask {
+        if self.generate_task.target_step == Step::Split || self.is_tasks_gen_done {
+            return;
+        }
+        // from 0 to number_of_seg - 1
+        let file_numbers = file::new(&self.generate_task.seg_path)
+            .read_dir()
+            .unwrap()
+            .iter()
+            .filter_map(|name| name.parse::<usize>().ok())
+            .collect::<Vec<_>>();
+        let max_file_no = file_numbers.iter().max();
+        if let Some(&max_file_no) = max_file_no {
+            if file_numbers.len() != max_file_no + 1 {
+                tracing::warn!(
+                    "The segment file number is not continuous, please check the segment files."
+                );
+            }
+            // generate prove tasks
+            let start = self.prove_tasks.len();
+            for file_no in start..=max_file_no {
+                self.prove_tasks.push(ProveTask {
                     task_id: uuid::Uuid::new_v4().to_string(),
                     proof_id: self.generate_task.proof_id.clone(),
                     state: TASK_STATE_UNPROCESSED,
@@ -205,19 +224,21 @@ impl Stage {
                     base_dir: self.generate_task.base_dir.clone(),
                     file_no,
                     is_deferred: false,
-                    // segment: safe_read(&format!("{}/{file_name}", self.generate_task.seg_path)),
-                    segment: format!("{}/{file_name}", self.generate_task.seg_path),
+                    segment: format!("{}/{file_no}", self.generate_task.seg_path),
                     program: self.generate_task.gen_program(),
                     // will be assigned after the root proving
                     output: vec![],
-                };
-                self.prove_tasks.push(prove_task);
+                });
             }
         }
-        self.prove_tasks.sort_by_key(|p| p.file_no);
+    }
+
+    fn gen_prove_task_post(&mut self) {
+        self.gen_prove_task();
 
         #[cfg(feature = "prover_v2")]
         {
+            let files = file::new(&self.generate_task.seg_path).read_dir().unwrap();
             let mut deferred_files: Vec<(usize, String)> = Vec::new();
             for file_name in files {
                 if let Some(name) = file_name.strip_prefix("deferred_proof_") {

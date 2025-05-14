@@ -67,7 +67,7 @@ async fn run_stage_task(
                 loop {
                     let current_step = stage.step;
                     match stage.step {
-                        Step::Split => {
+                        Step::Prove => {
                             let split_task = stage.get_split_task();
                             if let Some(split_task) = split_task {
                                 let tx = tx.clone();
@@ -80,10 +80,12 @@ async fn run_stage_task(
                                     }
                                 });
                             }
-                        }
-                        Step::Prove => {
+
                             let prove_task = stage.get_prove_task();
-                            log::debug!("Step::Prove get_prove_task {:?}", prove_task.is_some());
+                            tracing::debug!(
+                                "Step::Prove get_prove_task {:?}",
+                                prove_task.is_some()
+                            );
                             if let Some(prove_task) = prove_task {
                                 let tx = tx.clone();
                                 let tls_config = tls_config.clone();
