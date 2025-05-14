@@ -23,7 +23,7 @@ use crate::proto::stage_service;
 macro_rules! save_task {
     ($task:ident, $db_pool:ident, $type:expr) => {
         if $task.state == TASK_STATE_FAILED || $task.state == TASK_STATE_SUCCESS {
-            log::info!(
+            tracing::info!(
                 "begin to save task: {:?}:{:?} type {:?} status {}",
                 $task.proof_id,
                 $task.task_id,
@@ -43,7 +43,7 @@ macro_rules! save_task {
                 ..Default::default()
             };
             if let Err(e) = $db_pool.insert_prove_task(&prove_task).await {
-                log::error!("save task error: {:?}", e)
+                tracing::error!("save task error: {:?}", e)
             }
         }
     };
@@ -99,7 +99,7 @@ async fn run_stage_task(
                             }
                             if stage.count_unfinished_prove_tasks() < node_num {
                                 let agg_task = stage.get_agg_task();
-                                log::debug!("get_agg_task: {:?}", agg_task.is_some());
+                                tracing::debug!("get_agg_task: {:?}", agg_task.is_some());
                                 if let Some(agg_task) = agg_task {
                                     let tx = tx.clone();
                                     let tls_config = tls_config.clone();
@@ -203,7 +203,7 @@ async fn run_stage_task(
                     )
                     .await
                     .unwrap();
-                    log::info!("[stage] finished {:?} ", stage);
+                    tracing::info!("[stage] finished {:?} ", stage);
                 }
             }
             Err(_) => {
@@ -267,7 +267,7 @@ async fn load_stage_task(node_num: usize, tls_config: Option<TlsConfig>, db: dat
                 }
             }
             Err(e) => {
-                log::error!("{:?}", e);
+                tracing::error!("{:?}", e);
                 time::sleep(time::Duration::from_secs(10)).await;
             }
         }

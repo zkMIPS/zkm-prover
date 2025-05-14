@@ -422,7 +422,7 @@ impl Stage {
         let mut result: Option<AggTask> = None;
         for agg_task in &mut self.agg_tasks {
             if agg_task.childs.iter().any(|c| c.is_some()) {
-                log::debug!("Skipping agg_task: childs: {:?}", agg_task.childs);
+                tracing::debug!("Skipping agg_task: childs: {:?}", agg_task.childs);
                 continue;
             }
             if agg_task.state == TASK_STATE_UNPROCESSED || agg_task.state == TASK_STATE_FAILED {
@@ -498,7 +498,7 @@ impl Stage {
                 self.snark_task.agg_receipt = agg_task.output.clone();
             }
         }
-        log::info!(
+        tracing::info!(
             "gen_snark_task: {:?} {:?}",
             self.snark_task.proof_id,
             self.snark_task.task_id
@@ -507,7 +507,7 @@ impl Stage {
 
     pub fn get_snark_task(&mut self) -> Option<SnarkTask> {
         let src = &mut self.snark_task;
-        log::debug!(
+        tracing::debug!(
             "get_snark_task: proof_id:task_id: {:?}:{:?} => status:{}",
             src.proof_id,
             src.task_id,

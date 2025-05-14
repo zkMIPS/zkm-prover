@@ -175,7 +175,7 @@ impl StageService for StageServiceSVC {
         request: Request<GenerateProofRequest>,
     ) -> tonic::Result<Response<GenerateProofResponse>, Status> {
         metrics::record_metrics("stage::generate_proof", || async {
-            log::info!("[generate_proof] {} start", request.get_ref().proof_id);
+            tracing::info!("[generate_proof] {} start", request.get_ref().proof_id);
 
             // check seg_size
             #[cfg(feature = "prover")]
@@ -192,7 +192,7 @@ impl StageService for StageServiceSVC {
                     ),
                     ..Default::default()
                 };
-                log::warn!(
+                tracing::warn!(
                     "[generate_proof] {} invalid seg_size support [{}-{}] {}",
                     request.get_ref().proof_id,
                     request.get_ref().seg_size,
@@ -207,7 +207,7 @@ impl StageService for StageServiceSVC {
                 Ok(address) => {
                     // check white list
                     let users = self.db.get_user(&address).await.unwrap();
-                    log::info!(
+                    tracing::info!(
                         "[generate_proof] proof_id:{} address:{:?} exists:{:?}",
                         request.get_ref().proof_id,
                         address,
@@ -221,7 +221,7 @@ impl StageService for StageServiceSVC {
                             error_message: "permission denied".to_string(),
                             ..Default::default()
                         };
-                        log::warn!(
+                        tracing::warn!(
                             "[generate_proof] {} permission denied",
                             request.get_ref().proof_id,
                         );
@@ -236,7 +236,7 @@ impl StageService for StageServiceSVC {
                         error_message: "invalid signature".to_string(),
                         ..Default::default()
                     };
-                    log::warn!(
+                    tracing::warn!(
                         "[generate_proof] {} invalid signature {:?}",
                         request.get_ref().proof_id,
                         e,
@@ -257,7 +257,7 @@ impl StageService for StageServiceSVC {
                         .to_string(),
                     ..Default::default()
                 };
-                log::warn!(
+                tracing::warn!(
                     "[generate_proof] {} invalid TargetStep {:?}",
                     request.get_ref().proof_id,
                     target_step,
@@ -457,7 +457,7 @@ impl StageService for StageServiceSVC {
                 public_values_url,
                 ..Default::default()
             };
-            log::info!("[generate_proof] {} end", request.get_ref().proof_id);
+            tracing::info!("[generate_proof] {} end", request.get_ref().proof_id);
             Ok(Response::new(response))
         })
         .await
