@@ -97,7 +97,9 @@ async fn run_stage_task(
                                     }
                                 });
                             }
-                            if stage.count_unfinished_prove_tasks() < node_num {
+                            if stage.is_tasks_gen_done
+                                && stage.count_unfinished_prove_tasks() < node_num
+                            {
                                 let agg_task = stage.get_agg_task();
                                 tracing::debug!("get_agg_task: {:?}", agg_task.is_some());
                                 if let Some(agg_task) = agg_task {

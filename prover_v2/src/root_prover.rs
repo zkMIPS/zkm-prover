@@ -10,8 +10,27 @@ pub struct RootProver {}
 impl RootProver {
     pub fn prove(&self, ctx: &ProveContext) -> anyhow::Result<Vec<u8>> {
         let now = std::time::Instant::now();
-        let segment = std::fs::read(&ctx.segment)?;
-        let mut record: ExecutionRecord = bincode::deserialize(&segment)?;
+        let mut record: ExecutionRecord = {
+            let mut retries = 0;
+            const MAX_RETRIES: usize = 5;
+
+            loop {
+                match std::fs::read(&ctx.segment).and_then(|segment| {
+                    bincode::deserialize(&segment)
+                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+                }) {
+                    Ok(record) => break record,
+                    Err(e) => {
+                        if retries >= MAX_RETRIES {
+                            return Err(e.into());
+                        }
+                        tracing::warn!("read segment file error, try again");
+                        retries += 1;
+                        std::thread::sleep(std::time::Duration::from_millis(200));
+                    }
+                }
+            }
+        };
         tracing::info!("read segment time: {:?}", now.elapsed());
 
         let network_prove = NetworkProve::new(ctx.seg_size);

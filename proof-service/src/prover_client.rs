@@ -147,10 +147,11 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             index: prove_task.file_no as u32,
         };
         tracing::info!(
-            "[prove] rpc {} {}:{}start",
+            "[prove] rpc {} {}:{}:{} start",
             addrs,
             request.proof_id,
             request.computed_request_id,
+            request.index
         );
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
@@ -162,10 +163,11 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
                 prove_task.state = result_code_to_state(response_result.code);
                 prove_task.trace.node_info = addrs.clone();
                 tracing::info!(
-                    "[prove] rpc {} {}:{} code:{:?} message:{:?} end",
+                    "[prove] rpc {} {}:{}:{} code:{:?} message:{:?} end",
                     addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
+                    prove_task.file_no,
                     response_result.code,
                     response_result.message,
                 );
@@ -174,7 +176,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             }
         }
     }
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    // tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(prove_task)
 }
 
@@ -195,10 +197,11 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             is_deferred: agg_task.is_deferred,
         };
         tracing::info!(
-            "[aggregate] rpc {} {}:{} {} inputs start",
+            "[aggregate] rpc {} {}:{}:{} {} inputs start",
             addrs,
             request.proof_id,
             request.computed_request_id,
+            agg_task.agg_index,
             request.inputs.len()
         );
         let mut grpc_request = Request::new(request);
@@ -211,10 +214,11 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
                 agg_task.state = result_code_to_state(response_result.code);
                 agg_task.trace.node_info = addrs.clone();
                 tracing::info!(
-                    "[aggregate] rpc {} {}:{} code:{:?} message:{:?} end",
+                    "[aggregate] rpc {} {}:{}:{} code:{:?} message:{:?} end",
                     addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
+                    agg_task.agg_index,
                     response_result.code,
                     response_result.message,
                 );

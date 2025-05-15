@@ -106,6 +106,16 @@ impl Stage {
                             self.gen_agg_tasks();
                         }
                         self.is_tasks_gen_done = true;
+                        // clear agg tasks' child task
+                        let successful_task_ids = self
+                            .prove_tasks
+                            .iter()
+                            .filter(|t| t.state == TASK_STATE_SUCCESS)
+                            .map(|t| t.task_id.clone())
+                            .collect::<Vec<_>>();
+                        for id in successful_task_ids {
+                            self.clear_agg_child_task(&id);
+                        }
                     }
                 }
 
@@ -208,11 +218,11 @@ impl Stage {
             .collect::<Vec<_>>();
         let max_file_no = file_numbers.iter().max();
         if let Some(&max_file_no) = max_file_no {
-            if file_numbers.len() != max_file_no + 1 {
-                tracing::warn!(
-                    "The segment file number is not continuous, please check the segment files."
-                );
-            }
+            // if file_numbers.len() != max_file_no + 1 {
+            //     tracing::warn!(
+            //         "The segment file number is not continuous, please check the segment files."
+            //     );
+            // }
             // generate prove tasks
             let start = self.prove_tasks.len();
             for file_no in start..=max_file_no {
@@ -277,8 +287,14 @@ impl Stage {
     }
 
     pub fn get_prove_task(&mut self) -> Option<ProveTask> {
-        for prove_task in self.prove_tasks.iter_mut().rev() {
+        for prove_task in self.prove_tasks.iter_mut() {
             if prove_task.state == TASK_STATE_UNPROCESSED || prove_task.state == TASK_STATE_FAILED {
+                // check file exist
+                // Indeed we couldn't guarantee the file has been fully written.
+                // If the prover fails to read, we will wait and retry.
+                if !std::path::Path::new(&prove_task.segment).exists() {
+                    continue;
+                }
                 prove_task.state = TASK_STATE_PROCESSING;
                 prove_task.trace.start_ts = get_timestamp();
                 return Some(prove_task.clone());
@@ -288,19 +304,23 @@ impl Stage {
     }
 
     pub fn on_prove_task(&mut self, prove_task: &mut ProveTask) {
-        for item_task in self.prove_tasks.iter_mut().rev() {
+        for item_task in self.prove_tasks.iter_mut() {
             if item_task.task_id == prove_task.task_id && item_task.state == TASK_STATE_PROCESSING {
-                // let dst = &mut item_task;
                 on_task!(prove_task, item_task, self);
                 break;
             }
         }
         // clear agg‘s child task
         if prove_task.state == TASK_STATE_SUCCESS {
-            for item_task in &mut self.agg_tasks {
-                if item_task.clear_child_task(&prove_task.task_id) {
-                    break;
-                }
+            self.clear_agg_child_task(&prove_task.task_id);
+        }
+    }
+
+    // caller guarantees prove_task is done.
+    fn clear_agg_child_task(&mut self, task_id: &str) {
+        for agg_task in &mut self.agg_tasks {
+            if agg_task.clear_child_task(task_id) {
+                break;
             }
         }
     }
@@ -407,6 +427,7 @@ impl Stage {
                 let agg_task = AggTask::init_from_agg_tasks(batch, agg_index, false);
                 self.agg_tasks.push(agg_task.clone());
                 new_result.push(agg_task);
+                agg_index += 1;
             }
 
             result = new_result;
