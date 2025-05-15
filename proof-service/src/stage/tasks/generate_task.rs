@@ -1,4 +1,4 @@
-use crate::proto::includes::v1::{Program, ProverVersion};
+use crate::proto::includes::v1::{Program, ProverVersion, Step};
 use serde::{Deserialize, Serialize};
 //use zkm_emulator::utils::get_block_path;
 use crate::stage::{/*read_block_data, */ safe_read};
@@ -17,7 +17,7 @@ pub struct GenerateTask {
     pub output_stream_path: String,
     pub block_no: Option<u64>,
     pub seg_size: u32,
-    pub execute_only: bool,
+    pub target_step: Step,
     pub composite_proof: bool,
     pub receipt_inputs_path: String,
     pub receipts_path: String,
@@ -62,7 +62,7 @@ impl GenerateTask {
                 block_data,
                 public_input_stream: safe_read(&self.public_input_path),
                 private_input_stream: safe_read(&self.private_input_path),
-                execute_only: self.execute_only,
+                target_step: self.target_step.into(),
                 composite_proof: self.composite_proof,
                 proof_id: self.proof_id.clone(),
                 receipts,
@@ -86,7 +86,7 @@ impl GenerateTask {
         output_stream_path: &str,
         block_no: Option<u64>,
         seg_size: u32,
-        execute_only: bool,
+        target_step: Step,
         composite_proof: bool,
         receipt_inputs_path: &str,
         receipts_path: &str,
@@ -105,7 +105,7 @@ impl GenerateTask {
             output_stream_path: output_stream_path.to_string(),
             block_no,
             seg_size,
-            execute_only,
+            target_step,
             composite_proof,
             receipt_inputs_path: receipt_inputs_path.to_string(),
             receipts_path: receipts_path.to_string(),

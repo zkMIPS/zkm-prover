@@ -40,6 +40,9 @@ impl NetworkProve<'_> {
         if keccaks > 0 {
             prove.opts.core_opts.split_opts.keccak = keccaks;
         }
+        if shard_size > 0 {
+            std::env::remove_var("SHARD_SIZE");
+        }
 
         prove
     }

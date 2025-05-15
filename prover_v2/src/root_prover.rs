@@ -10,8 +10,45 @@ pub struct RootProver {}
 impl RootProver {
     pub fn prove(&self, ctx: &ProveContext) -> anyhow::Result<Vec<u8>> {
         let now = std::time::Instant::now();
-        let segment = std::fs::read(&ctx.segment)?;
-        let mut record: ExecutionRecord = bincode::deserialize(&segment)?;
+        let mut record: ExecutionRecord = {
+            let mut retries = 0;
+            const MAX_RETRIES: usize = 10;
+
+            loop {
+                match std::fs::read(&ctx.segment) {
+                    Ok(segment) => match bincode::deserialize::<ExecutionRecord>(&segment) {
+                        Ok(r) => break r,
+                        Err(e) => {
+                            if retries >= MAX_RETRIES {
+                                return Err(anyhow::anyhow!(
+                                    "Deserialize failed after {} retries: {}",
+                                    MAX_RETRIES,
+                                    e
+                                ));
+                            }
+                            tracing::warn!(
+                                "Deserialize segment {:?} failed: {}, retrying...",
+                                ctx.segment,
+                                e
+                            );
+                        }
+                    },
+                    Err(e) => {
+                        if retries >= MAX_RETRIES {
+                            return Err(anyhow::anyhow!(
+                                "Read failed after {} retries: {}",
+                                MAX_RETRIES,
+                                e
+                            ));
+                        }
+                        tracing::warn!("Read segment {:?} failed: {}, retrying...", ctx.segment, e);
+                    }
+                }
+
+                retries += 1;
+                std::thread::sleep(std::time::Duration::from_millis(300));
+            }
+        };
         tracing::info!("read segment time: {:?}", now.elapsed());
 
         let network_prove = NetworkProve::new(ctx.seg_size);

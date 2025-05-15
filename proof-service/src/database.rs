@@ -194,7 +194,7 @@ impl Database {
             ethers::utils::to_checksum(&address.parse::<ethereum_types::Address>()?, None);
         // Determine whether “0x” is needed based on the specific `User` table in the database.
         let checksum_address = checksum_address.trim_start_matches("0x");
-        log::debug!("searching address {}", checksum_address);
+        tracing::debug!("searching address {}", checksum_address);
         let rows = sqlx::query_as!(
             User,
             "SELECT address from user where address = ?",
@@ -202,7 +202,7 @@ impl Database {
         )
         .fetch_all(&self.db_pool)
         .await?;
-        log::debug!("get_user: {:?}", rows);
+        tracing::debug!("get_user: {:?}", rows);
         Ok(rows)
     }
 }

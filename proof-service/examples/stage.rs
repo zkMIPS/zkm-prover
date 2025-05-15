@@ -62,8 +62,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let key_path = env::var("KEY_PATH").unwrap_or("".to_string());
     let domain_name = env::var("DOMAIN_NAME").unwrap_or("stage".to_string());
     let private_key = env::var("PRIVATE_KEY").unwrap_or("".to_string());
-    let execute_only = env::var("EXECUTE_ONLY").unwrap_or("false".to_string());
-    let execute_only = execute_only.parse::<bool>().unwrap_or(false);
+    let target_step = env::var("TARGET_STEP").unwrap_or("5".to_string());
+    let target_step = target_step.parse::<i32>().unwrap_or(5);
     let ssl_config = if ca_cert_path.is_empty() {
         None
     } else {
@@ -87,14 +87,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let args: Vec<&str> = args.split_whitespace().collect();
-    let public_input_stream: Vec<u8> = hex::decode(args[0]).unwrap();
+    // let public_input_stream: Vec<u8> = hex::decode(args[0]).unwrap();
     let private_input_stream = args[1].as_bytes().to_vec();
 
     // It depends on whether the guest program uses io::read() or io::read_vec().
     // If it’s the former, then `bincode::serialize` is used; otherwise, it’s not.
     // In `sha2-rust` example, the guest program uses io::read().
-    let public_input_stream: Vec<u8> = bincode::serialize(&public_input_stream).unwrap();
+    // let public_input_stream: Vec<u8> = bincode::serialize(&public_input_stream).unwrap();
     let private_input_stream: Vec<u8> = bincode::serialize(&private_input_stream).unwrap();
+    let private_input_stream: Vec<u8> = bincode::serialize(&vec![private_input_stream]).unwrap();
 
     //let public_input_stream = if public_input_path.is_empty() {
     //    vec![]
@@ -115,9 +116,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         block_data,
         block_no: Some(block_no),
         seg_size,
-        public_input_stream,
+        public_input_stream: vec![],
         private_input_stream,
-        execute_only,
+        target_step: Some(target_step), // 1, 3, 5
         ..Default::default()
     };
     sign_ecdsa(&mut request, &private_key).await;

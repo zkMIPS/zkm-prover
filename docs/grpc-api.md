@@ -1,6 +1,7 @@
 # Public Grpc API for zkm-prover service
 
 ## General API Information
+
 * The following base endpoints are available.
     * **https://152.32.186.45:20002**
 
@@ -11,7 +12,8 @@ Please refer to [Stage Proto](../proof-service/proto/src/proto/stage/v1/stage.pr
 ## Status Codes
 
 * `SUCCESS` The operation has been successful.
-* `UNSPECIFIED` There was an internal timeout during the operation, which can be queried later through `GetStatusRequest`.
+* `UNSPECIFIED` There was an internal timeout during the operation, which can be queried later through
+  `GetStatusRequest`.
 * `COMPUTING` The task is currently being processed.
 * `INVALID_PARAMETER` Input parameter error, and `error_message` may be helpful.
 * `INTERNAL_ERROR` Task execution failed due to internal reasons, please try again later.
@@ -28,6 +30,7 @@ proving service only provide services to whitelist users, be sure to use the cor
 ## GenerateProof
 
 ### GenerateProofRequest
+
 **Parameters:**
 Name | Type | Mandatory | Description
 ------------ | ------------ | ------------ | ------------
@@ -42,24 +45,24 @@ args | STRING | NO | ARGS for `elf_data`.
 signature | STRING | YES | Signature.
 public_input_stream | BYTES | NO | Public input, Will be passed as the first parameter to the `elf_data`.
 private_input_stream | BYTES | NO | private input, Will be passed as the second parameter to the `elf_data`.
-execute_only | BOOL | NO | Default false.
-
+target_step | UINT32 | NO | Default 5.
 
 ### GenerateProofResponse
 
-Name | Type | Mandatory | Description
------------- | ------------ | ------------ | ------------
-status | UINT32 | YES | Status Codes.
-error_message | STRING | NO |
-proof_id | STRING | YES | Request.proof_id.
-proof_url | STRING | YES | After the task is completed, you can download the snark proof from this URL.
-stark_proof_url | STRING | YES | After the task is completed, you can download the stark proof from this URL.
-solidity_verifier_url | STRING | YES | After the task is completed, you can download the verifier's contract from this URL.
-output_stream | BYTES | NO | Guest program output.
+ Name                  | Type   | Mandatory | Description                                                                          
+-----------------------|--------|-----------|--------------------------------------------------------------------------------------
+ status                | UINT32 | YES       | Status Codes.                                                                        
+ error_message         | STRING | NO        |
+ proof_id              | STRING | YES       | Request.proof_id.                                                                    
+ proof_url             | STRING | YES       | After the task is completed, you can download the snark proof from this URL.         
+ stark_proof_url       | STRING | YES       | After the task is completed, you can download the stark proof from this URL.         
+ solidity_verifier_url | STRING | YES       | After the task is completed, you can download the verifier's contract from this URL. 
+ output_stream         | BYTES  | NO        | Guest program output.                                                                
 
 ## GetStatus
 
 ### GetStatusRequest
+
 **Parameters:**
 Name | Type | Mandatory | Description
 ------------ | ------------ | ------------ | ------------
@@ -67,12 +70,12 @@ proof_id | STRING | YES | Proof id to be queried.
 
 ### GetStatusResponse
 
-Name | Type | Mandatory | Description
------------- | ------------ | ------------ | ------------
-proof_id | STRING | YES | Request.proof_id.
-status | UINT32 | YES | Status Codes.
-proof_with_public_inputs | BYTES | NO | Proof of binary data.
-proof_url | STRING | YES | After the task is completed, you can download the snark proof from this URL.
-stark_proof_url | STRING | YES | After the task is completed, you can download the stark proof from this URL.
-solidity_verifier_url | STRING | YES | After the task is completed, you can download the verifier's contract from this URL.
-output_stream | BYTES | NO | Guest program output.
+ Name                     | Type   | Mandatory | Description                                                                          
+--------------------------|--------|-----------|--------------------------------------------------------------------------------------
+ proof_id                 | STRING | YES       | Request.proof_id.                                                                    
+ status                   | UINT32 | YES       | Status Codes.                                                                        
+ proof_with_public_inputs | BYTES  | NO        | Proof of binary data.                                                                
+ proof_url                | STRING | YES       | After the task is completed, you can download the snark proof from this URL.         
+ stark_proof_url          | STRING | YES       | After the task is completed, you can download the stark proof from this URL.         
+ solidity_verifier_url    | STRING | YES       | After the task is completed, you can download the verifier's contract from this URL. 
+ output_stream            | BYTES  | NO        | Guest program output.                                                                
