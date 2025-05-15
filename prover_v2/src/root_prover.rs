@@ -12,23 +12,41 @@ impl RootProver {
         let now = std::time::Instant::now();
         let mut record: ExecutionRecord = {
             let mut retries = 0;
-            const MAX_RETRIES: usize = 5;
+            const MAX_RETRIES: usize = 10;
 
             loop {
-                match std::fs::read(&ctx.segment).and_then(|segment| {
-                    bincode::deserialize(&segment)
-                        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
-                }) {
-                    Ok(record) => break record,
+                match std::fs::read(&ctx.segment) {
+                    Ok(segment) => match bincode::deserialize::<ExecutionRecord>(&segment) {
+                        Ok(r) => break r,
+                        Err(e) => {
+                            if retries >= MAX_RETRIES {
+                                return Err(anyhow::anyhow!(
+                                    "Deserialize failed after {} retries: {}",
+                                    MAX_RETRIES,
+                                    e
+                                ));
+                            }
+                            tracing::warn!(
+                                "Deserialize segment {:?} failed: {}, retrying...",
+                                ctx.segment,
+                                e
+                            );
+                        }
+                    },
                     Err(e) => {
                         if retries >= MAX_RETRIES {
-                            return Err(e.into());
+                            return Err(anyhow::anyhow!(
+                                "Read failed after {} retries: {}",
+                                MAX_RETRIES,
+                                e
+                            ));
                         }
-                        tracing::warn!("read segment file error, try again");
-                        retries += 1;
-                        std::thread::sleep(std::time::Duration::from_millis(200));
+                        tracing::warn!("Read segment {:?} failed: {}, retrying...", ctx.segment, e);
                     }
                 }
+
+                retries += 1;
+                std::thread::sleep(std::time::Duration::from_millis(300));
             }
         };
         tracing::info!("read segment time: {:?}", now.elapsed());

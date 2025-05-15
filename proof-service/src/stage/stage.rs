@@ -1,10 +1,3 @@
-use common::file;
-use std::{
-    fmt::{Debug, Formatter},
-    io::Write,
-    time::{SystemTime, UNIX_EPOCH},
-};
-
 use crate::proto::includes::v1::Step;
 #[cfg(feature = "prover_v2")]
 use crate::stage::safe_read;
@@ -12,6 +5,13 @@ use crate::stage::tasks::{
     agg_task::AggTask, generate_task::GenerateTask, ProveTask, SnarkTask, SplitTask, Trace,
     TASK_STATE_FAILED, TASK_STATE_INITIAL, TASK_STATE_PROCESSING, TASK_STATE_SUCCESS,
     TASK_STATE_UNPROCESSED,
+};
+use common::file;
+use std::collections::BTreeMap;
+use std::{
+    fmt::{Debug, Formatter},
+    io::Write,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 pub fn get_timestamp() -> u64 {
@@ -23,7 +23,7 @@ pub fn get_timestamp() -> u64 {
 pub struct Stage {
     pub generate_task: GenerateTask,
     pub split_task: SplitTask,
-    pub prove_tasks: Vec<ProveTask>,
+    pub prove_tasks: BTreeMap<usize, ProveTask>,
     pub agg_tasks: Vec<AggTask>,
     pub snark_task: SnarkTask,
     pub is_error: bool,
@@ -71,7 +71,7 @@ impl Stage {
             //base_dir: generate_task.base_dir.clone(),
             generate_task,
             split_task: SplitTask::default(),
-            prove_tasks: Vec::new(),
+            prove_tasks: BTreeMap::new(),
             agg_tasks: Vec::new(),
             snark_task: SnarkTask::default(),
             is_error: false,
@@ -109,7 +109,7 @@ impl Stage {
                         // clear agg tasks' child task
                         let successful_task_ids = self
                             .prove_tasks
-                            .iter()
+                            .values()
                             .filter(|t| t.state == TASK_STATE_SUCCESS)
                             .map(|t| t.task_id.clone())
                             .collect::<Vec<_>>();
@@ -122,7 +122,7 @@ impl Stage {
                 if self.is_tasks_gen_done
                     && self
                         .prove_tasks
-                        .iter()
+                        .values()
                         .all(|task| task.state == TASK_STATE_SUCCESS)
                 {
                     if self.generate_task.composite_proof {
@@ -216,30 +216,22 @@ impl Stage {
             .iter()
             .filter_map(|name| name.parse::<usize>().ok())
             .collect::<Vec<_>>();
-        let max_file_no = file_numbers.iter().max();
-        if let Some(&max_file_no) = max_file_no {
-            // if file_numbers.len() != max_file_no + 1 {
-            //     tracing::warn!(
-            //         "The segment file number is not continuous, please check the segment files."
-            //     );
-            // }
-            // generate prove tasks
-            let start = self.prove_tasks.len();
-            for file_no in start..=max_file_no {
-                self.prove_tasks.push(ProveTask {
-                    task_id: uuid::Uuid::new_v4().to_string(),
-                    proof_id: self.generate_task.proof_id.clone(),
-                    state: TASK_STATE_UNPROCESSED,
-                    trace: Trace::default(),
-                    base_dir: self.generate_task.base_dir.clone(),
-                    file_no,
-                    is_deferred: false,
-                    segment: format!("{}/{file_no}", self.generate_task.seg_path),
-                    program: self.generate_task.gen_program(),
-                    // will be assigned after the root proving
-                    output: vec![],
-                });
-            }
+
+        // generate prove tasks
+        for file_no in file_numbers {
+            self.prove_tasks.entry(file_no).or_insert(ProveTask {
+                task_id: uuid::Uuid::new_v4().to_string(),
+                proof_id: self.generate_task.proof_id.clone(),
+                state: TASK_STATE_UNPROCESSED,
+                trace: Trace::default(),
+                base_dir: self.generate_task.base_dir.clone(),
+                file_no,
+                is_deferred: false,
+                segment: format!("{}/{file_no}", self.generate_task.seg_path),
+                program: self.generate_task.gen_program(),
+                // will be assigned after the root proving
+                output: vec![],
+            });
         }
     }
 
@@ -272,7 +264,7 @@ impl Stage {
                     output: safe_read(&format!("{}/{file_name}", self.generate_task.seg_path)),
                     ..Default::default()
                 };
-                self.prove_tasks.push(prove_task);
+                self.prove_tasks.entry(file_no).or_insert(prove_task);
             }
         }
 
@@ -287,14 +279,8 @@ impl Stage {
     }
 
     pub fn get_prove_task(&mut self) -> Option<ProveTask> {
-        for prove_task in self.prove_tasks.iter_mut() {
+        for prove_task in self.prove_tasks.values_mut() {
             if prove_task.state == TASK_STATE_UNPROCESSED || prove_task.state == TASK_STATE_FAILED {
-                // check file exist
-                // Indeed we couldn't guarantee the file has been fully written.
-                // If the prover fails to read, we will wait and retry.
-                if !std::path::Path::new(&prove_task.segment).exists() {
-                    continue;
-                }
                 prove_task.state = TASK_STATE_PROCESSING;
                 prove_task.trace.start_ts = get_timestamp();
                 return Some(prove_task.clone());
@@ -304,7 +290,7 @@ impl Stage {
     }
 
     pub fn on_prove_task(&mut self, prove_task: &mut ProveTask) {
-        for item_task in self.prove_tasks.iter_mut() {
+        for item_task in self.prove_tasks.values_mut() {
             if item_task.task_id == prove_task.task_id && item_task.state == TASK_STATE_PROCESSING {
                 on_task!(prove_task, item_task, self);
                 break;
@@ -327,7 +313,7 @@ impl Stage {
 
     pub fn count_unfinished_prove_tasks(&self) -> usize {
         self.prove_tasks
-            .iter()
+            .values()
             .filter(|task| task.state != TASK_STATE_SUCCESS)
             .count()
     }
@@ -341,14 +327,14 @@ impl Stage {
         for i in (0..current_length - 1).step_by(2) {
             agg_index += 1;
             result.push(AggTask::init_from_two_prove_task(
-                &(self.prove_tasks[i]),
-                &(self.prove_tasks[i + 1]),
+                &(self.prove_tasks[&i]),
+                &(self.prove_tasks[&(i + 1)]),
                 agg_index,
             ));
         }
         if current_length % 2 == 1 {
             result.push(AggTask::init_from_single_prove_task(
-                &(self.prove_tasks[current_length - 1]),
+                &(self.prove_tasks[&(current_length - 1)]),
                 agg_index + 1,
             ));
         }
@@ -391,7 +377,7 @@ impl Stage {
 
         let (normal_prove_tasks, deferred_prove_tasks): (Vec<_>, Vec<_>) = self
             .prove_tasks
-            .iter()
+            .values()
             .cloned()
             .partition(|task| !task.is_deferred);
         let is_complete = normal_prove_tasks.len() == 1 && deferred_prove_tasks.is_empty();
@@ -466,7 +452,7 @@ impl Stage {
                 } else {
                     let tmp = self
                         .prove_tasks
-                        .iter()
+                        .values()
                         .find(|x| x.task_id == input.computed_request_id)
                         .unwrap();
                     input.receipt_input = tmp.output.clone();
@@ -557,7 +543,7 @@ impl Debug for Stage {
         );
         let root_prove_cost = self
             .prove_tasks
-            .iter()
+            .values()
             .map(|task| {
                 format!(
                     "prove_id: {} cost: {} sec",
@@ -602,11 +588,14 @@ mod tests {
         for n in 12..20 {
             let mut stage = Stage::default();
             for i in 0..n {
-                stage.prove_tasks.push(ProveTask {
-                    output: vec![1, 2, 3],
-                    file_no: i,
-                    ..Default::default()
-                })
+                stage.prove_tasks.insert(
+                    i,
+                    ProveTask {
+                        output: vec![1, 2, 3],
+                        file_no: i,
+                        ..Default::default()
+                    },
+                );
             }
             stage.gen_agg_tasks();
             stage.agg_tasks.iter().for_each(|element| {
