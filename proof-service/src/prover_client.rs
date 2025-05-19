@@ -117,13 +117,16 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
                 // FIXME: node_info usage?
                 split_task.trace.node_info = addrs.clone();
                 split_task.total_steps = response.get_ref().total_steps;
+                split_task.total_segments = response.get_ref().total_segments;
                 tracing::info!(
-                    "[split] rpc {} {}:{} code:{:?} message:{:?} end",
+                    "[split] rpc {} {}:{} code:{:?} message:{:?} end. Total cycles {}, segments {}",
                     addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
                     response_result.message,
+                    split_task.total_steps,
+                    split_task.total_segments,
                 );
                 return Some(split_task);
             }

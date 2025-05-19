@@ -23,4 +23,5 @@ pub struct SplitTask {
     pub output: Vec<u8>, //void
 
     pub total_steps: u64,
+    pub total_segments: u32,
 }

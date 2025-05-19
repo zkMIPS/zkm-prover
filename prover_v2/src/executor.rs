@@ -32,7 +32,7 @@ use crate::{get_prover, NetworkProve, FIRST_LAYER_BATCH_SIZE};
 #[derive(Default)]
 pub struct Executor {}
 impl Executor {
-    pub fn split(&self, ctx: &SplitContext) -> anyhow::Result<u64> {
+    pub fn split(&self, ctx: &SplitContext) -> anyhow::Result<(u64, u32)> {
         let prover = get_prover();
         let mut network_prove = NetworkProve::new(ctx.seg_size);
 
@@ -67,7 +67,7 @@ impl Executor {
         file::new(&format!("{}/vk.bin", ctx.base_dir)).write_all(&vk_bytes)?;
 
         let context = network_prove.context_builder.build();
-        let (total_steps, public_values_stream) = self.split_with_context(
+        let (total_steps, total_segments, public_values_stream) = self.split_with_context(
             &prover,
             ctx,
             program,
@@ -82,7 +82,7 @@ impl Executor {
         let public_values_path = format!("{}/wrap/public_values.bin", ctx.base_dir);
         file::new(&public_values_path).write_all(&public_values_stream)?;
 
-        Ok(total_steps)
+        Ok((total_steps, total_segments))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -96,7 +96,7 @@ impl Executor {
         opts: ZKMCoreOpts,
         mut context: ZKMContext<'a>,
         shape_config: Option<&CoreShapeConfig<<CoreSC as StarkGenericConfig>::Val>>,
-    ) -> anyhow::Result<(u64, Vec<u8>)> {
+    ) -> anyhow::Result<(u64, u32, Vec<u8>)> {
         context.subproof_verifier = Some(prover as &dyn SubproofVerifier);
         // Setup the runtime.
         let mut runtime = Runtime::with_context(program.clone(), opts, context);
@@ -327,6 +327,10 @@ impl Executor {
             p2_record_and_trace_gen_handles
                 .into_iter()
                 .for_each(|handle| handle.join().unwrap());
+            let total_segments = {
+                let segment_index = segment_index.lock().unwrap();
+                *segment_index
+            };
 
             // Log some of the `ExecutionReport` information.
             let report_aggregate = report_aggregate.lock().unwrap();
@@ -370,7 +374,7 @@ impl Executor {
                 cycles as f64 / (split_time * 1000.0),
             );
 
-            Ok((cycles, public_values_stream))
+            Ok((cycles, total_segments as u32, public_values_stream))
         })
     }
 }

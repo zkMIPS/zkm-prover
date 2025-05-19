@@ -174,6 +174,7 @@ impl ProverService for ProverServiceSVC {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
                 total_steps: result.clone().unwrap_or_default().1,
+                total_segments: result.clone().unwrap_or_default().2,
                 ..Default::default()
             };
             // True if and only if no error occurs and ELF size > 0
@@ -185,11 +186,13 @@ impl ProverService for ProverServiceSVC {
             let end = Instant::now();
             let elapsed = end.duration_since(start);
             tracing::info!(
-                "[split_elf] {}:{} code:{} elapsed:{} end",
+                "[split_elf] {}:{} code:{} elapsed:{} end. Total cycles {}, segments {}",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
                 response.result.as_ref().unwrap().code,
-                elapsed.as_secs()
+                elapsed.as_secs(),
+                response.total_steps,
+                response.total_steps
             );
             Ok(Response::new(response))
         })

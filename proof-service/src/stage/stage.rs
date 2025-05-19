@@ -202,6 +202,7 @@ impl Stage {
     pub fn on_split_task(&mut self, split_task: &mut SplitTask) {
         let dst = &mut self.split_task;
         dst.total_steps = split_task.total_steps;
+        dst.total_segments = split_task.total_segments;
         on_task!(split_task, dst, self);
     }
 
@@ -245,20 +246,14 @@ impl Stage {
     }
 
     fn gen_prove_task_post(&mut self) {
-        let files = file::new(&self.generate_task.seg_path).read_dir().unwrap();
-
         // ensure all the prove tasks are generated
         {
-            let file_numbers = files
-                .iter()
-                .filter_map(|name| name.parse::<usize>().ok())
-                .collect::<Vec<_>>();
             let cur_tasks_len = if self.prove_tasks.is_empty() {
                 0
             } else {
                 self.prove_tasks.last_key_value().unwrap().0 + 1
             };
-            let total_tasks = std::cmp::max(file_numbers.len(), cur_tasks_len);
+            let total_tasks = std::cmp::max(self.split_task.total_segments as usize, cur_tasks_len);
             let missing_keys: Vec<usize> = (0..total_tasks)
                 .filter(|k| !self.prove_tasks.contains_key(k))
                 .collect();

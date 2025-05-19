@@ -82,6 +82,7 @@ message SplitElfResponse {
   string computed_request_id = 2;
   Result result = 3;
   uint64 total_steps = 4;
+  uint32 total_segments = 5;
 }
 
 message ProveRequest {
