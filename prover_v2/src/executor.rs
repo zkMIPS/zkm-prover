@@ -261,9 +261,22 @@ impl Executor {
 
                                 records.par_iter().enumerate().for_each(|(i, record)| {
                                     let encoded_record = bincode::serialize(&record).unwrap();
-                                    file::new(&format!("{}/{}", ctx.seg_path, base_index + i))
-                                        .write_all(&encoded_record)
+                                    let write_start = Instant::now();
+                                    let tmp_path =
+                                        format!("{}/{}.tmp", ctx.seg_path, base_index + i);
+                                    let final_path = format!("{}/{}", ctx.seg_path, base_index + i);
+                                    let mut file =
+                                        File::create(&tmp_path).expect("Failed to create tmp file");
+                                    file.write_all(&encoded_record)
                                         .expect("Failed to write record");
+                                    file.sync_all().expect("Failed to sync tmp file");
+                                    std::fs::rename(tmp_path, final_path)
+                                        .expect("Failed to rename tmp file");
+                                    tracing::info!(
+                                        "Wrote record {} in {:?}",
+                                        base_index + i,
+                                        write_start.elapsed()
+                                    );
                                 });
 
                                 // process deferred proofs

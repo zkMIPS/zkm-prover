@@ -80,23 +80,21 @@ async fn run_stage_task(
                                     }
                                 });
                             }
-
-                            let prove_task = stage.get_prove_task();
-                            tracing::debug!(
-                                "Step::Prove get_prove_task {:?}",
-                                prove_task.is_some()
-                            );
-                            if let Some(prove_task) = prove_task {
-                                let tx = tx.clone();
-                                let tls_config = tls_config.clone();
-                                tokio::spawn(async move {
-                                    let response =
-                                        prover_client::prove(prove_task, tls_config).await;
-                                    if let Some(prove_task) = response {
-                                        let _ = tx.send(Task::Prove(prove_task)).await;
-                                    }
-                                });
+                            // This is a temporary workaround.
+                            if stage.count_processing_prove_tasks() < node_num {
+                                if let Some(prove_task) = stage.get_prove_task() {
+                                    let tx = tx.clone();
+                                    let tls_config = tls_config.clone();
+                                    tokio::spawn(async move {
+                                        let response =
+                                            prover_client::prove(prove_task, tls_config).await;
+                                        if let Some(prove_task) = response {
+                                            let _ = tx.send(Task::Prove(prove_task)).await;
+                                        }
+                                    });
+                                }
                             }
+
                             if stage.is_tasks_gen_done
                                 && stage.count_unfinished_prove_tasks() < node_num
                             {

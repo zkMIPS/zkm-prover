@@ -205,11 +205,28 @@ impl Stage {
         on_task!(split_task, dst, self);
     }
 
+    fn task_with_no(&self, file_no: usize) -> ProveTask {
+        ProveTask {
+            task_id: uuid::Uuid::new_v4().to_string(),
+            proof_id: self.generate_task.proof_id.clone(),
+            state: TASK_STATE_UNPROCESSED,
+            trace: Trace::default(),
+            base_dir: self.generate_task.base_dir.clone(),
+            file_no,
+            is_deferred: false,
+            segment: format!("{}/{file_no}", self.generate_task.seg_path),
+            program: self.generate_task.gen_program(),
+            // will be assigned after the root proving
+            output: vec![],
+        }
+    }
+
     fn gen_prove_task(&mut self) {
         if self.generate_task.target_step == Step::Split || self.is_tasks_gen_done {
             return;
         }
         // from 0 to number_of_seg - 1
+        // todo: optimize
         let file_numbers = file::new(&self.generate_task.seg_path)
             .read_dir()
             .unwrap()
@@ -219,24 +236,39 @@ impl Stage {
 
         // generate prove tasks
         for file_no in file_numbers {
-            self.prove_tasks.entry(file_no).or_insert(ProveTask {
-                task_id: uuid::Uuid::new_v4().to_string(),
-                proof_id: self.generate_task.proof_id.clone(),
-                state: TASK_STATE_UNPROCESSED,
-                trace: Trace::default(),
-                base_dir: self.generate_task.base_dir.clone(),
-                file_no,
-                is_deferred: false,
-                segment: format!("{}/{file_no}", self.generate_task.seg_path),
-                program: self.generate_task.gen_program(),
-                // will be assigned after the root proving
-                output: vec![],
-            });
+            if !self.prove_tasks.contains_key(&file_no) {
+                let task = self.task_with_no(file_no);
+                self.prove_tasks.insert(file_no, task);
+                tracing::debug!("insert {file_no}");
+            }
         }
     }
 
     fn gen_prove_task_post(&mut self) {
-        self.gen_prove_task();
+        let files = file::new(&self.generate_task.seg_path).read_dir().unwrap();
+
+        // ensure all the prove tasks are generated
+        {
+            let file_numbers = files
+                .iter()
+                .filter_map(|name| name.parse::<usize>().ok())
+                .collect::<Vec<_>>();
+            let cur_tasks_len = if self.prove_tasks.is_empty() {
+                0
+            } else {
+                self.prove_tasks.last_key_value().unwrap().0 + 1
+            };
+            let total_tasks = std::cmp::max(file_numbers.len(), cur_tasks_len);
+            let missing_keys: Vec<usize> = (0..total_tasks)
+                .filter(|k| !self.prove_tasks.contains_key(k))
+                .collect();
+            if !missing_keys.is_empty() {
+                tracing::warn!("Missing file_no keys: {:?}, add now.", missing_keys);
+            }
+            for file_no in missing_keys {
+                self.prove_tasks.insert(file_no, self.task_with_no(file_no));
+            }
+        }
 
         #[cfg(feature = "prover_v2")]
         {
@@ -315,6 +347,13 @@ impl Stage {
         self.prove_tasks
             .values()
             .filter(|task| task.state != TASK_STATE_SUCCESS)
+            .count()
+    }
+
+    pub fn count_processing_prove_tasks(&self) -> usize {
+        self.prove_tasks
+            .values()
+            .filter(|task| task.state == TASK_STATE_PROCESSING)
             .count()
     }
 
