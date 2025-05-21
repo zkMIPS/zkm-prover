@@ -4,10 +4,7 @@ use crate::prover_client;
 use crate::stage::{
     stage::get_timestamp,
     stage::Stage,
-    tasks::{
-        Task, TASK_ITYPE_AGG, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT,
-        TASK_STATE_FAILED, TASK_STATE_SUCCESS,
-    },
+    tasks::{Task, TASK_ITYPE_FINAL, TASK_ITYPE_SPLIT, TASK_STATE_FAILED, TASK_STATE_SUCCESS},
     GenerateTask,
 };
 use crate::TlsConfig;
@@ -139,11 +136,11 @@ async fn run_stage_task(
                                     },
                                     Task::Prove(mut data) => {
                                         stage.on_prove_task(&mut data);
-                                        save_task!(data, db, TASK_ITYPE_PROVE);
+                                        // save_task!(data, db, TASK_ITYPE_PROVE);
                                     },
                                     Task::Agg(mut data) => {
                                         stage.on_agg_task(&mut data);
-                                        save_task!(data, db, TASK_ITYPE_AGG);
+                                        // save_task!(data, db, TASK_ITYPE_AGG);
                                     },
                                     Task::Snark(mut data) => {
                                         stage.on_snark_task(&mut data);
