@@ -15,38 +15,35 @@ impl RootProver {
             const MAX_RETRIES: usize = 10;
 
             loop {
-                match std::fs::read(&ctx.segment) {
-                    Ok(segment) => match bincode::deserialize::<ExecutionRecord>(&segment) {
-                        Ok(r) => break r,
-                        Err(e) => {
-                            if retries >= MAX_RETRIES {
-                                return Err(anyhow::anyhow!(
-                                    "Deserialize failed after {} retries: {}",
-                                    MAX_RETRIES,
-                                    e
-                                ));
-                            }
-                            tracing::warn!(
-                                "Deserialize segment {:?} failed: {}, retrying...",
-                                ctx.segment,
-                                e
-                            );
-                        }
-                    },
+                let result = std::fs::read(&ctx.segment)
+                    .and_then(|segment| {
+                        zstd::stream::decode_all(&*segment)
+                            .map_err(|e| std::io::Error::other(format!("zstd decode failed: {e}")))
+                    })
+                    .and_then(|decoded| {
+                        bincode::deserialize::<ExecutionRecord>(&decoded).map_err(|e| {
+                            std::io::Error::new(
+                                std::io::ErrorKind::InvalidData,
+                                format!("deserialize failed: {e}"),
+                            )
+                        })
+                    });
+
+                match result {
+                    Ok(r) => break r,
                     Err(e) => {
                         if retries >= MAX_RETRIES {
                             return Err(anyhow::anyhow!(
-                                "Read failed after {} retries: {}",
+                                "Segment read/decode failed after {} retries: {}",
                                 MAX_RETRIES,
                                 e
                             ));
                         }
-                        tracing::warn!("Read segment {:?} failed: {}, retrying...", ctx.segment, e);
+                        tracing::warn!("Segment {:?} error: {}, retrying...", ctx.segment, e);
+                        retries += 1;
+                        std::thread::sleep(std::time::Duration::from_millis(300));
                     }
                 }
-
-                retries += 1;
-                std::thread::sleep(std::time::Duration::from_millis(300));
             }
         };
         tracing::info!("read segment time: {:?}", now.elapsed());

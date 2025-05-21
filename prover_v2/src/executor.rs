@@ -266,22 +266,22 @@ impl Executor {
                                 record_gen_sync.advance_turn();
 
                                 records.par_iter().enumerate().for_each(|(i, record)| {
+                                    let now = Instant::now();
                                     let encoded_record = bincode::serialize(&record).unwrap();
-                                    let write_start = Instant::now();
-                                    let tmp_path =
-                                        format!("{}/{}.tmp", ctx.seg_path, base_index + i);
-                                    let final_path = format!("{}/{}", ctx.seg_path, base_index + i);
-                                    let mut file =
-                                        File::create(&tmp_path).expect("Failed to create tmp file");
-                                    file.write_all(&encoded_record)
-                                        .expect("Failed to write record");
-                                    file.sync_all().expect("Failed to sync tmp file");
-                                    std::fs::rename(tmp_path, final_path)
-                                        .expect("Failed to rename tmp file");
+                                    // use zstd to compress, level = 2 or 3
+                                    let encoded_record =
+                                        zstd::stream::encode_all(&*encoded_record, 2)
+                                            .expect("zstd compress failed");
+                                    write_file(
+                                        format!("{}/{}", ctx.seg_path, base_index + i),
+                                        &encoded_record,
+                                    )
+                                    .expect("Failed to write record");
+
                                     tracing::info!(
                                         "Wrote record {} in {:?}",
                                         base_index + i,
-                                        write_start.elapsed()
+                                        now.elapsed()
                                     );
                                 });
 
