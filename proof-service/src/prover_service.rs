@@ -192,7 +192,7 @@ impl ProverService for ProverServiceSVC {
                 response.result.as_ref().unwrap().code,
                 elapsed.as_secs(),
                 response.total_steps,
-                response.total_steps
+                response.total_segments
             );
             Ok(Response::new(response))
         })

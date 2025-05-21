@@ -256,6 +256,12 @@ impl Executor {
                                 let base_index = *segment_index;
                                 *segment_index += records.len();
 
+                                write_file(
+                                    format!("{}/segments.txt", ctx.seg_path),
+                                    segment_index.to_string().as_bytes(),
+                                )
+                                .expect("Failed to write file_no");
+
                                 // Let another worker update the state.
                                 record_gen_sync.advance_turn();
 
@@ -377,4 +383,14 @@ impl Executor {
             Ok((cycles, total_segments as u32, public_values_stream))
         })
     }
+}
+
+fn write_file(path: String, buf: &[u8]) -> anyhow::Result<()> {
+    let tmp_path = format!("{path}.tmp");
+    let mut file = File::create(&tmp_path)?;
+    file.write_all(buf)?;
+    file.sync_all()?;
+    std::fs::rename(tmp_path, path)?;
+
+    Ok(())
 }
