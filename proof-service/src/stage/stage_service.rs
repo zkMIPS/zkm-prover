@@ -17,9 +17,9 @@ use common::file;
 #[cfg(feature = "prover")]
 use prover::provers;
 
-use std::io::Write;
-
 use ethers::types::Signature;
+use sha2::{Digest, Sha256};
+use std::io::Write;
 use std::str::FromStr;
 
 use crate::database;
@@ -381,9 +381,13 @@ impl StageService for StageServiceSVC {
             } else {
                 return Err(Status::internal("ProverVersion error"));
             };
-
+            // compute program id
+            let mut hasher = Sha256::new();
+            hasher.update(&request.get_ref().elf_data);
+            let elf_hash = hasher.finalize();
             let generate_task = GenerateTask::new(
                 prover_version,
+                hex::encode(elf_hash),
                 &request.get_ref().proof_id,
                 &dir_path,
                 &elf_path,

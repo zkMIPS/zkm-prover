@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::stage::{/*read_block_data, */ safe_read};
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct GenerateTask {
+    pub program_id: String,
     pub base_dir: String,
     pub proof_id: String,
     pub version: ProverVersion,
@@ -74,6 +75,7 @@ impl GenerateTask {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         version: ProverVersion,
+        program_id: String,
         proof_id: &str,
         base_dir: &str,
         elf_path: &str,
@@ -92,6 +94,7 @@ impl GenerateTask {
         receipts_path: &str,
     ) -> Self {
         GenerateTask {
+            program_id,
             version,
             proof_id: proof_id.to_string(),
             base_dir: base_dir.to_string(),

@@ -163,6 +163,9 @@ impl Stage {
     fn gen_split_task(&mut self) {
         assert_eq!(self.split_task.state, TASK_STATE_INITIAL);
         self.split_task
+            .program_id
+            .clone_from(&self.generate_task.program_id);
+        self.split_task
             .proof_id
             .clone_from(&self.generate_task.proof_id);
         self.split_task
@@ -208,6 +211,7 @@ impl Stage {
     fn task_with_no(&self, file_no: usize) -> ProveTask {
         ProveTask {
             task_id: uuid::Uuid::new_v4().to_string(),
+            program_id: self.generate_task.program_id.clone(),
             proof_id: self.generate_task.proof_id.clone(),
             state: TASK_STATE_UNPROCESSED,
             trace: Trace::default(),

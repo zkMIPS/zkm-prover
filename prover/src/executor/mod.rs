@@ -24,6 +24,7 @@ impl SplitContext {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         basedir: &str,
+        _program_id: &str,
         elf_path: &str,
         block_no: Option<u64>,
         seg_size: u32,

@@ -148,6 +148,7 @@ impl ProverService for ProverServiceSVC {
             let start = Instant::now();
             let split_context = SplitContext::new(
                 &request.get_ref().base_dir,
+                &request.get_ref().program_id,
                 &request.get_ref().elf_path,
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
@@ -221,6 +222,7 @@ impl ProverService for ProverServiceSVC {
             #[cfg(feature = "prover_v2")]
             let prove_context = ProveContext {
                 proof_id: request.get_ref().proof_id.clone(),
+                program_id: request.get_ref().program_id.clone(),
                 index: request.get_ref().index as usize,
                 segment: request.get_ref().segment.clone(),
                 seg_size: request.get_ref().seg_size,

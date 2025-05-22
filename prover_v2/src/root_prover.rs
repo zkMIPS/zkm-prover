@@ -2,7 +2,7 @@ use zkm_core_executor::ExecutionRecord;
 use zkm_stark::{MachineProver, StarkGenericConfig};
 
 use crate::contexts::ProveContext;
-use crate::{get_prover, NetworkProve};
+use crate::{get_prover, NetworkProve, KEY_CACHE};
 
 #[derive(Default)]
 pub struct RootProver {}
@@ -53,7 +53,14 @@ impl RootProver {
 
         let prover = get_prover();
         let now = std::time::Instant::now();
-        let (pk, _) = prover.core_prover.machine().setup(&record.program);
+        let mut cache = KEY_CACHE.lock().unwrap();
+        let pk = if let Some((pk, _)) = cache.cache.get(&ctx.program_id) {
+            pk
+        } else {
+            let (pk, vk) = prover.core_prover.setup(&record.program);
+            cache.push(ctx.program_id.clone(), (pk, vk));
+            &cache.cache.get(&ctx.program_id).unwrap().0
+        };
         tracing::info!("setup time: {:?}", now.elapsed());
         let now = std::time::Instant::now();
         prover.core_prover.machine().generate_dependencies(
@@ -79,7 +86,7 @@ impl RootProver {
         let main_data = prover.core_prover.commit(&record, main_trace);
         tracing::info!("commit time: {:?}", now.elapsed());
         let now = std::time::Instant::now();
-        let proof = prover.core_prover.open(&pk, main_data, &mut challenger)?;
+        let proof = prover.core_prover.open(pk, main_data, &mut challenger)?;
         tracing::info!("open time: {:?}", now.elapsed());
 
         Ok(bincode::serialize(&proof)?)

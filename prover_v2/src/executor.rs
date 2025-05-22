@@ -27,7 +27,7 @@ use zkm_stark::{
 };
 
 pub use crate::contexts::SplitContext;
-use crate::{get_prover, NetworkProve, FIRST_LAYER_BATCH_SIZE};
+use crate::{get_prover, NetworkProve, FIRST_LAYER_BATCH_SIZE, KEY_CACHE};
 
 #[derive(Default)]
 pub struct Executor {}
@@ -62,7 +62,16 @@ impl Executor {
         let program = prover
             .get_program(&elf)
             .map_err(|e| anyhow::Error::msg(e.to_string()))?;
-        let (_, vk) = prover.core_prover.setup(&program);
+        let mut cache = KEY_CACHE.lock().unwrap();
+        let vk = if let Some((_, vk)) = cache.cache.get(&ctx.program_id) {
+            tracing::info!("load vk from cache");
+            vk
+        } else {
+            tracing::info!("No vk in cache, generate new keys");
+            let (pk, vk) = prover.core_prover.setup(&program);
+            cache.push(ctx.program_id.clone(), (pk, vk));
+            &cache.cache.get(&ctx.program_id).unwrap().1
+        };
         let vk_bytes = bincode::serialize(&vk)?;
         file::new(&format!("{}/vk.bin", ctx.base_dir)).write_all(&vk_bytes)?;
 
@@ -71,7 +80,7 @@ impl Executor {
             &prover,
             ctx,
             program,
-            &vk,
+            vk,
             &network_prove.stdin,
             network_prove.opts.core_opts,
             context,

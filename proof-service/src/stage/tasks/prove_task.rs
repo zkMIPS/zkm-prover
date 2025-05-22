@@ -5,6 +5,7 @@ use serde_derive::{Deserialize, Serialize};
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ProveTask {
     pub task_id: String,
+    pub program_id: String,
     pub proof_id: String,
     pub state: u32,
     pub base_dir: String,

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct SplitTask {
     pub task_id: String,
+    pub program_id: String,
     pub state: u32,
     pub proof_id: String,
     pub base_dir: String,

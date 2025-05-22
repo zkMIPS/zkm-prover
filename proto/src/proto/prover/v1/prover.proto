@@ -75,6 +75,7 @@ message SplitElfRequest {
   string private_input_path = 10;
   string output_path = 11;
   string receipt_inputs_path = 12;
+  string program_id = 13;
 }
 
 message SplitElfResponse {
@@ -88,8 +89,7 @@ message SplitElfResponse {
 message ProveRequest {
   string proof_id = 1;
   string computed_request_id = 2;
-
-  //string base_dir = 3;
+  string program_id = 3;
   string segment = 4;
   //  bytes segment = 4;
   optional uint64 block_no = 5;

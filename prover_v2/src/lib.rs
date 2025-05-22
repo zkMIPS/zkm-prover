@@ -1,9 +1,11 @@
+use lru::LruCache;
 use once_cell::sync::OnceCell;
+use std::num::NonZeroUsize;
 use std::sync::Mutex;
 use std::time::Duration;
 use zkm_core_executor::ZKMContextBuilder;
 use zkm_core_machine::io::ZKMStdin;
-use zkm_prover::{OuterSC, ZKMProver};
+use zkm_prover::{CoreSC, OuterSC, ZKMProver};
 use zkm_stark::{StarkProvingKey, StarkVerifyingKey, ZKMProverOpts};
 
 pub use zkm_sdk;
@@ -61,3 +63,29 @@ pub fn get_prover() -> impl std::ops::DerefMut<Target = ZKMProver> {
 
 static WRAP_KEYS: OnceCell<(StarkProvingKey<OuterSC>, StarkVerifyingKey<OuterSC>)> =
     OnceCell::new();
+
+const DEFAULT_CACHE_SIZE: usize = 3;
+
+pub struct StarkKeyCache {
+    pub cache: LruCache<String, (StarkProvingKey<CoreSC>, StarkVerifyingKey<CoreSC>)>,
+}
+
+impl StarkKeyCache {
+    pub fn new(size: usize) -> Self {
+        let cache = LruCache::<String, (StarkProvingKey<CoreSC>, StarkVerifyingKey<CoreSC>)>::new(
+            NonZeroUsize::new(size).unwrap(),
+        );
+        Self { cache }
+    }
+    pub fn contains(&mut self, key: &String) -> bool {
+        self.cache.get(key).is_some()
+    }
+    pub fn push(&mut self, key: String, v: (StarkProvingKey<CoreSC>, StarkVerifyingKey<CoreSC>)) {
+        self.cache.push(key.clone(), v);
+    }
+}
+
+lazy_static::lazy_static! {
+    pub static ref KEY_CACHE: Mutex<StarkKeyCache> =
+        Mutex::new(StarkKeyCache::new(DEFAULT_CACHE_SIZE));
+}

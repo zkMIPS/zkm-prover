@@ -99,6 +99,7 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             block_no: split_task.block_no,
             seg_size: split_task.seg_size,
             receipt_inputs_path: split_task.recepit_inputs_path.clone(),
+            program_id: split_task.program_id.clone(),
         };
         tracing::info!(
             "[split] rpc {} {}:{} start",
@@ -143,6 +144,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
         let request = ProveRequest {
             proof_id: prove_task.program.proof_id.clone(),
             computed_request_id: prove_task.task_id.clone(),
+            program_id: prove_task.program_id.clone(),
             segment: prove_task.segment.clone(),
             block_no: prove_task.program.block_no,
             seg_size: prove_task.program.seg_size,
