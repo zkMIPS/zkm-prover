@@ -52,20 +52,21 @@ async fn get_idle_client(
     nodes.shuffle(&mut rng);
 
     for mut node in nodes {
-        let is_idle = {
-            let status = node.status.lock().unwrap();
-            *status == NodeStatus::Idle
-        };
-
-        if !is_idle {
-            continue;
+        {
+            let mut status = node.status.lock().unwrap();
+            if *status != NodeStatus::Idle {
+                continue;
+            }
+            *status = NodeStatus::Busy;
         }
 
         if let Some(client) = node.is_active(tls_config.clone()).await {
-            let mut status = node.status.lock().unwrap();
-            *status = NodeStatus::Busy;
-
             return Some((node.addr.clone(), client, node.status.clone()));
+        } else {
+            tracing::warn!(
+                "Node {} is unreachable, marked Busy to avoid reuse",
+                node.addr
+            );
         }
     }
     // tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
