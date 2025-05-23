@@ -162,9 +162,10 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.prove(grpc_request).await;
-        let mut status = node_status.lock().unwrap();
-        *status = NodeStatus::Idle;
         if let Ok(response) = response {
+            //  If the server does not respond, keep the previous busy status to prevent reuse.
+            let mut status = node_status.lock().unwrap();
+            *status = NodeStatus::Idle;
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 prove_task.state = result_code_to_state(response_result.code);
                 prove_task.trace.node_info = addrs.clone();
