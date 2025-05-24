@@ -21,15 +21,6 @@ enum Status {
   SNARK_ERROR = 8;
 }
 
-enum Step {
-  Init = 0;
-  InSplit = 1;
-  InProve = 2;
-  InAgg = 3;
-  InAggAll = 4;
-  InSnark = 5;
-  End = 6;
-}
 message GenerateProofRequest {
   string proof_id = 1;
   bytes elf_data = 2;
@@ -40,7 +31,9 @@ message GenerateProofRequest {
   string signature = 7;
   bytes public_input_stream = 8;
   bytes private_input_stream = 9;
-  bool execute_only = 10;
+  // only support Split, Agg and Snark
+  // default value is Snark
+  optional includes.v1.Step target_step = 10;
   bool composite_proof = 11;
   repeated bytes receipt_inputs = 12;
   repeated bytes receipts = 13;
@@ -67,7 +60,7 @@ message GetStatusResponse {
   string snark_proof_url = 4;
   string stark_proof_url = 5;
   bytes output_stream = 7;
-  Step step = 8; // Step
+  includes.v1.Step step = 8; // Step
   string public_values_url = 9;
   uint64 total_steps = 10;
   bytes receipt = 11;

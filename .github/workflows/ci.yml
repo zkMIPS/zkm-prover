@@ -49,10 +49,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: clippy
       - name: Install Dependencies
         run: sudo apt install protobuf-compiler
+      - run: rustup component add clippy
       - run: cargo clippy --features=prover --all-targets -- -D warnings
       - run: cargo clippy --features=prover_v2 --all-targets -- -D warnings
 
@@ -62,6 +61,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: rustfmt
+      - run: rustup component add rustfmt
       - run: cargo fmt --all -- --check

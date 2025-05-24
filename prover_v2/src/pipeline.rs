@@ -26,10 +26,10 @@ impl Pipeline {
         }
     }
 
-    pub fn split(&self, split_context: &SplitContext) -> Result<(bool, u64), String> {
+    pub fn split(&self, split_context: &SplitContext) -> Result<(bool, u64, u32), String> {
         self.executor
             .split(split_context)
-            .map(|n| (true, n))
+            .map(|(step, segments)| (true, step, segments))
             .map_err(|e| e.to_string())
     }
 

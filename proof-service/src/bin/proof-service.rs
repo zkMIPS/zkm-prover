@@ -108,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::pin!(metrics_server);
     // tokio::pin!(file_server);
 
-    log::info!(
+    tracing::info!(
         "Starting stage/prover:{} on {}",
         args.stage,
         runtime_config.addr

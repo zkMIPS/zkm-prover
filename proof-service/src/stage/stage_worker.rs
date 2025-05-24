@@ -4,10 +4,7 @@ use crate::prover_client;
 use crate::stage::{
     stage::get_timestamp,
     stage::Stage,
-    tasks::{
-        Task, TASK_ITYPE_AGG, TASK_ITYPE_FINAL, TASK_ITYPE_PROVE, TASK_ITYPE_SPLIT,
-        TASK_STATE_FAILED, TASK_STATE_SUCCESS,
-    },
+    tasks::{Task, TASK_ITYPE_FINAL, TASK_ITYPE_SPLIT, TASK_STATE_FAILED, TASK_STATE_SUCCESS},
     GenerateTask,
 };
 use crate::TlsConfig;
@@ -17,12 +14,13 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::time;
 
-use crate::proto::stage_service::{self, v1::Step};
+use crate::proto::includes::v1::Step;
+use crate::proto::stage_service;
 
 macro_rules! save_task {
     ($task:ident, $db_pool:ident, $type:expr) => {
         if $task.state == TASK_STATE_FAILED || $task.state == TASK_STATE_SUCCESS {
-            log::info!(
+            tracing::info!(
                 "begin to save task: {:?}:{:?} type {:?} status {}",
                 $task.proof_id,
                 $task.task_id,
@@ -42,7 +40,7 @@ macro_rules! save_task {
                 ..Default::default()
             };
             if let Err(e) = $db_pool.insert_prove_task(&prove_task).await {
-                log::error!("save task error: {:?}", e)
+                tracing::error!("save task error: {:?}", e)
             }
         }
     };
@@ -57,16 +55,16 @@ async fn run_stage_task(
     if let Some(context) = task.context {
         let task_decoded = serde_json::from_str::<GenerateTask>(&context);
         match task_decoded {
-            Ok(generte_context) => {
+            Ok(generate_context) => {
                 let mut check_at = get_timestamp();
-                let mut stage = Stage::new(generte_context.clone());
+                let mut stage = Stage::new(generate_context.clone());
                 let (tx, mut rx) = tokio::sync::mpsc::channel(128);
                 stage.dispatch();
                 let mut interval = time::interval(time::Duration::from_millis(200));
                 loop {
                     let current_step = stage.step;
                     match stage.step {
-                        Step::InSplit => {
+                        Step::Prove => {
                             let split_task = stage.get_split_task();
                             if let Some(split_task) = split_task {
                                 let tx = tx.clone();
@@ -79,27 +77,26 @@ async fn run_stage_task(
                                     }
                                 });
                             }
-                        }
-                        Step::InProve => {
-                            let prove_task = stage.get_prove_task();
-                            log::debug!("Step::InProve get_prove_task {:?}", prove_task.is_some());
-                            if let Some(prove_task) = prove_task {
-                                let tx = tx.clone();
-                                let tls_config = tls_config.clone();
-                                tokio::spawn(async move {
-                                    let response =
-                                        prover_client::prove(prove_task, tls_config).await;
-                                    if let Some(prove_task) = response {
-                                        let _ = tx.send(Task::Prove(prove_task)).await;
-                                    }
-                                });
+                            // This is a temporary workaround.
+                            if stage.count_processing_prove_tasks() < node_num {
+                                if let Some(prove_task) = stage.get_prove_task() {
+                                    let tx = tx.clone();
+                                    let tls_config = tls_config.clone();
+                                    tokio::spawn(async move {
+                                        let response =
+                                            prover_client::prove(prove_task, tls_config).await;
+                                        if let Some(prove_task) = response {
+                                            let _ = tx.send(Task::Prove(prove_task)).await;
+                                        }
+                                    });
+                                }
                             }
-                            // }
-                            // Step::InAgg => {
-                            //
-                            if stage.count_unfinished_prove_tasks() < node_num {
+
+                            if stage.is_tasks_gen_done
+                                && stage.count_unfinished_prove_tasks() < node_num
+                            {
                                 let agg_task = stage.get_agg_task();
-                                log::debug!("get_agg_task: {:?}", agg_task.is_some());
+                                tracing::debug!("get_agg_task: {:?}", agg_task.is_some());
                                 if let Some(agg_task) = agg_task {
                                     let tx = tx.clone();
                                     let tls_config = tls_config.clone();
@@ -113,7 +110,7 @@ async fn run_stage_task(
                                 }
                             }
                         }
-                        Step::InSnark => {
+                        Step::Snark => {
                             let snark_task = stage.get_snark_task();
                             if let Some(snark_task) = snark_task {
                                 let tx = tx.clone();
@@ -139,11 +136,11 @@ async fn run_stage_task(
                                     },
                                     Task::Prove(mut data) => {
                                         stage.on_prove_task(&mut data);
-                                        save_task!(data, db, TASK_ITYPE_PROVE);
+                                        // save_task!(data, db, TASK_ITYPE_PROVE);
                                     },
                                     Task::Agg(mut data) => {
                                         stage.on_agg_task(&mut data);
-                                        save_task!(data, db, TASK_ITYPE_AGG);
+                                        // save_task!(data, db, TASK_ITYPE_AGG);
                                     },
                                     Task::Snark(mut data) => {
                                         stage.on_snark_task(&mut data);
@@ -179,11 +176,10 @@ async fn run_stage_task(
                 }
                 if stage.is_error() {
                     let get_status = || match stage.step {
-                        Step::InSplit => stage_service::v1::Status::SplitError,
-                        Step::InProve => stage_service::v1::Status::ProveError,
-                        Step::InAgg => stage_service::v1::Status::AggError,
-                        Step::InAggAll => stage_service::v1::Status::AggError,
-                        Step::InSnark => stage_service::v1::Status::SnarkError,
+                        Step::Split => stage_service::v1::Status::SplitError,
+                        Step::Prove => stage_service::v1::Status::ProveError,
+                        Step::Agg => stage_service::v1::Status::AggError,
+                        Step::Snark => stage_service::v1::Status::SnarkError,
                         _ => stage_service::v1::Status::InternalError,
                     };
                     let status = get_status();
@@ -191,11 +187,11 @@ async fn run_stage_task(
                         .await
                         .unwrap();
                 } else {
-                    let result = if generte_context.execute_only || generte_context.composite_proof
-                    {
-                        vec![]
+                    // If generate compressed proof, do not store in database, use file instead.
+                    let result = if generate_context.target_step == Step::Snark {
+                        file::new(&generate_context.snark_path).read().unwrap()
                     } else {
-                        file::new(&generte_context.snark_path).read().unwrap()
+                        vec![]
                     };
                     db.update_stage_task(
                         &task.id,
@@ -204,7 +200,7 @@ async fn run_stage_task(
                     )
                     .await
                     .unwrap();
-                    log::info!("[stage] finished {:?} ", stage);
+                    tracing::info!("[stage] finished {:?} ", stage);
                 }
             }
             Err(_) => {
@@ -268,7 +264,7 @@ async fn load_stage_task(node_num: usize, tls_config: Option<TlsConfig>, db: dat
                 }
             }
             Err(e) => {
-                log::error!("{:?}", e);
+                tracing::error!("{:?}", e);
                 time::sleep(time::Duration::from_secs(10)).await;
             }
         }

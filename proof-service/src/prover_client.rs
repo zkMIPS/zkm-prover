@@ -52,20 +52,21 @@ async fn get_idle_client(
     nodes.shuffle(&mut rng);
 
     for mut node in nodes {
-        let is_idle = {
-            let status = node.status.lock().unwrap();
-            *status == NodeStatus::Idle
-        };
-
-        if !is_idle {
-            continue;
+        {
+            let mut status = node.status.lock().unwrap();
+            if *status != NodeStatus::Idle {
+                continue;
+            }
+            *status = NodeStatus::Busy;
         }
 
         if let Some(client) = node.is_active(tls_config.clone()).await {
-            let mut status = node.status.lock().unwrap();
-            *status = NodeStatus::Busy;
-
             return Some((node.addr.clone(), client, node.status.clone()));
+        } else {
+            tracing::warn!(
+                "Node {} is unreachable, marked Busy to avoid reuse",
+                node.addr
+            );
         }
     }
     // tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
@@ -99,8 +100,9 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
             block_no: split_task.block_no,
             seg_size: split_task.seg_size,
             receipt_inputs_path: split_task.recepit_inputs_path.clone(),
+            program_id: split_task.program_id.clone(),
         };
-        log::info!(
+        tracing::info!(
             "[split] rpc {} {}:{} start",
             addrs,
             request.proof_id,
@@ -117,13 +119,16 @@ pub async fn split(mut split_task: SplitTask, tls_config: Option<TlsConfig>) -> 
                 // FIXME: node_info usage?
                 split_task.trace.node_info = addrs.clone();
                 split_task.total_steps = response.get_ref().total_steps;
-                log::info!(
-                    "[split] rpc {} {}:{} code:{:?} message:{:?} end",
+                split_task.total_segments = response.get_ref().total_segments;
+                tracing::info!(
+                    "[split] rpc {} {}:{} code:{:?} message:{:?} end. Total cycles {}, segments {}",
                     addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
                     response_result.code,
                     response_result.message,
+                    split_task.total_steps,
+                    split_task.total_segments,
                 );
                 return Some(split_task);
             }
@@ -140,32 +145,36 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
         let request = ProveRequest {
             proof_id: prove_task.program.proof_id.clone(),
             computed_request_id: prove_task.task_id.clone(),
+            program_id: prove_task.program_id.clone(),
             segment: prove_task.segment.clone(),
             block_no: prove_task.program.block_no,
             seg_size: prove_task.program.seg_size,
             receipts_input: prove_task.program.receipts.clone(),
             index: prove_task.file_no as u32,
         };
-        log::info!(
-            "[prove] rpc {} {}:{}start",
+        tracing::info!(
+            "[prove] rpc {} {}:{}:{} start",
             addrs,
             request.proof_id,
             request.computed_request_id,
+            request.index
         );
         let mut grpc_request = Request::new(request);
         grpc_request.set_timeout(Duration::from_secs(TASK_TIMEOUT));
         let response = client.prove(grpc_request).await;
-        let mut status = node_status.lock().unwrap();
-        *status = NodeStatus::Idle;
         if let Ok(response) = response {
+            //  If the server does not respond, keep the previous busy status to prevent reuse.
+            let mut status = node_status.lock().unwrap();
+            *status = NodeStatus::Idle;
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 prove_task.state = result_code_to_state(response_result.code);
                 prove_task.trace.node_info = addrs.clone();
-                log::info!(
-                    "[prove] rpc {} {}:{} code:{:?} message:{:?} end",
+                tracing::info!(
+                    "[prove] rpc {} {}:{}:{} code:{:?} message:{:?} end",
                     addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
+                    prove_task.file_no,
                     response_result.code,
                     response_result.message,
                 );
@@ -174,7 +183,7 @@ pub async fn prove(mut prove_task: ProveTask, tls_config: Option<TlsConfig>) -> 
             }
         }
     }
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    // tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     Some(prove_task)
 }
 
@@ -194,11 +203,12 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             is_leaf_layer: agg_task.is_leaf_layer,
             is_deferred: agg_task.is_deferred,
         };
-        log::info!(
-            "[aggregate] rpc {} {}:{} {} inputs start",
+        tracing::info!(
+            "[aggregate] rpc {} {}:{}:{} {} inputs start",
             addrs,
             request.proof_id,
             request.computed_request_id,
+            agg_task.agg_index,
             request.inputs.len()
         );
         let mut grpc_request = Request::new(request);
@@ -210,11 +220,12 @@ pub async fn aggregate(mut agg_task: AggTask, tls_config: Option<TlsConfig>) -> 
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 agg_task.state = result_code_to_state(response_result.code);
                 agg_task.trace.node_info = addrs.clone();
-                log::info!(
-                    "[aggregate] rpc {} {}:{} code:{:?} message:{:?} end",
+                tracing::info!(
+                    "[aggregate] rpc {} {}:{}:{} code:{:?} message:{:?} end",
                     addrs,
                     response.get_ref().proof_id,
                     response.get_ref().computed_request_id,
+                    agg_task.agg_index,
                     response_result.code,
                     response_result.message,
                 );
@@ -238,7 +249,7 @@ pub async fn snark_proof(
             computed_request_id: snark_task.task_id.clone(),
             agg_receipt: snark_task.agg_receipt.clone(),
         };
-        log::info!(
+        tracing::info!(
             "[snark_proof] rpc {} {}:{} start",
             addrs,
             request.proof_id,
@@ -252,7 +263,7 @@ pub async fn snark_proof(
         if let Ok(response) = response {
             if let Some(response_result) = response.get_ref().result.as_ref() {
                 if ResultCode::from_i32(response_result.code) == Some(ResultCode::Ok) {
-                    log::info!(
+                    tracing::info!(
                         "[snark_proof] rpc {} {}:{}  code:{:?} message:{:?}",
                         addrs,
                         response.get_ref().proof_id,

@@ -27,12 +27,12 @@ use zkm_stark::{
 };
 
 pub use crate::contexts::SplitContext;
-use crate::{get_prover, NetworkProve, FIRST_LAYER_BATCH_SIZE};
+use crate::{get_prover, NetworkProve, FIRST_LAYER_BATCH_SIZE, KEY_CACHE};
 
 #[derive(Default)]
 pub struct Executor {}
 impl Executor {
-    pub fn split(&self, ctx: &SplitContext) -> anyhow::Result<u64> {
+    pub fn split(&self, ctx: &SplitContext) -> anyhow::Result<(u64, u32)> {
         let prover = get_prover();
         let mut network_prove = NetworkProve::new(ctx.seg_size);
 
@@ -62,16 +62,25 @@ impl Executor {
         let program = prover
             .get_program(&elf)
             .map_err(|e| anyhow::Error::msg(e.to_string()))?;
-        let (_, vk) = prover.core_prover.setup(&program);
+        let mut cache = KEY_CACHE.lock().unwrap();
+        let vk = if let Some((_, vk)) = cache.cache.get(&ctx.program_id) {
+            tracing::info!("load vk from cache");
+            vk
+        } else {
+            tracing::info!("No vk in cache, generate new keys");
+            let (pk, vk) = prover.core_prover.setup(&program);
+            cache.push(ctx.program_id.clone(), (pk, vk));
+            &cache.cache.get(&ctx.program_id).unwrap().1
+        };
         let vk_bytes = bincode::serialize(&vk)?;
         file::new(&format!("{}/vk.bin", ctx.base_dir)).write_all(&vk_bytes)?;
 
         let context = network_prove.context_builder.build();
-        let (total_steps, public_values_stream) = self.split_with_context(
+        let (total_steps, total_segments, public_values_stream) = self.split_with_context(
             &prover,
             ctx,
             program,
-            &vk,
+            vk,
             &network_prove.stdin,
             network_prove.opts.core_opts,
             context,
@@ -82,7 +91,7 @@ impl Executor {
         let public_values_path = format!("{}/wrap/public_values.bin", ctx.base_dir);
         file::new(&public_values_path).write_all(&public_values_stream)?;
 
-        Ok(total_steps)
+        Ok((total_steps, total_segments))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -96,7 +105,7 @@ impl Executor {
         opts: ZKMCoreOpts,
         mut context: ZKMContext<'a>,
         shape_config: Option<&CoreShapeConfig<<CoreSC as StarkGenericConfig>::Val>>,
-    ) -> anyhow::Result<(u64, Vec<u8>)> {
+    ) -> anyhow::Result<(u64, u32, Vec<u8>)> {
         context.subproof_verifier = Some(prover as &dyn SubproofVerifier);
         // Setup the runtime.
         let mut runtime = Runtime::with_context(program.clone(), opts, context);
@@ -256,14 +265,33 @@ impl Executor {
                                 let base_index = *segment_index;
                                 *segment_index += records.len();
 
+                                write_file(
+                                    format!("{}/segments.txt", ctx.seg_path),
+                                    segment_index.to_string().as_bytes(),
+                                )
+                                .expect("Failed to write file_no");
+
                                 // Let another worker update the state.
                                 record_gen_sync.advance_turn();
 
                                 records.par_iter().enumerate().for_each(|(i, record)| {
+                                    let now = Instant::now();
                                     let encoded_record = bincode::serialize(&record).unwrap();
-                                    file::new(&format!("{}/{}", ctx.seg_path, base_index + i))
-                                        .write_all(&encoded_record)
-                                        .expect("Failed to write record");
+                                    // use zstd to compress, level = 2 or 3
+                                    let encoded_record =
+                                        zstd::stream::encode_all(&*encoded_record, 2)
+                                            .expect("zstd compress failed");
+                                    write_file(
+                                        format!("{}/{}", ctx.seg_path, base_index + i),
+                                        &encoded_record,
+                                    )
+                                    .expect("Failed to write record");
+
+                                    tracing::info!(
+                                        "Wrote record {} in {:?}",
+                                        base_index + i,
+                                        now.elapsed()
+                                    );
                                 });
 
                                 // process deferred proofs
@@ -314,6 +342,10 @@ impl Executor {
             p2_record_and_trace_gen_handles
                 .into_iter()
                 .for_each(|handle| handle.join().unwrap());
+            let total_segments = {
+                let segment_index = segment_index.lock().unwrap();
+                *segment_index
+            };
 
             // Log some of the `ExecutionReport` information.
             let report_aggregate = report_aggregate.lock().unwrap();
@@ -357,7 +389,17 @@ impl Executor {
                 cycles as f64 / (split_time * 1000.0),
             );
 
-            Ok((cycles, public_values_stream))
+            Ok((cycles, total_segments as u32, public_values_stream))
         })
     }
+}
+
+fn write_file(path: String, buf: &[u8]) -> anyhow::Result<()> {
+    let tmp_path = format!("{path}.tmp");
+    let mut file = File::create(&tmp_path)?;
+    file.write_all(buf)?;
+    file.sync_all()?;
+    std::fs::rename(tmp_path, path)?;
+
+    Ok(())
 }

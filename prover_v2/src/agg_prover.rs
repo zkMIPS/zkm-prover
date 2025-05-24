@@ -8,6 +8,7 @@ use zkm_recursion_circuit::machine::{
 };
 use zkm_recursion_compiler::config::InnerConfig;
 use zkm_recursion_core::Runtime;
+use zkm_sdk::ZKMProof;
 use zkm_stark::{Challenge, MachineProver, StarkGenericConfig, Val, ZKMCoreOpts};
 
 #[derive(Default)]
@@ -41,7 +42,15 @@ impl AggProver {
             let reduced_proofs: Vec<ZKMReduceProof<_>> = ctx
                 .proofs
                 .iter()
-                .map(|vk_and_proof| bincode::deserialize(vk_and_proof).unwrap())
+                .map(|vk_and_proof| {
+                    let json_str = String::from_utf8_lossy(vk_and_proof).to_string();
+                    let proof: ZKMProof =
+                        serde_json::from_str(&json_str).expect("could not deserialize proof");
+                    match proof {
+                        ZKMProof::Compressed(proof) => *proof,
+                        _ => unreachable!("unexpected proof"),
+                    }
+                })
                 .collect();
 
             ZKMCircuitWitness::Compress(ZKMCompressWitnessValues {
@@ -55,7 +64,7 @@ impl AggProver {
 
         let reduced_proof = self.compress(&prover, input, network_prove.opts.recursion_opts)?;
 
-        Ok(bincode::serialize(&reduced_proof)?)
+        Ok(serde_json::to_string(&reduced_proof)?.into_bytes())
     }
 
     fn compress(
@@ -63,7 +72,7 @@ impl AggProver {
         prover: &ZKMProver,
         input: ZKMCircuitWitness,
         recursion_opts: ZKMCoreOpts,
-    ) -> anyhow::Result<ZKMReduceProof<InnerSC>> {
+    ) -> anyhow::Result<ZKMProof> {
         // Get the program and witness stream.
         let (program, witness_stream) = tracing::debug_span!("get program and witness stream")
             .in_scope(|| match input {
@@ -157,6 +166,6 @@ impl AggProver {
             (vk, proof)
         });
 
-        Ok(ZKMReduceProof { vk, proof })
+        Ok(ZKMProof::Compressed(Box::new(ZKMReduceProof { vk, proof })))
     }
 }

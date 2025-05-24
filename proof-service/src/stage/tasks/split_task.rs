@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct SplitTask {
     pub task_id: String,
+    pub program_id: String,
     pub state: u32,
     pub proof_id: String,
     pub base_dir: String,
@@ -23,4 +24,5 @@ pub struct SplitTask {
     pub output: Vec<u8>, //void
 
     pub total_steps: u64,
+    pub total_segments: u32,
 }

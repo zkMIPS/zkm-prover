@@ -10,7 +10,7 @@ pub struct Executor {}
 use crate::executor::SplitContext;
 
 impl Executor {
-    pub fn split(&self, ctx: &SplitContext) -> Result<u64, String> {
+    pub fn split(&self, ctx: &SplitContext) -> Result<(u64, u32), String> {
         // 1. split ELF into segs
         let elf_path = ctx.elf_path.clone();
         let block_no = ctx.block_no.unwrap_or(0);
@@ -115,7 +115,10 @@ impl Executor {
                     let _ = file::new(&ctx.output_path)
                         .write(&instrumented_state.state.public_values_stream)
                         .unwrap();
-                    return Ok(instrumented_state.state.total_step);
+                    return Ok((
+                        instrumented_state.state.total_step,
+                        instrumented_state.pre_segment_id,
+                    ));
                 }
                 Err(e) => {
                     log::error!("split minimal_parse error {:?}", e.to_string());
@@ -123,6 +126,6 @@ impl Executor {
                 }
             }
         }
-        Ok(0)
+        Ok((0, 0))
     }
 }

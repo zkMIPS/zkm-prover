@@ -46,7 +46,7 @@ async fn run_back_task<
             "Unknown panic".to_string()
         };
 
-        log::error!("Task panicked: {}", panic_message);
+        tracing::error!("Task panicked: {}", panic_message);
         Err(panic_message) // Convert into a boxed error
     })
 }
@@ -109,10 +109,10 @@ impl ProverService for ProverServiceSVC {
         _request: Request<GetStatusRequest>,
     ) -> tonic::Result<Response<GetStatusResponse>, Status> {
         metrics::record_metrics("prover::get_status", || async {
-            // log::info!("{:#?}", request);
+            // tracing::info!("{:#?}", request);
             let mut response = GetStatusResponse::default();
             let success = self.pipeline.lock().unwrap().get_status();
-            log::info!("node {:?}: lock pipeline {:?}", self.config.addr, success);
+            tracing::info!("node {:?}: lock pipeline {:?}", self.config.addr, success);
             if success {
                 response.status = get_status_response::Status::Idle.into();
             } else {
@@ -128,7 +128,7 @@ impl ProverService for ProverServiceSVC {
         _request: Request<GetTaskResultRequest>,
     ) -> tonic::Result<Response<GetTaskResultResponse>, Status> {
         metrics::record_metrics("prover::get_task_result", || async {
-            // log::info!("{:#?}", request);
+            // tracing::info!("{:#?}", request);
             let response = GetTaskResultResponse::default();
             Ok(Response::new(response))
         })
@@ -140,7 +140,7 @@ impl ProverService for ProverServiceSVC {
         request: Request<SplitElfRequest>,
     ) -> tonic::Result<Response<SplitElfResponse>, Status> {
         metrics::record_metrics("prover::split_elf", || async {
-            log::info!(
+            tracing::info!(
                 "[split_elf] {}:{} start",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
@@ -148,6 +148,7 @@ impl ProverService for ProverServiceSVC {
             let start = Instant::now();
             let split_context = SplitContext::new(
                 &request.get_ref().base_dir,
+                &request.get_ref().program_id,
                 &request.get_ref().elf_path,
                 request.get_ref().block_no,
                 request.get_ref().seg_size,
@@ -163,7 +164,7 @@ impl ProverService for ProverServiceSVC {
             let split_func = move || {
                 // todo: use try_lock?
                 let guard = pipeline.lock().unwrap_or_else(|e| {
-                    log::error!("Mutex poisoned, recovering");
+                    tracing::error!("Mutex poisoned, recovering");
                     e.into_inner()
                 });
 
@@ -174,6 +175,7 @@ impl ProverService for ProverServiceSVC {
                 proof_id: request.get_ref().proof_id.clone(),
                 computed_request_id: request.get_ref().computed_request_id.clone(),
                 total_steps: result.clone().unwrap_or_default().1,
+                total_segments: result.clone().unwrap_or_default().2,
                 ..Default::default()
             };
             // True if and only if no error occurs and ELF size > 0
@@ -184,12 +186,14 @@ impl ProverService for ProverServiceSVC {
             on_done!(result, response);
             let end = Instant::now();
             let elapsed = end.duration_since(start);
-            log::info!(
-                "[split_elf] {}:{} code:{} elapsed:{} end",
+            tracing::info!(
+                "[split_elf] {}:{} code:{} elapsed:{} end. Total cycles {}, segments {}",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
                 response.result.as_ref().unwrap().code,
-                elapsed.as_secs()
+                elapsed.as_secs(),
+                response.total_steps,
+                response.total_segments
             );
             Ok(Response::new(response))
         })
@@ -201,7 +205,7 @@ impl ProverService for ProverServiceSVC {
         request: Request<ProveRequest>,
     ) -> tonic::Result<Response<ProveResponse>, Status> {
         metrics::record_metrics("prover::prove", || async {
-            log::info!(
+            tracing::info!(
                 "[prove] {}:{} start",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
@@ -218,6 +222,7 @@ impl ProverService for ProverServiceSVC {
             #[cfg(feature = "prover_v2")]
             let prove_context = ProveContext {
                 proof_id: request.get_ref().proof_id.clone(),
+                program_id: request.get_ref().program_id.clone(),
                 index: request.get_ref().index as usize,
                 segment: request.get_ref().segment.clone(),
                 seg_size: request.get_ref().seg_size,
@@ -227,7 +232,7 @@ impl ProverService for ProverServiceSVC {
             // todo: lock the pipeline
             let prove_func = move || {
                 let guard = pipeline.lock().unwrap_or_else(|e| {
-                    log::error!("Mutex poisoned, recovering");
+                    tracing::error!("Mutex poisoned, recovering");
                     e.into_inner()
                 });
 
@@ -246,7 +251,7 @@ impl ProverService for ProverServiceSVC {
             on_done!(result, response);
             let end = Instant::now();
             let elapsed = end.duration_since(start);
-            log::info!(
+            tracing::info!(
                 "[prove] {}:{} code:{} elapsed:{} end",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
@@ -263,7 +268,7 @@ impl ProverService for ProverServiceSVC {
         request: Request<AggregateRequest>,
     ) -> tonic::Result<Response<AggregateResponse>, Status> {
         metrics::record_metrics("prover::aggregate", || async {
-            log::info!(
+            tracing::info!(
                 "[aggregate] {}:{} {} inputs start",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
@@ -300,7 +305,7 @@ impl ProverService for ProverServiceSVC {
             let pipeline = self.pipeline.clone();
             let agg_func = move || {
                 let ppl = pipeline.lock().unwrap_or_else(|e| {
-                    log::error!("Mutex poisoned, recovering");
+                    tracing::error!("Mutex poisoned, recovering");
                     e.into_inner()
                 });
                 ppl.prove_aggregate(&agg_context)
@@ -318,7 +323,7 @@ impl ProverService for ProverServiceSVC {
             on_done!(result, response);
             let end = Instant::now();
             let elapsed = end.duration_since(start);
-            log::info!(
+            tracing::info!(
                 "[aggregate] {}:{} code:{} elapsed:{} end",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
@@ -335,7 +340,7 @@ impl ProverService for ProverServiceSVC {
         request: Request<SnarkProofRequest>,
     ) -> tonic::Result<Response<SnarkProofResponse>, Status> {
         metrics::record_metrics("prover::snark_proof", || async {
-            log::info!(
+            tracing::info!(
                 "[snark_proof] {}:{} start",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,
@@ -352,7 +357,7 @@ impl ProverService for ProverServiceSVC {
             let pipeline = self.pipeline.clone();
             let snark_func = move || {
                 let guard = pipeline.lock().unwrap_or_else(|e| {
-                    log::error!("Mutex poisoned, recovering");
+                    tracing::error!("Mutex poisoned, recovering");
                     e.into_inner()
                 });
                 guard.prove_snark(&snark_context)
@@ -370,7 +375,7 @@ impl ProverService for ProverServiceSVC {
             on_done!(result, response);
             let end = Instant::now();
             let elapsed = end.duration_since(start);
-            log::info!(
+            tracing::info!(
                 "[snark_proof] {}:{} code:{} elapsed:{} end",
                 request.get_ref().proof_id,
                 request.get_ref().computed_request_id,

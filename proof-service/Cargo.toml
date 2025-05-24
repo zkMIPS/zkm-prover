@@ -36,12 +36,14 @@ ethers = "2.0.14"
 prometheus = "0.13"
 hyper = { version = "^0.14", features = ["server", "http1", "tcp"] }
 rand = "0.8"
+sha2 = "0.10.9"
 
 # file server
 warp = "0.3"
 tracing = "0.1.37"
 tracing-forest = { version = "0.1.6", features = ["ansi", "smallvec"] }
 tracing-subscriber = { version = "0.3.19", features = ["std", "env-filter"] }
+rayon = "1.10.0"
 
 [build-dependencies]
 tonic-build = "0.8.0"

@@ -23,9 +23,9 @@ impl Pipeline {
         }
     }
 
-    pub fn split(&self, split_context: &SplitContext) -> Result<(bool, u64), String> {
+    pub fn split(&self, split_context: &SplitContext) -> Result<(bool, u64, u32), String> {
         match self.executor.split(split_context) {
-            Ok(n) => Ok((true, n)),
+            Ok((steps, segments)) => Ok((true, steps, segments)),
             Err(e) => Err(e.to_string()),
         }
     }
